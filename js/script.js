@@ -11,6 +11,7 @@
     const BACKUP_HANDLE_KEY = 'backup-directory-handle';
     const BACKUP_PREFERENCES_KEY = 'backup-preferences';
     const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
+    const SYNC_SESSION_CREDENTIALS_KEY = 'bookmark-manager.sync-session-credentials';
     const DEVICE_ID_KEY = 'sync-device-id';
     const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
     const PBKDF2_ITERATIONS = 250000;
@@ -119,15 +120,17 @@
             webDavUsername: '用户名',
             webDavUsernameHint: '地址和用户名会保存在本机',
             webDavPassword: '密码或应用密码',
-            sessionOnly: '仅保留在当前页面内存中',
+            sessionOnly: '默认仅保留在当前页面内存中',
             encryptionPassphrase: '加密口令',
             encryptionPassphraseHint: '至少 8 个字符；遗失后无法解密远端数据',
             autoCreateWebDavFolder: '自动创建同步目录',
             autoCreateWebDavFolderHint: '目录不存在时仅创建同步文件所在的最后一级目录',
             automaticSync: '页面打开时自动同步',
             automaticSyncHint: '解锁成功后，数据变化会自动同步至 WebDAV',
+            rememberSessionCredentials: '在当前标签页中记住凭据',
+            rememberSessionCredentialsHint: '刷新后保留，取消勾选或关闭标签页后清除',
             lastSync: '最近同步',
-            syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。',
+            syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。凭据默认仅存内存；勾选“当前标签页中记住”后只写入 sessionStorage，关闭标签页后清除。',
             syncCorsNote: 'Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头。',
             disconnectSync: '移除同步配置',
             syncNow: '立即同步',
@@ -135,6 +138,7 @@
             syncMenuUnsupported: '当前环境不支持加密同步',
             syncMenuNotConfigured: '尚未设置',
             syncMenuLocked: '等待输入凭据',
+            syncMenuCredentialsReady: '凭据已恢复，等待同步',
             syncMenuRunning: '正在同步…',
             syncMenuError: '上次同步失败',
             syncMenuReady: ({ time }) => time ? `上次：${time}` : '已解锁',
@@ -191,6 +195,8 @@
             syncNotConfiguredDetail: '填写远端地址和凭据后即可进行加密同步。',
             syncLockedTitle: '同步配置等待解锁',
             syncLockedDetail: '请输入 WebDAV 密码和加密口令，然后点击“立即同步”。',
+            syncCredentialsReadyTitle: '已恢复本标签页凭据',
+            syncCredentialsReadyDetail: '凭据已从 sessionStorage 恢复；点击“立即同步”即可重新验证并解锁。',
             syncReadyTitle: 'WebDAV 同步已解锁',
             syncReadyDetail: '本页保持打开时，书签变更可以自动同步。',
             syncReadyKoofrDetail: '已通过支持浏览器 CORS 的 Koofr REST API 连接。',
@@ -230,6 +236,9 @@
             syncFailed: ({ message }) => `同步失败：${message}`,
             syncAutoEnabled: '自动同步已开启；本次会话解锁后将自动运行',
             syncAutoPaused: '自动同步已暂停',
+            sessionCredentialsRemembered: '刷新后将保持凭据；关闭标签页后自动清除',
+            sessionCredentialsCleared: '已停止记住凭据，并从当前标签页存储中清除',
+            sessionStorageUnavailable: '当前浏览器不允许使用标签页存储，凭据不会被记住',
             syncDisconnected: '同步配置已移除，远端文件未被删除',
             confirmDisconnectSync: '确定移除本机的 WebDAV 同步配置吗？远端加密文件不会被删除。',
             syncSecretsSessionOnly: '敏感凭据只在本次页面打开期间使用',
@@ -448,15 +457,17 @@
             webDavUsername: 'Username',
             webDavUsernameHint: 'The URL and username are stored on this device',
             webDavPassword: 'Password or app password',
-            sessionOnly: 'Kept in memory for this page session only',
+            sessionOnly: 'Kept in memory by default',
             encryptionPassphrase: 'Encryption passphrase',
             encryptionPassphraseHint: 'At least 8 characters; remote data cannot be recovered if this is lost',
             autoCreateWebDavFolder: 'Create sync folder automatically',
             autoCreateWebDavFolderHint: 'Create only the final folder containing the sync file when it does not exist',
             automaticSync: 'Sync automatically while open',
             automaticSyncHint: 'After unlocking, data changes are synchronized to WebDAV automatically',
+            rememberSessionCredentials: 'Remember credentials in this tab',
+            rememberSessionCredentialsHint: 'Keep across refreshes; clear when unchecked or when the tab is closed',
             lastSync: 'Last sync',
-            syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. The WebDAV password and encryption passphrase are never persisted and must be entered again after reopening the page.',
+            syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. Credentials stay in memory by default; when “Remember in this tab” is enabled, they are stored only in sessionStorage and cleared when the tab closes.',
             syncCorsNote: 'Koofr WebDAV URLs automatically use the CORS-enabled official REST API. Other WebDAV services must allow Origin, Authorization, GET, PUT, MKCOL, and conditional request headers.',
             disconnectSync: 'Remove sync configuration',
             syncNow: 'Sync now',
@@ -464,6 +475,7 @@
             syncMenuUnsupported: 'Encrypted sync unsupported',
             syncMenuNotConfigured: 'Not configured',
             syncMenuLocked: 'Credentials required',
+            syncMenuCredentialsReady: 'Credentials restored; sync required',
             syncMenuRunning: 'Syncing…',
             syncMenuError: 'Last sync failed',
             syncMenuReady: ({ time }) => time ? `Last: ${time}` : 'Unlocked',
@@ -520,6 +532,8 @@
             syncNotConfiguredDetail: 'Enter the remote URL and credentials to start encrypted synchronization.',
             syncLockedTitle: 'Sync configuration is locked',
             syncLockedDetail: 'Enter the WebDAV password and encryption passphrase, then click “Sync now”.',
+            syncCredentialsReadyTitle: 'Credentials restored for this tab',
+            syncCredentialsReadyDetail: 'Credentials were restored from sessionStorage. Click “Sync now” to validate and unlock again.',
             syncReadyTitle: 'WebDAV sync is unlocked',
             syncReadyDetail: 'Bookmark changes can sync automatically while this page remains open.',
             syncReadyKoofrDetail: 'Connected through the browser-compatible Koofr REST API.',
@@ -559,6 +573,9 @@
             syncFailed: ({ message }) => `Sync failed: ${message}`,
             syncAutoEnabled: 'Automatic sync enabled; it will run after this session is unlocked',
             syncAutoPaused: 'Automatic sync paused',
+            sessionCredentialsRemembered: 'Credentials will survive refreshes and clear when this tab closes',
+            sessionCredentialsCleared: 'Credential retention disabled and tab storage cleared',
+            sessionStorageUnavailable: 'Tab storage is unavailable in this browser; credentials will not be remembered',
             syncDisconnected: 'Sync configuration removed; the remote file was not deleted',
             confirmDisconnectSync: 'Remove the WebDAV sync configuration from this device? The encrypted remote file will not be deleted.',
             syncSecretsSessionOnly: 'Sensitive credentials are used only while this page remains open',
@@ -697,6 +714,8 @@
             username: '',
             password: '',
             passphrase: '',
+            rememberSession: false,
+            sessionCredentialsRestored: false,
             createDirectory: true,
             automatic: false,
             unlocked: false,
@@ -794,7 +813,8 @@
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
             'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
             'sync-passphrase-input', 'auto-create-directory-toggle',
-            'auto-sync-toggle', 'last-sync-value', 'conflict-protection-value',
+            'auto-sync-toggle', 'remember-session-credentials-toggle',
+            'last-sync-value', 'conflict-protection-value',
             'disconnect-sync-button',
             'sync-now-button', 'conflict-dialog', 'conflict-dialog-title',
             'conflict-dialog-close-button', 'conflict-progress-label',
@@ -950,6 +970,7 @@
         ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.autoCreateDirectoryToggle.addEventListener('change', handleAutoCreateDirectoryToggle);
         ui.autoSyncToggle.addEventListener('change', handleAutoSyncToggle);
+        ui.rememberSessionCredentialsToggle.addEventListener('change', handleRememberSessionCredentials);
         ui.disconnectSyncButton.addEventListener('click', disconnectWebDavSync);
         ui.syncNowButton.addEventListener('click', handleSyncNow);
 
@@ -1791,6 +1812,7 @@
             }
             ui.syncEndpointInput.value = state.sync.endpoint;
             ui.syncUsernameInput.value = state.sync.username;
+            restoreSessionSyncCredentials();
             state.sync.hasBaseline = state.sync.endpoint
                 ? Boolean(await getSyncBaseline(syncEndpointKey()))
                 : false;
@@ -1801,10 +1823,57 @@
         }
         renderSyncSettings();
         renderConflictBanner();
+        if (
+            state.sync.sessionCredentialsRestored
+            && state.sync.automatic
+            && !state.sync.conflicts.length
+            && state.sync.password
+            && state.sync.passphrase.length >= 8
+        ) {
+            window.setTimeout(() => runWebDavSync({ notify: false }), 180);
+        }
     }
 
     function syncEndpointKey(endpoint = state.sync.endpoint, username = state.sync.username) {
         return `${String(username || '').trim().toLocaleLowerCase('en-US')}\u0000${String(endpoint || '').trim()}`;
+    }
+
+    function restoreSessionSyncCredentials() {
+        const raw = safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY);
+        if (!raw) return false;
+        try {
+            const saved = JSON.parse(raw);
+            if (saved?.version !== 1 || saved.endpointKey !== syncEndpointKey()) {
+                safeSessionStorageRemove(SYNC_SESSION_CREDENTIALS_KEY);
+                return false;
+            }
+            state.sync.password = typeof saved.password === 'string' ? saved.password : '';
+            state.sync.passphrase = typeof saved.passphrase === 'string' ? saved.passphrase : '';
+            state.sync.rememberSession = true;
+            state.sync.sessionCredentialsRestored = Boolean(state.sync.password || state.sync.passphrase);
+            ui.syncPasswordInput.value = state.sync.password;
+            ui.syncPassphraseInput.value = state.sync.passphrase;
+            return state.sync.sessionCredentialsRestored;
+        } catch {
+            safeSessionStorageRemove(SYNC_SESSION_CREDENTIALS_KEY);
+            return false;
+        }
+    }
+
+    function saveSessionSyncCredentials() {
+        if (!state.sync.rememberSession) return false;
+        return safeSessionStorageSet(SYNC_SESSION_CREDENTIALS_KEY, JSON.stringify({
+            version: 1,
+            endpointKey: syncEndpointKey(),
+            password: state.sync.password,
+            passphrase: state.sync.passphrase,
+            savedAt: new Date().toISOString(),
+        }));
+    }
+
+    function clearSessionSyncCredentials() {
+        safeSessionStorageRemove(SYNC_SESSION_CREDENTIALS_KEY);
+        state.sync.sessionCredentialsRestored = false;
     }
 
     async function loadSyncConflicts() {
@@ -2280,9 +2349,10 @@
             state.sync.conflictSelections = {};
             renderConflictBanner();
         }
-        if (state.sync.unlocked && previousFingerprint !== syncSessionFingerprint()) {
-            state.sync.unlocked = false;
-        }
+        const credentialsChanged = previousFingerprint !== syncSessionFingerprint();
+        if (credentialsChanged) state.sync.sessionCredentialsRestored = false;
+        if (state.sync.unlocked && credentialsChanged) state.sync.unlocked = false;
+        if (state.sync.rememberSession) saveSessionSyncCredentials();
         state.sync.error = '';
         renderSyncSettings();
     }
@@ -2305,6 +2375,7 @@
         else if (sync.conflicts.length) status = 'conflict';
         else if (sync.error) status = 'error';
         else if (!sync.endpoint) status = 'not-configured';
+        else if (!sync.unlocked && sync.passphrase.length >= 8 && (!sync.username || sync.password)) status = 'credentials-ready';
         else if (!sync.unlocked) status = 'locked';
 
         const statusContent = {
@@ -2318,6 +2389,11 @@
             ],
             'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
             locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
+            'credentials-ready': [
+                t('syncCredentialsReadyTitle'),
+                t('syncCredentialsReadyDetail'),
+                t('syncMenuCredentialsReady'),
+            ],
             ready: [
                 t('syncReadyTitle'),
                 t(sync.provider === 'koofr' ? 'syncReadyKoofrDetail' : 'syncReadyDetail'),
@@ -2339,6 +2415,8 @@
         ui.autoCreateDirectoryToggle.disabled = !sync.supported || sync.running;
         ui.autoSyncToggle.checked = sync.automatic;
         ui.autoSyncToggle.disabled = !sync.supported || sync.running;
+        ui.rememberSessionCredentialsToggle.checked = sync.rememberSession;
+        ui.rememberSessionCredentialsToggle.disabled = !sync.supported || sync.running;
         ui.syncNowButton.disabled = !sync.supported || sync.running;
         ui.syncNowButton.textContent = t(sync.conflicts.length ? 'reviewConflicts' : 'syncNow');
         ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
@@ -2350,6 +2428,27 @@
         ui.syncPassphraseInput.disabled = sync.running;
         ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
         ui.disconnectSyncButton.disabled = sync.running;
+    }
+
+    async function handleRememberSessionCredentials() {
+        const remember = ui.rememberSessionCredentialsToggle.checked;
+        updateSyncSecretsFromForm();
+        state.sync.rememberSession = remember;
+        await saveSyncPreferences();
+        if (remember) {
+            if (!saveSessionSyncCredentials()) {
+                state.sync.rememberSession = false;
+                ui.rememberSessionCredentialsToggle.checked = false;
+                showToast(t('sessionStorageUnavailable'));
+                renderSyncSettings();
+                return;
+            }
+            showToast(t('sessionCredentialsRemembered'));
+        } else {
+            clearSessionSyncCredentials();
+            showToast(t('sessionCredentialsCleared'));
+        }
+        renderSyncSettings();
     }
 
     async function handleAutoCreateDirectoryToggle() {
@@ -2376,6 +2475,7 @@
     async function disconnectWebDavSync() {
         if (!window.confirm(t('confirmDisconnectSync'))) return;
         window.clearTimeout(state.sync.timer);
+        clearSessionSyncCredentials();
         const endpointKey = syncEndpointKey();
         try {
             await deleteSetting(SYNC_PREFERENCES_KEY);
@@ -2389,6 +2489,8 @@
             username: '',
             password: '',
             passphrase: '',
+            rememberSession: false,
+            sessionCredentialsRestored: false,
             createDirectory: true,
             automatic: false,
             unlocked: false,
@@ -2547,6 +2649,8 @@
             }
 
             sync.unlocked = true;
+            sync.sessionCredentialsRestored = false;
+            if (sync.rememberSession) saveSessionSyncCredentials();
             sync.lastSyncAt = new Date().toISOString();
             sync.lastNotifiedError = '';
             sync.conflicts = [];
@@ -4713,6 +4817,31 @@
             localStorage.setItem(key, value);
         } catch {
             // Theme and sorting preferences are non-critical.
+        }
+    }
+
+    function safeSessionStorageGet(key) {
+        try {
+            return sessionStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    }
+
+    function safeSessionStorageSet(key, value) {
+        try {
+            sessionStorage.setItem(key, value);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function safeSessionStorageRemove(key) {
+        try {
+            sessionStorage.removeItem(key);
+        } catch {
+            // Session credential retention is optional.
         }
     }
 })();

@@ -1798,6 +1798,7 @@ svg {
 .backup-status-card[data-state="paused"],
 .backup-status-card[data-state="permission"],
 .backup-status-card[data-state="locked"],
+.backup-status-card[data-state="credentials-ready"],
 .backup-status-card[data-state="not-configured"] {
     background: var(--panel-muted);
     border-color: var(--border);
@@ -1807,6 +1808,7 @@ svg {
 .backup-status-card[data-state="paused"] .backup-status-icon,
 .backup-status-card[data-state="permission"] .backup-status-icon,
 .backup-status-card[data-state="locked"] .backup-status-icon,
+.backup-status-card[data-state="credentials-ready"] .backup-status-icon,
 .backup-status-card[data-state="not-configured"] .backup-status-icon {
     color: var(--text-faint);
 }

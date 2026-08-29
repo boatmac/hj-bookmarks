@@ -12,7 +12,7 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/script.js?v=20260829-6" defer></script>
+    <script src="js/script.js?v=20260829-7" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -352,6 +352,13 @@
                         <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动同步至 WebDAV</small></span>
                         <span class="switch-control">
                             <input id="auto-sync-toggle" type="checkbox">
+                            <span></span>
+                        </span>
+                    </label>
+                    <label class="setting-row settings-switch-row">
+                        <span class="setting-copy"><strong data-i18n="rememberSessionCredentials">在当前标签页中记住凭据</strong><small data-i18n="rememberSessionCredentialsHint">刷新后保留，取消勾选或关闭标签页后清除</small></span>
+                        <span class="switch-control">
+                            <input id="remember-session-credentials-toggle" type="checkbox">
                             <span></span>
                         </span>
                     </label>
