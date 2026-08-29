@@ -897,6 +897,15 @@ svg {
     color: var(--accent);
 }
 
+.export-popover .conflict-menu-item.has-conflicts {
+    background: color-mix(in srgb, #d69724 13%, var(--panel));
+}
+
+.export-popover .conflict-menu-item.has-conflicts strong,
+.export-popover .conflict-menu-item.has-conflicts small {
+    color: #b97a12;
+}
+
 .content {
     width: min(100%, 1480px);
     margin: 0 auto;
@@ -2464,10 +2473,6 @@ body.syncing {
 @media (max-width: 540px) {
     .topbar-actions {
         gap: 2px;
-    }
-
-    #import-button {
-        display: none;
     }
 
     .export-menu .topbar-secondary {

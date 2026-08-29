@@ -12,7 +12,7 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/script.js?v=20260829-4" defer></script>
+    <script src="js/script.js?v=20260829-5" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -113,9 +113,6 @@
 
                 <div class="topbar-actions">
                     <input id="import-file-input" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
-                    <button class="button button-quiet topbar-secondary" id="import-button" type="button" title="合并导入 JSON 或浏览器书签 HTML" data-i18n-title="importTooltip">
-                        <svg><use href="#icon-upload"></use></svg><span data-i18n="import">导入</span>
-                    </button>
 
                     <details class="export-menu" id="export-menu">
                         <summary class="button button-quiet topbar-secondary" title="备份、同步与数据管理" data-i18n-title="exportTooltip">
@@ -124,6 +121,7 @@
                         <div class="export-popover">
                             <button class="backup-menu-item" id="backup-settings-button" type="button"><strong data-i18n="automaticBackup">自动本地备份</strong><small id="backup-menu-status">尚未设置</small></button>
                             <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">WebDAV 加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
+                            <button class="conflict-menu-item" id="conflict-center-menu-button" type="button"><strong data-i18n="conflictCenter">冲突中心</strong><small id="conflict-menu-status">暂无待处理冲突</small></button>
                             <hr>
                             <button id="import-menu-button" type="button"><strong data-i18n="import">导入</strong><small data-i18n="importTooltip">支持 JSON 或浏览器书签 HTML</small></button>
                             <button id="export-json-button" type="button"><strong data-i18n="jsonBackup">JSON 备份</strong><small data-i18n="jsonBackupDescription">保留全部应用数据</small></button>
@@ -356,6 +354,9 @@
                     </label>
                     <div class="setting-row information-row">
                         <span class="setting-copy"><strong data-i18n="lastSync">最近同步</strong><small id="last-sync-value">从未同步</small></span>
+                    </div>
+                    <div class="setting-row information-row">
+                        <span class="setting-copy"><strong data-i18n="conflictProtection">三方冲突保护</strong><small id="conflict-protection-value">将在下次成功同步后建立基线</small></span>
                     </div>
                 </div>
 

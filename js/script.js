@@ -143,6 +143,10 @@
             reviewConflicts: '处理冲突',
             conflictEyebrow: '同步安全',
             conflictCenter: '冲突中心',
+            noPendingConflicts: '暂无待处理冲突',
+            conflictProtection: '三方冲突保护',
+            conflictBaselineReady: '同步基线已建立，字段级冲突检测已启用',
+            conflictBaselinePending: '将在下次成功同步后建立基线',
             localVersion: '本机版本',
             remoteVersion: '远端版本',
             choosePerField: '逐字段选择',
@@ -465,6 +469,10 @@
             reviewConflicts: 'Review conflicts',
             conflictEyebrow: 'SYNC SAFETY',
             conflictCenter: 'Conflict center',
+            noPendingConflicts: 'No conflicts to review',
+            conflictProtection: 'Three-way conflict protection',
+            conflictBaselineReady: 'Sync baseline established; field-level conflict detection is active',
+            conflictBaselinePending: 'A baseline will be created after the next successful sync',
             localVersion: 'Local version',
             remoteVersion: 'Remote version',
             choosePerField: 'Choose per field',
@@ -688,6 +696,7 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            hasBaseline: false,
             conflicts: [],
             conflictEndpointKey: '',
             conflictIndex: 0,
@@ -751,9 +760,10 @@
             'all-view-button', 'favorites-view-button', 'all-count', 'favorites-count',
             'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
             'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
-            'search-shortcut', 'import-file-input', 'import-button', 'export-menu',
+            'search-shortcut', 'import-file-input', 'export-menu',
             'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
-            'sync-menu-status', 'import-menu-button', 'export-json-button',
+            'sync-menu-status', 'conflict-center-menu-button', 'conflict-menu-status',
+            'import-menu-button', 'export-json-button',
             'export-html-button', 'clear-all-button',
             'add-bookmark-button', 'conflict-banner', 'conflict-banner-title',
             'conflict-banner-detail', 'open-conflict-center-button', 'breadcrumbs',
@@ -778,7 +788,8 @@
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
             'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
             'sync-passphrase-input', 'auto-create-directory-toggle',
-            'auto-sync-toggle', 'last-sync-value', 'disconnect-sync-button',
+            'auto-sync-toggle', 'last-sync-value', 'conflict-protection-value',
+            'disconnect-sync-button',
             'sync-now-button', 'conflict-dialog', 'conflict-dialog-title',
             'conflict-dialog-close-button', 'conflict-progress-label',
             'conflict-detected-time', 'conflict-kind-label', 'conflict-item-title',
@@ -872,7 +883,6 @@
             renderContent();
         });
 
-        ui.importButton.addEventListener('click', () => ui.importFileInput.click());
         ui.importMenuButton.addEventListener('click', () => {
             closeExportMenu();
             ui.importFileInput.click();
@@ -880,6 +890,7 @@
         ui.importFileInput.addEventListener('change', handleImport);
         ui.backupSettingsButton.addEventListener('click', openBackupDialog);
         ui.syncSettingsButton.addEventListener('click', openSyncDialog);
+        ui.conflictCenterMenuButton.addEventListener('click', handleConflictCenterMenu);
         ui.exportJsonButton.addEventListener('click', exportJson);
         ui.exportHtmlButton.addEventListener('click', exportHtml);
         ui.clearAllButton.addEventListener('click', clearAllData);
@@ -1773,6 +1784,9 @@
             }
             ui.syncEndpointInput.value = state.sync.endpoint;
             ui.syncUsernameInput.value = state.sync.username;
+            state.sync.hasBaseline = state.sync.endpoint
+                ? Boolean(await getSyncBaseline(syncEndpointKey()))
+                : false;
             await loadSyncConflicts();
         } catch (error) {
             console.error('Unable to restore WebDAV sync settings:', error);
@@ -1805,9 +1819,22 @@
         renderSyncSettings();
     }
 
+    function handleConflictCenterMenu() {
+        closeExportMenu();
+        if (state.sync.conflicts.length) {
+            openConflictCenter();
+        } else {
+            showToast(t('noPendingConflicts'));
+        }
+    }
+
     function renderConflictBanner() {
         if (!ui.conflictBanner) return;
         const count = state.sync.conflicts.length;
+        ui.conflictMenuStatus.textContent = count
+            ? t('syncMenuConflicts', { count })
+            : t('noPendingConflicts');
+        ui.conflictCenterMenuButton.classList.toggle('has-conflicts', count > 0);
         ui.conflictBanner.classList.toggle('hidden', count === 0);
         if (!count) return;
         ui.conflictBannerTitle.textContent = t('conflictDetectedBanner', { count });
@@ -2061,7 +2088,10 @@
         }
 
         const pendingRemote = await getPendingSyncBaseline(endpointKey);
-        if (pendingRemote) await saveSyncBaseline(endpointKey, pendingRemote);
+        if (pendingRemote) {
+            await saveSyncBaseline(endpointKey, pendingRemote);
+            state.sync.hasBaseline = true;
+        }
         await deleteSyncBaseline(pendingSyncBaselineKey(endpointKey));
         closeConflictCenter();
         showToast(t('allConflictsResolved'));
@@ -2236,6 +2266,7 @@
         state.sync.passphrase = ui.syncPassphraseInput.value;
         const nextEndpointKey = syncEndpointKey();
         if (previousEndpointKey !== nextEndpointKey) {
+            state.sync.hasBaseline = false;
             state.sync.conflicts = [];
             state.sync.conflictEndpointKey = nextEndpointKey;
             state.sync.conflictIndex = 0;
@@ -2293,6 +2324,9 @@
         ui.syncStatusDetail.textContent = statusContent[1];
         ui.syncMenuStatus.textContent = statusContent[2];
         ui.lastSyncValue.textContent = formatBackupTime(sync.lastSyncAt) || t('syncLastNever');
+        ui.conflictProtectionValue.textContent = t(
+            sync.hasBaseline ? 'conflictBaselineReady' : 'conflictBaselinePending',
+        );
         ui.autoCreateDirectoryToggle.checked = sync.createDirectory;
         ui.autoCreateDirectoryToggle.disabled = !sync.supported || sync.running;
         ui.autoSyncToggle.checked = sync.automatic;
@@ -2352,6 +2386,7 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            hasBaseline: false,
             conflicts: [],
             conflictEndpointKey: '',
             conflictIndex: 0,
@@ -2443,6 +2478,7 @@
             const remoteContext = await createSyncRemoteContext(endpoint);
             sync.provider = remoteContext.provider;
             const baseline = await getSyncBaseline(endpointKey);
+            sync.hasBaseline = Boolean(baseline);
             let merged = null;
             for (let attempt = 0; attempt < 3; attempt += 1) {
                 setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
@@ -2508,6 +2544,7 @@
             sync.conflicts = [];
             sync.conflictEndpointKey = endpointKey;
             await saveSyncBaseline(endpointKey, merged);
+            sync.hasBaseline = true;
             await deleteSyncBaseline(pendingSyncBaselineKey(endpointKey));
             await replaceSyncConflicts(endpointKey, []);
             await saveSyncPreferences();
