@@ -111,15 +111,12 @@
             persistenceGrantedToast: '浏览器持久存储保护已开启',
             persistenceDeniedToast: '浏览器未授予持久存储权限',
             backupHandleNotRemembered: '目录已可用于当前会话，但浏览器无法记住它；下次打开需要重新选择。',
-            encryptedWebDavSync: 'WebDAV 加密同步',
+            encryptedWebDavSync: '云端加密同步',
             syncEyebrow: '跨设备同步',
-            syncSettings: 'WebDAV 加密同步',
-            webDavUrl: 'WebDAV 地址',
-            webDavUrlHint: '可填写目录或完整 JSON 文件地址',
+            syncSettings: '云端加密同步',
+            webDavUrl: '同步地址',
+            webDavUrlHint: '支持标准 WebDAV 和 Koofr 地址',
             webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
-            koofrMountId: 'Koofr Mount ID（可选）',
-            koofrMountIdHint: '填写后跳过偶发超时的存储空间查询',
-            koofrMountIdPlaceholder: '例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             webDavUsername: '用户名',
             webDavUsernameHint: '地址和用户名会保存在本机',
             webDavPassword: '密码或应用密码',
@@ -133,8 +130,8 @@
             rememberSessionCredentials: '在当前标签页中记住凭据',
             rememberSessionCredentialsHint: '刷新后保留，取消勾选或关闭标签页后清除',
             lastSync: '最近同步',
-            syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。凭据默认仅存内存；勾选“当前标签页中记住”后只写入 sessionStorage，关闭标签页后清除。',
-            syncCorsNote: 'Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头。',
+            syncSecurityNote: '书签会先在本机加密后再上传；密码和加密口令不会写入远端文件。',
+            syncCorsNote: '如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。',
             disconnectSync: '移除同步配置',
             syncNow: '立即同步',
             syncLastNever: '从未同步',
@@ -194,21 +191,20 @@
             conflictCopySuffix: '冲突副本',
             syncUnsupportedTitle: '当前环境不支持加密同步',
             syncUnsupportedDetail: '需要支持 Web Crypto 和 Fetch API 的现代浏览器。',
-            syncNotConfiguredTitle: '尚未配置 WebDAV',
-            syncNotConfiguredDetail: '填写远端地址和凭据后即可进行加密同步。',
+            syncNotConfiguredTitle: '尚未配置云端同步',
+            syncNotConfiguredDetail: '填写同步地址和凭据后即可开始。',
             syncLockedTitle: '同步配置等待解锁',
             syncLockedDetail: '请输入 WebDAV 密码和加密口令，然后点击“立即同步”。',
             syncCredentialsReadyTitle: '已恢复本标签页凭据',
             syncCredentialsReadyDetail: '凭据已从 sessionStorage 恢复；点击“立即同步”即可重新验证并解锁。',
             syncReadyTitle: 'WebDAV 同步已解锁',
             syncReadyDetail: '本页保持打开时，书签变更可以自动同步。',
-            syncReadyKoofrDetail: '已通过支持浏览器 CORS 的 Koofr REST API 连接。',
+            syncReadyKoofrDetail: '已连接 Koofr，书签会加密后同步。',
             syncRunningTitle: '正在进行加密同步',
             syncRunningDetail: '正在读取远端数据、合并更改并安全写回…',
             syncPhasePreparing: '正在准备同步并保存本机配置…',
             syncPhaseReading: '正在连接远端并读取同步文件…',
-            syncPhaseResolvingKoofr: '检测到 Koofr，正在查找对应的存储空间…',
-            syncPhaseRetryingKoofr: 'Koofr 存储空间查询未响应，正在自动重试…',
+            syncPhaseResolvingKoofr: '正在连接 Koofr 并准备同步空间…',
             syncPhaseCreatingFolder: '远端目录不存在，正在创建最后一级目录…',
             syncPhaseMerging: '正在比较本机与远端版本并合并更改…',
             syncPhaseEncrypting: '正在使用 AES-GCM 加密合并后的数据…',
@@ -453,15 +449,12 @@
             persistenceGrantedToast: 'Persistent browser storage enabled',
             persistenceDeniedToast: 'The browser did not grant persistent storage',
             backupHandleNotRemembered: 'The folder is available for this session, but the browser could not remember it. Select it again next time.',
-            encryptedWebDavSync: 'Encrypted WebDAV sync',
+            encryptedWebDavSync: 'Encrypted cloud sync',
             syncEyebrow: 'CROSS-DEVICE SYNC',
-            syncSettings: 'Encrypted WebDAV sync',
-            webDavUrl: 'WebDAV URL',
-            webDavUrlHint: 'Enter a folder URL or the complete JSON file URL',
+            syncSettings: 'Encrypted cloud sync',
+            webDavUrl: 'Sync URL',
+            webDavUrlHint: 'Supports standard WebDAV and Koofr URLs',
             webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
-            koofrMountId: 'Koofr Mount ID (optional)',
-            koofrMountIdHint: 'Bypass the mount lookup if it times out intermittently',
-            koofrMountIdPlaceholder: 'For example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             webDavUsername: 'Username',
             webDavUsernameHint: 'The URL and username are stored on this device',
             webDavPassword: 'Password or app password',
@@ -475,8 +468,8 @@
             rememberSessionCredentials: 'Remember credentials in this tab',
             rememberSessionCredentialsHint: 'Keep across refreshes; clear when unchecked or when the tab is closed',
             lastSync: 'Last sync',
-            syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. Credentials stay in memory by default; when “Remember in this tab” is enabled, they are stored only in sessionStorage and cleared when the tab closes.',
-            syncCorsNote: 'Koofr WebDAV URLs automatically use the CORS-enabled official REST API. Other WebDAV services must allow Origin, Authorization, GET, PUT, MKCOL, and conditional request headers.',
+            syncSecurityNote: 'Bookmarks are encrypted on this device before upload; passwords and the encryption passphrase are never written to the remote file.',
+            syncCorsNote: 'If the connection fails, check the sync URL and app password, or contact the sync service administrator.',
             disconnectSync: 'Remove sync configuration',
             syncNow: 'Sync now',
             syncLastNever: 'Never',
@@ -536,21 +529,20 @@
             conflictCopySuffix: 'conflict copy',
             syncUnsupportedTitle: 'Encrypted sync is not supported',
             syncUnsupportedDetail: 'A modern browser with Web Crypto and Fetch API support is required.',
-            syncNotConfiguredTitle: 'WebDAV is not configured',
-            syncNotConfiguredDetail: 'Enter the remote URL and credentials to start encrypted synchronization.',
+            syncNotConfiguredTitle: 'Cloud sync is not configured',
+            syncNotConfiguredDetail: 'Enter a sync URL and credentials to get started.',
             syncLockedTitle: 'Sync configuration is locked',
             syncLockedDetail: 'Enter the WebDAV password and encryption passphrase, then click “Sync now”.',
             syncCredentialsReadyTitle: 'Credentials restored for this tab',
             syncCredentialsReadyDetail: 'Credentials were restored from sessionStorage. Click “Sync now” to validate and unlock again.',
             syncReadyTitle: 'WebDAV sync is unlocked',
             syncReadyDetail: 'Bookmark changes can sync automatically while this page remains open.',
-            syncReadyKoofrDetail: 'Connected through the browser-compatible Koofr REST API.',
+            syncReadyKoofrDetail: 'Connected to Koofr; bookmarks are encrypted before synchronization.',
             syncRunningTitle: 'Encrypted synchronization in progress',
             syncRunningDetail: 'Reading remote data, merging changes, and writing them back securely…',
             syncPhasePreparing: 'Preparing synchronization and saving local settings…',
             syncPhaseReading: 'Connecting to remote storage and reading the sync file…',
-            syncPhaseResolvingKoofr: 'Koofr detected; locating the corresponding storage mount…',
-            syncPhaseRetryingKoofr: 'The Koofr mount lookup did not respond; retrying automatically…',
+            syncPhaseResolvingKoofr: 'Connecting to Koofr and preparing the sync location…',
             syncPhaseCreatingFolder: 'The remote folder is missing; creating the final folder…',
             syncPhaseMerging: 'Comparing local and remote versions and merging changes…',
             syncPhaseEncrypting: 'Encrypting the merged data with AES-GCM…',
@@ -824,8 +816,7 @@
             'backup-now-button', 'sync-dialog', 'sync-dialog-title',
             'sync-dialog-close-button', 'sync-dialog-cancel-button',
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
-            'sync-endpoint-input', 'koofr-mount-id-field', 'koofr-mount-id-input',
-            'sync-username-input', 'sync-password-input',
+            'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
             'sync-passphrase-input', 'auto-create-directory-toggle',
             'auto-sync-toggle', 'remember-session-credentials-toggle',
             'last-sync-value', 'conflict-protection-value',
@@ -979,8 +970,6 @@
         ui.syncEndpointInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncUsernameInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncEndpointInput.addEventListener('change', saveSyncPreferences);
-        ui.koofrMountIdInput.addEventListener('input', handleKoofrMountIdInput);
-        ui.koofrMountIdInput.addEventListener('change', saveSyncPreferences);
         ui.syncUsernameInput.addEventListener('change', saveSyncPreferences);
         ui.syncPasswordInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
@@ -1830,7 +1819,6 @@
                 state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
             }
             ui.syncEndpointInput.value = state.sync.endpoint;
-            ui.koofrMountIdInput.value = state.sync.koofrMountId;
             ui.syncUsernameInput.value = state.sync.username;
             restoreSessionSyncCredentials();
             state.sync.hasBaseline = state.sync.endpoint
@@ -2329,7 +2317,6 @@
     function openSyncDialog() {
         closeExportMenu();
         ui.syncEndpointInput.value = state.sync.endpoint;
-        ui.koofrMountIdInput.value = state.sync.koofrMountId;
         ui.syncUsernameInput.value = state.sync.username;
         ui.syncPasswordInput.value = state.sync.password;
         ui.syncPassphraseInput.value = state.sync.passphrase;
@@ -2370,7 +2357,6 @@
             state.sync.koofrMountId = '';
             state.sync.koofrMountName = '';
             state.sync.koofrMountUser = '';
-            ui.koofrMountIdInput.value = '';
         }
         if (previousEndpointKey !== nextEndpointKey) {
             state.sync.hasBaseline = false;
@@ -2453,27 +2439,12 @@
         ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
         ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
         ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
-        const koofrEndpoint = isKoofrSyncEndpoint(sync.endpoint);
-        ui.koofrMountIdField.classList.toggle('hidden', !koofrEndpoint);
-        if (document.activeElement !== ui.koofrMountIdInput) {
-            ui.koofrMountIdInput.value = sync.koofrMountId;
-        }
         ui.syncEndpointInput.disabled = sync.running;
-        ui.koofrMountIdInput.disabled = sync.running;
         ui.syncUsernameInput.disabled = sync.running;
         ui.syncPasswordInput.disabled = sync.running;
         ui.syncPassphraseInput.disabled = sync.running;
         ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
         ui.disconnectSyncButton.disabled = sync.running;
-    }
-
-    function handleKoofrMountIdInput() {
-        state.sync.koofrMountId = ui.koofrMountIdInput.value.trim();
-        state.sync.koofrMountName = koofrMountNameFromEndpoint(state.sync.endpoint);
-        state.sync.koofrMountUser = state.sync.username;
-        state.sync.error = '';
-        saveSyncPreferences();
-        renderSyncSettings();
     }
 
     async function handleRememberSessionCredentials() {
@@ -2765,18 +2736,6 @@
         }
     }
 
-    function koofrMountNameFromEndpoint(value) {
-        try {
-            const url = new URL(value);
-            const segments = url.pathname.split('/').filter(Boolean);
-            return segments.length > 1 && segments[0].toLowerCase() === 'dav'
-                ? decodeURIComponent(segments[1])
-                : '';
-        } catch {
-            return '';
-        }
-    }
-
     function normalizeWebDavEndpoint(value) {
         const input = String(value || '').trim();
         if (!input) throw new Error(t('syncUrlRequired'));
@@ -2875,31 +2834,15 @@
 
         setSyncPhase('syncPhaseResolvingKoofr');
         const mountsUrl = new URL('/api/v2/mounts', url.origin);
-        let response;
-        let lastError;
-        for (let attempt = 0; attempt < 2; attempt += 1) {
-            if (attempt) {
-                setSyncPhase('syncPhaseRetryingKoofr');
-                await new Promise((resolve) => window.setTimeout(resolve, 700));
-            }
-            try {
-                response = await fetchWebDav(mountsUrl.toString(), {
-                    method: 'GET',
-                    headers: createWebDavHeaders(),
-                    cache: 'no-store',
-                    credentials: 'omit',
-                    redirect: 'follow',
-                });
-                if (response.status !== 429 || attempt === 1) break;
-                lastError = new Error(t('syncReadFailed', { status: response.status }));
-            } catch (error) {
-                lastError = error;
-                if (state.sync.cancelRequested || attempt === 1) throw error;
-            }
-        }
-        if (!response) throw lastError || new Error(t('syncNetworkError', { method: 'GET', target: 'app.koofr.net/api/v2/mounts' }));
+        const response = await fetchWebDav(mountsUrl.toString(), {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
-        if (!response.ok) throw lastError || new Error(t('syncReadFailed', { status: response.status }));
+        if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
 
         let payload;
         try {

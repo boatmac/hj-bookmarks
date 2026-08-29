@@ -107,16 +107,7 @@ https://dav.example.com/bookmarks/
 https://app.koofr.net/dav/Koofr/Example-Bookmarks/
 ```
 
-用户名使用 Koofr 登录邮箱，密码使用 Koofr 生成的应用密码。应用会通过 Koofr API 查找 URL 中的 `Koofr` 存储空间、创建最后一级目录并上传加密同步文件。首次成功查询后会在本机保存对应的非敏感 Mount ID，后续刷新和同步直接访问目标文件，不再重复查询 `/api/v2/mounts`；首次查询遇到超时或限流时会自动重试一次。普通 WebDAV 服务仍使用标准 `GET`、`PUT` 和 `MKCOL`。
-
-如果当前网络中的 `/api/v2/mounts` 查询持续超时，Koofr 地址下会显示可选的“Koofr Mount ID”输入框。可用以下安全命令查询，命令会提示输入应用密码且不会打印 Authorization：
-
-```powershell
-$result = curl.exe -sS -u "你的Koofr邮箱" "https://app.koofr.net/api/v2/mounts" | ConvertFrom-Json
-$result.mounts | Select-Object name, id, isPrimary
-```
-
-找到名称为 `Koofr` 或 `isPrimary` 为 `True` 的记录，将它的 `id` 粘贴到该输入框，即可完全跳过 mounts 查询。Mount ID 不是密码，但无需发送给其他人。
+用户名使用 Koofr 登录邮箱，密码使用 Koofr 生成的应用密码。应用会自动连接对应存储空间、创建最后一级目录并上传加密同步文件。首次成功连接后会记住必要的非敏感存储信息，后续刷新时直接访问同步文件。普通 WebDAV 地址会自动使用标准协议。连接失败时不会循环重试，用户可以检查设置后再次点击“立即同步”。
 
 同步特性：
 
@@ -141,20 +132,13 @@ $result.mounts | Select-Object name, id, isPrimary
 
 “在当前标签页中记住凭据”默认关闭。开启后，密码和加密口令只写入该标签页的 `sessionStorage`：刷新页面后可以自动恢复；关闭标签页后通常会由浏览器清除。该选项不会把凭据写入 IndexedDB、localStorage、源码或远端文件。部分浏览器的“恢复上次会话”功能可能同时恢复标签页会话数据，因此共享设备上建议保持关闭。
 
-### 其他 WebDAV 服务的 CORS 要求
+### 连接兼容性
 
-Koofr 已通过专用 REST API 适配，无需以下配置。其他普通 WebDAV 服务不能绕过浏览器跨域策略，至少需要允许：
+Koofr 地址会自动使用适合浏览器访问的连接方式。其他标准 WebDAV 服务必须允许网页访问；如果服务不兼容，应用会给出连接错误，请联系对应服务管理员。
 
-```text
-Methods: GET, PUT, MKCOL, OPTIONS
-Headers: Authorization, Content-Type, If-Match, If-None-Match
-Expose:  ETag
-Origin:  应用所在站点；从 index.html 直接打开时通常为 null
-```
+同步过程中会显示当前阶段，并允许取消。刷新后的后台连接不会冻结页面；为了避免合并期间覆盖数据，修改操作会短暂暂停，完成或取消后立即恢复。
 
-建议使用 HTTPS 和 WebDAV 应用专用密码。如果服务不允许 CORS，应用会显示网络/CORS 错误；这需要在 WebDAV、NAS 或反向代理侧调整，前端无法自行绕过。
-
-同步过程中会显示“读取远端文件、创建目录、合并、加密、写入、更新本机”等当前阶段。每个 WebDAV 网络请求最多等待 20 秒，超时后会给出诊断提示；同步期间可点击“取消同步”。刷新后的后台自动重连不会冻结页面，用户仍可浏览、搜索和打开链接；为了避免合并期间覆盖数据，新增、编辑、删除、拖拽和导入会暂时阻止，完成或取消同步后立即恢复。
+协议、CORS、加密格式、凭据边界及冲突算法详见 [`docs/SYNC-DESIGN.md`](docs/SYNC-DESIGN.md)。
 
 ## 冲突处理
 

@@ -12,7 +12,7 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/script.js?v=20260829-11" defer></script>
+    <script src="js/script.js?v=20260829-12" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -120,7 +120,7 @@
                         </summary>
                         <div class="export-popover">
                             <p class="export-section-label" data-i18n="syncSection">同步与冲突</p>
-                            <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">WebDAV 加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
+                            <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">云端加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
                             <button class="conflict-menu-item" id="conflict-center-menu-button" type="button"><strong data-i18n="conflictCenter">冲突中心</strong><small id="conflict-menu-status">暂无待处理冲突</small></button>
                             <hr>
                             <p class="export-section-label" data-i18n="backupTransferSection">备份与迁移</p>
@@ -309,7 +309,7 @@
     <dialog class="item-dialog sync-dialog" id="sync-dialog">
         <div class="dialog-panel">
             <header class="dialog-header">
-                <div><p class="eyebrow" data-i18n="syncEyebrow">跨设备同步</p><h2 id="sync-dialog-title" data-i18n="syncSettings">WebDAV 加密同步</h2></div>
+                <div><p class="eyebrow" data-i18n="syncEyebrow">跨设备同步</p><h2 id="sync-dialog-title" data-i18n="syncSettings">云端加密同步</h2></div>
                 <button class="icon-button dialog-close" id="sync-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
                     <svg><use href="#icon-x"></use></svg>
                 </button>
@@ -323,12 +323,8 @@
 
                 <div class="sync-fields">
                     <label class="settings-field">
-                        <span><strong data-i18n="webDavUrl">WebDAV 地址</strong><small data-i18n="webDavUrlHint">可填写目录或完整 JSON 文件地址</small></span>
+                        <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="webDavUrlHint">支持标准 WebDAV 和 Koofr 地址</small></span>
                         <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="url">
-                    </label>
-                    <label class="settings-field koofr-mount-id-field hidden" id="koofr-mount-id-field">
-                        <span><strong data-i18n="koofrMountId">Koofr Mount ID（可选）</strong><small data-i18n="koofrMountIdHint">填写后跳过偶发超时的存储空间查询</small></span>
-                        <input id="koofr-mount-id-input" type="text" maxlength="200" placeholder="例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" data-i18n-placeholder="koofrMountIdPlaceholder" autocomplete="off">
                     </label>
                     <label class="settings-field">
                         <span><strong data-i18n="webDavUsername">用户名</strong><small data-i18n="webDavUsernameHint">地址和用户名会保存在本机</small></span>
@@ -375,8 +371,8 @@
                     </div>
                 </div>
 
-                <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。凭据默认仅存内存；勾选后只写入当前标签页的 sessionStorage。</p>
-                <p class="sync-compatibility" data-i18n="syncCorsNote">Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需配置跨域许可。</p>
+                <p class="sync-security-note" data-i18n="syncSecurityNote">书签会先在本机加密后再上传；密码和加密口令不会写入远端文件。</p>
+                <p class="sync-compatibility" data-i18n="syncCorsNote">如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。</p>
             </div>
 
             <footer class="dialog-footer sync-dialog-footer">

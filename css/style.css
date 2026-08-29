@@ -1990,16 +1990,8 @@ svg {
 }
 
 .settings-field:first-child,
-.settings-field:last-child,
-.koofr-mount-id-field {
+.settings-field:last-child {
     grid-column: 1 / -1;
-}
-
-.koofr-mount-id-field {
-    padding: 10px;
-    background: var(--panel-muted);
-    border: 1px dashed var(--border-strong);
-    border-radius: 10px;
 }
 
 .settings-field > span {
@@ -2627,8 +2619,7 @@ body.syncing .mini-icon-button {
     }
 
     .settings-field:first-child,
-    .settings-field:last-child,
-    .koofr-mount-id-field {
+    .settings-field:last-child {
         grid-column: auto;
     }
 
