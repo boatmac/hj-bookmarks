@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookmarks</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="js/script.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>My Bookmarks</h1>
+        <p>A durable, client-side bookmark manager.</p>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="main-content">
+                <section id="pinned-bookmarks-section" class="bookmarks-section">
+                    <h2>⭐ Pinned</h2>
+                    <div id="pinned-bookmarks" class="pinned-container">
+                        <!-- Pinned bookmarks will be rendered here -->
+                    </div>
+                </section>
+
+                <section class="bookmarks-section">
+                    <h2>Bookmarks Tree</h2>
+                    <div id="bookmarks-tree" class="tree-container">
+                        <div class="loader">Loading bookmarks...</div>
+                    </div>
+                </section>
+            </section>
+
+            <aside class="sidebar-section">
+                <div class="widget">
+                    <h3>Search</h3>
+                    <input type="search" id="search-input" placeholder="Search by title, url, or tag...">
+                </div>
+
+                <div class="widget">
+                    <h3>Data Management</h3>
+                    <div class="data-actions">
+                        <button id="export-btn" class="data-btn">Export to JSON</button>
+                        <label for="import-file-input" class="btn-like data-btn">Import from HTML</label>
+                        <input type="file" id="import-file-input" accept=".html,.htm" style="display: none;">
+                        <button id="clear-all-btn" class="data-btn danger">Clear All Data</button>
+                    </div>
+                </div>
+
+                <div class="widget">
+                    <h3 id="add-form-title">Add New</h3>
+                    <form id="add-form">
+                        <div class="form-group">
+                            <label for="title">Title</label>
+                            <input type="text" id="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="url">URL (leave empty for a folder)</label>
+                            <input type="url" id="url" placeholder="https://example.com">
+                        </div>
+                         <div class="form-group">
+                            <label for="parent">Parent Category</label>
+                            <select id="parent">
+                                <option value="root">/ (Root)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tags">Tags (comma-separated)</label>
+                            <input type="text" id="tags" placeholder="Tags (comma separated)">
+                        </div>
+                        <button type="submit">Add Item</button>
+                    </form>
+                </div>
+
+                <div class="widget">
+                    <h3>Tags</h3>
+                    <div id="tags-wall" class="tags-wall-container"></div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer>
+        <p>Bookmark Manager Demo &copy; 2025</p>
+    </footer>
+</body>
+</html>
