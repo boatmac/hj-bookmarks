@@ -115,13 +115,14 @@
                     </button>
 
                     <details class="export-menu" id="export-menu">
-                        <summary class="button button-quiet topbar-secondary" title="导出备份" data-i18n-title="exportTooltip">
-                            <svg><use href="#icon-download"></use></svg><span data-i18n="export">导出</span>
+                        <summary class="button button-quiet topbar-secondary" title="备份、同步与数据管理" data-i18n-title="exportTooltip">
+                            <svg><use href="#icon-database"></use></svg><span data-i18n="export">备份/同步</span>
                         </summary>
                         <div class="export-popover">
                             <button class="backup-menu-item" id="backup-settings-button" type="button"><strong data-i18n="automaticBackup">自动本地备份</strong><small id="backup-menu-status">尚未设置</small></button>
                             <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">WebDAV 加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
                             <hr>
+                            <button id="import-menu-button" type="button"><strong data-i18n="import">导入</strong><small data-i18n="importTooltip">支持 JSON 或浏览器书签 HTML</small></button>
                             <button id="export-json-button" type="button"><strong data-i18n="jsonBackup">JSON 备份</strong><small data-i18n="jsonBackupDescription">保留全部应用数据</small></button>
                             <button id="export-html-button" type="button"><strong data-i18n="browserHtml">浏览器 HTML</strong><small data-i18n="browserHtmlDescription">可导入其他浏览器</small></button>
                             <hr>

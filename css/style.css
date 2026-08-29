@@ -2164,8 +2164,12 @@ body.syncing {
         gap: 2px;
     }
 
-    .topbar-secondary {
+    #import-button {
         display: none;
+    }
+
+    .export-menu .topbar-secondary {
+        display: inline-flex;
     }
 
     .add-button {

@@ -42,8 +42,8 @@
             clearSearch: '清除搜索',
             importTooltip: '合并导入 JSON 或浏览器书签 HTML',
             import: '导入',
-            exportTooltip: '导出备份',
-            export: '导出',
+            exportTooltip: '备份、同步与数据管理',
+            export: '备份/同步',
             jsonBackup: 'JSON 备份',
             jsonBackupDescription: '保留全部应用数据',
             browserHtml: '浏览器 HTML',
@@ -301,8 +301,8 @@
             clearSearch: 'Clear search',
             importTooltip: 'Merge a JSON backup or browser bookmark HTML',
             import: 'Import',
-            exportTooltip: 'Export backup',
-            export: 'Export',
+            exportTooltip: 'Backups, synchronization, and data management',
+            export: 'Backup & sync',
             jsonBackup: 'JSON backup',
             jsonBackupDescription: 'Preserves all application data',
             browserHtml: 'Browser HTML',
@@ -615,7 +615,8 @@
             'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
             'search-shortcut', 'import-file-input', 'import-button', 'export-menu',
             'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
-            'sync-menu-status', 'export-json-button', 'export-html-button', 'clear-all-button',
+            'sync-menu-status', 'import-menu-button', 'export-json-button',
+            'export-html-button', 'clear-all-button',
             'add-bookmark-button', 'breadcrumbs', 'page-eyebrow', 'page-title',
             'page-description', 'result-count', 'add-folder-button', 'results-label',
             'sort-select', 'folder-grid', 'bookmark-grid', 'empty-state',
@@ -722,6 +723,10 @@
         });
 
         ui.importButton.addEventListener('click', () => ui.importFileInput.click());
+        ui.importMenuButton.addEventListener('click', () => {
+            closeExportMenu();
+            ui.importFileInput.click();
+        });
         ui.importFileInput.addEventListener('change', handleImport);
         ui.backupSettingsButton.addEventListener('click', openBackupDialog);
         ui.syncSettingsButton.addEventListener('click', openSyncDialog);
