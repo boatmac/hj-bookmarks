@@ -2,10 +2,12 @@
     'use strict';
 
     const DB_NAME = 'BookmarkDB_v3';
-    const DB_VERSION = 6;
+    const DB_VERSION = 7;
     const STORE_NAME = 'bookmarks';
     const SETTINGS_STORE_NAME = 'settings';
     const TOMBSTONE_STORE_NAME = 'tombstones';
+    const SYNC_BASELINE_STORE_NAME = 'syncBaselines';
+    const SYNC_CONFLICT_STORE_NAME = 'syncConflicts';
     const BACKUP_HANDLE_KEY = 'backup-directory-handle';
     const BACKUP_PREFERENCES_KEY = 'backup-preferences';
     const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
@@ -133,6 +135,49 @@
             syncMenuRunning: '正在同步…',
             syncMenuError: '上次同步失败',
             syncMenuReady: ({ time }) => time ? `上次：${time}` : '已解锁',
+            syncMenuConflicts: ({ count }) => `${count} 项冲突待处理`,
+            syncConflictStatusTitle: '检测到同步冲突',
+            syncConflictStatusDetail: ({ count }) => `有 ${count} 项无法安全自动合并，双方版本均已保留。`,
+            conflictDetectedBanner: ({ count }) => `发现 ${count} 项同步冲突`,
+            conflictBannerDetail: '双方版本均已安全保留，请在应用内选择处理方式。',
+            reviewConflicts: '处理冲突',
+            conflictEyebrow: '同步安全',
+            conflictCenter: '冲突中心',
+            localVersion: '本机版本',
+            remoteVersion: '远端版本',
+            choosePerField: '逐字段选择',
+            choosePerFieldHint: '只列出双方同时修改且结果不同的字段',
+            previousConflict: '上一项',
+            nextConflict: '下一项',
+            keepBoth: '保留两个副本',
+            keepLocal: '保留本机',
+            keepRemote: '保留远端',
+            keepDeletion: '确认删除',
+            restoreEdited: '恢复编辑版本',
+            applySelectedMerge: '应用所选合并',
+            conflictKindBookmark: '书签',
+            conflictKindFolder: '文件夹',
+            conflictFieldsExplanation: '双方修改了同一字段，请选择希望保留的值。',
+            conflictDeleteEditExplanation: '一端删除了该项目，另一端对它进行了编辑。删除不会自动覆盖编辑。',
+            conflictDeletedVersion: '此版本已删除',
+            conflictFieldTitle: '标题',
+            conflictFieldUrl: '链接',
+            conflictFieldDescription: '描述',
+            conflictFieldTags: '标签',
+            conflictFieldFavorite: '收藏状态',
+            conflictFieldParent: '上级文件夹',
+            conflictValueEmpty: '（空）',
+            conflictValueFavorite: '已收藏',
+            conflictValueNotFavorite: '未收藏',
+            conflictModifiedAt: ({ time }) => `修改于 ${time}`,
+            conflictDeviceId: ({ device }) => `设备 ${device}`,
+            conflictRootFolder: '根目录',
+            conflictChooseLocal: ({ field }) => `${field}：选择本机值`,
+            conflictChooseRemote: ({ field }) => `${field}：选择远端值`,
+            conflictDetectedToast: ({ count }) => `检测到 ${count} 项冲突，请在冲突中心处理`,
+            conflictResolved: '冲突已解决',
+            allConflictsResolved: '所有冲突已解决，正在重新同步',
+            conflictCopySuffix: '冲突副本',
             syncUnsupportedTitle: '当前环境不支持加密同步',
             syncUnsupportedDetail: '需要支持 Web Crypto 和 Fetch API 的现代浏览器。',
             syncNotConfiguredTitle: '尚未配置 WebDAV',
@@ -412,6 +457,49 @@
             syncMenuRunning: 'Syncing…',
             syncMenuError: 'Last sync failed',
             syncMenuReady: ({ time }) => time ? `Last: ${time}` : 'Unlocked',
+            syncMenuConflicts: ({ count }) => `${count} conflict${count === 1 ? '' : 's'} to review`,
+            syncConflictStatusTitle: 'Synchronization conflicts detected',
+            syncConflictStatusDetail: ({ count }) => `${count} item${count === 1 ? '' : 's'} could not be merged safely. Both versions are preserved.`,
+            conflictDetectedBanner: ({ count }) => `${count} synchronization conflict${count === 1 ? '' : 's'} found`,
+            conflictBannerDetail: 'Both versions are preserved. Choose how to resolve them inside the app.',
+            reviewConflicts: 'Review conflicts',
+            conflictEyebrow: 'SYNC SAFETY',
+            conflictCenter: 'Conflict center',
+            localVersion: 'Local version',
+            remoteVersion: 'Remote version',
+            choosePerField: 'Choose per field',
+            choosePerFieldHint: 'Only fields changed differently on both sides are listed',
+            previousConflict: 'Previous',
+            nextConflict: 'Next',
+            keepBoth: 'Keep both copies',
+            keepLocal: 'Keep local',
+            keepRemote: 'Keep remote',
+            keepDeletion: 'Confirm deletion',
+            restoreEdited: 'Restore edited version',
+            applySelectedMerge: 'Apply selected merge',
+            conflictKindBookmark: 'Bookmark',
+            conflictKindFolder: 'Folder',
+            conflictFieldsExplanation: 'Both sides changed the same field. Choose the value to keep.',
+            conflictDeleteEditExplanation: 'One side deleted this item while the other side edited it. The deletion will not silently overwrite the edit.',
+            conflictDeletedVersion: 'This version was deleted',
+            conflictFieldTitle: 'Title',
+            conflictFieldUrl: 'URL',
+            conflictFieldDescription: 'Description',
+            conflictFieldTags: 'Tags',
+            conflictFieldFavorite: 'Favorite',
+            conflictFieldParent: 'Parent folder',
+            conflictValueEmpty: '(empty)',
+            conflictValueFavorite: 'Favorited',
+            conflictValueNotFavorite: 'Not favorited',
+            conflictModifiedAt: ({ time }) => `Modified ${time}`,
+            conflictDeviceId: ({ device }) => `Device ${device}`,
+            conflictRootFolder: 'Root',
+            conflictChooseLocal: ({ field }) => `${field}: choose local value`,
+            conflictChooseRemote: ({ field }) => `${field}: choose remote value`,
+            conflictDetectedToast: ({ count }) => `${count} conflict${count === 1 ? '' : 's'} detected. Review them in the conflict center.`,
+            conflictResolved: 'Conflict resolved',
+            allConflictsResolved: 'All conflicts resolved; synchronizing again',
+            conflictCopySuffix: 'conflict copy',
             syncUnsupportedTitle: 'Encrypted sync is not supported',
             syncUnsupportedDetail: 'A modern browser with Web Crypto and Fetch API support is required.',
             syncNotConfiguredTitle: 'WebDAV is not configured',
@@ -600,6 +688,10 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            conflicts: [],
+            conflictEndpointKey: '',
+            conflictIndex: 0,
+            conflictSelections: {},
             phase: '',
             running: false,
             pending: false,
@@ -663,7 +755,9 @@
             'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
             'sync-menu-status', 'import-menu-button', 'export-json-button',
             'export-html-button', 'clear-all-button',
-            'add-bookmark-button', 'breadcrumbs', 'page-eyebrow', 'page-title',
+            'add-bookmark-button', 'conflict-banner', 'conflict-banner-title',
+            'conflict-banner-detail', 'open-conflict-center-button', 'breadcrumbs',
+            'page-eyebrow', 'page-title',
             'page-description', 'result-count', 'add-folder-button', 'results-label',
             'sort-select', 'folder-grid', 'bookmark-grid', 'empty-state',
             'empty-icon-use', 'empty-title', 'empty-description', 'empty-action-button',
@@ -684,8 +778,15 @@
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
             'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
             'sync-passphrase-input', 'auto-create-directory-toggle',
-            'auto-sync-toggle', 'last-sync-value',
-            'disconnect-sync-button', 'sync-now-button', 'toast', 'toast-message',
+            'auto-sync-toggle', 'last-sync-value', 'disconnect-sync-button',
+            'sync-now-button', 'conflict-dialog', 'conflict-dialog-title',
+            'conflict-dialog-close-button', 'conflict-progress-label',
+            'conflict-detected-time', 'conflict-kind-label', 'conflict-item-title',
+            'conflict-explanation', 'conflict-local-device', 'conflict-remote-device',
+            'conflict-local-summary', 'conflict-remote-summary', 'field-merge-section',
+            'conflict-fields', 'conflict-previous-button', 'conflict-next-button',
+            'keep-both-button', 'keep-local-button', 'keep-remote-button',
+            'apply-field-merge-button', 'toast', 'toast-message',
         ];
 
         for (const id of ids) ui[toCamelCase(id)] = document.getElementById(id);
@@ -744,6 +845,8 @@
         if (state.db) renderAll();
         if (ui.backupMenuStatus) renderBackupSettings();
         if (ui.syncMenuStatus) renderSyncSettings();
+        if (ui.conflictBanner) renderConflictBanner();
+        if (ui.conflictDialog?.open) renderConflictCenter();
     }
 
     function bindStaticEvents() {
@@ -831,7 +934,23 @@
         ui.autoCreateDirectoryToggle.addEventListener('change', handleAutoCreateDirectoryToggle);
         ui.autoSyncToggle.addEventListener('change', handleAutoSyncToggle);
         ui.disconnectSyncButton.addEventListener('click', disconnectWebDavSync);
-        ui.syncNowButton.addEventListener('click', () => runWebDavSync({ notify: true }));
+        ui.syncNowButton.addEventListener('click', handleSyncNow);
+
+        ui.openConflictCenterButton.addEventListener('click', openConflictCenter);
+        ui.conflictDialogCloseButton.addEventListener('click', closeConflictCenter);
+        ui.conflictDialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            closeConflictCenter();
+        });
+        ui.conflictDialog.addEventListener('mousedown', (event) => {
+            if (event.target === ui.conflictDialog) closeConflictCenter();
+        });
+        ui.conflictPreviousButton.addEventListener('click', () => navigateConflict(-1));
+        ui.conflictNextButton.addEventListener('click', () => navigateConflict(1));
+        ui.keepLocalButton.addEventListener('click', () => resolveCurrentConflict('local'));
+        ui.keepRemoteButton.addEventListener('click', () => resolveCurrentConflict('remote'));
+        ui.keepBothButton.addEventListener('click', () => resolveCurrentConflict('both'));
+        ui.applyFieldMergeButton.addEventListener('click', () => resolveCurrentConflict('merge'));
 
         ui.emptyActionButton.addEventListener('click', handleEmptyAction);
 
@@ -878,6 +997,13 @@
                 }
                 if (!database.objectStoreNames.contains(TOMBSTONE_STORE_NAME)) {
                     database.createObjectStore(TOMBSTONE_STORE_NAME, { keyPath: 'syncId' });
+                }
+                if (!database.objectStoreNames.contains(SYNC_BASELINE_STORE_NAME)) {
+                    database.createObjectStore(SYNC_BASELINE_STORE_NAME, { keyPath: 'key' });
+                }
+                if (!database.objectStoreNames.contains(SYNC_CONFLICT_STORE_NAME)) {
+                    const conflicts = database.createObjectStore(SYNC_CONFLICT_STORE_NAME, { keyPath: 'id' });
+                    conflicts.createIndex('endpointKey', 'endpointKey', { unique: false });
                 }
             };
 
@@ -994,6 +1120,108 @@
                 .getAll();
             request.onsuccess = () => resolve(request.result || []);
             request.onerror = () => reject(request.error);
+        });
+    }
+
+    function getSyncBaseline(endpointKey) {
+        return new Promise((resolve, reject) => {
+            const request = state.db.transaction(SYNC_BASELINE_STORE_NAME, 'readonly')
+                .objectStore(SYNC_BASELINE_STORE_NAME)
+                .get(endpointKey);
+            request.onsuccess = () => resolve(request.result?.dataset ?? null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    function saveSyncBaseline(endpointKey, dataset) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SYNC_BASELINE_STORE_NAME, 'readwrite');
+            transaction.objectStore(SYNC_BASELINE_STORE_NAME).put({
+                key: endpointKey,
+                savedAt: new Date().toISOString(),
+                dataset,
+            });
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    function pendingSyncBaselineKey(endpointKey) {
+        return `${endpointKey}\u0000pending-remote`;
+    }
+
+    function getPendingSyncBaseline(endpointKey) {
+        return getSyncBaseline(pendingSyncBaselineKey(endpointKey));
+    }
+
+    function savePendingSyncBaseline(endpointKey, dataset) {
+        return saveSyncBaseline(pendingSyncBaselineKey(endpointKey), dataset);
+    }
+
+    function deleteSyncBaseline(key) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SYNC_BASELINE_STORE_NAME, 'readwrite');
+            transaction.objectStore(SYNC_BASELINE_STORE_NAME).delete(key);
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    function getSyncConflicts(endpointKey) {
+        return new Promise((resolve, reject) => {
+            const request = state.db.transaction(SYNC_CONFLICT_STORE_NAME, 'readonly')
+                .objectStore(SYNC_CONFLICT_STORE_NAME)
+                .index('endpointKey')
+                .getAll(endpointKey);
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function replaceSyncConflicts(endpointKey, conflicts) {
+        const existing = await getSyncConflicts(endpointKey);
+        await new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SYNC_CONFLICT_STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(SYNC_CONFLICT_STORE_NAME);
+            existing.forEach((conflict) => store.delete(conflict.id));
+            conflicts.forEach((conflict) => store.put({
+                ...conflict,
+                id: `${endpointKey}\u0000${conflict.syncId}`,
+                endpointKey,
+            }));
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    function deleteSyncConflict(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SYNC_CONFLICT_STORE_NAME, 'readwrite');
+            transaction.objectStore(SYNC_CONFLICT_STORE_NAME).delete(id);
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    async function deleteSyncState(endpointKey) {
+        const conflicts = await getSyncConflicts(endpointKey);
+        await new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(
+                [SYNC_BASELINE_STORE_NAME, SYNC_CONFLICT_STORE_NAME],
+                'readwrite',
+            );
+            const baselineStore = transaction.objectStore(SYNC_BASELINE_STORE_NAME);
+            baselineStore.delete(endpointKey);
+            baselineStore.delete(pendingSyncBaselineKey(endpointKey));
+            const conflictStore = transaction.objectStore(SYNC_CONFLICT_STORE_NAME);
+            conflicts.forEach((conflict) => conflictStore.delete(conflict.id));
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
         });
     }
 
@@ -1545,11 +1773,412 @@
             }
             ui.syncEndpointInput.value = state.sync.endpoint;
             ui.syncUsernameInput.value = state.sync.username;
+            await loadSyncConflicts();
         } catch (error) {
             console.error('Unable to restore WebDAV sync settings:', error);
             state.sync.error = error?.message || String(error);
         }
         renderSyncSettings();
+        renderConflictBanner();
+    }
+
+    function syncEndpointKey(endpoint = state.sync.endpoint, username = state.sync.username) {
+        return `${String(username || '').trim().toLocaleLowerCase('en-US')}\u0000${String(endpoint || '').trim()}`;
+    }
+
+    async function loadSyncConflicts() {
+        const endpointKey = syncEndpointKey();
+        if (!state.sync.endpoint) {
+            state.sync.conflicts = [];
+            state.sync.conflictEndpointKey = '';
+        } else {
+            state.sync.conflicts = await getSyncConflicts(endpointKey);
+            state.sync.conflictEndpointKey = endpointKey;
+        }
+        state.sync.conflicts.sort((left, right) => Date.parse(left.detectedAt) - Date.parse(right.detectedAt));
+        state.sync.conflictIndex = Math.min(
+            state.sync.conflictIndex,
+            Math.max(0, state.sync.conflicts.length - 1),
+        );
+        state.sync.conflictSelections = {};
+        renderConflictBanner();
+        renderSyncSettings();
+    }
+
+    function renderConflictBanner() {
+        if (!ui.conflictBanner) return;
+        const count = state.sync.conflicts.length;
+        ui.conflictBanner.classList.toggle('hidden', count === 0);
+        if (!count) return;
+        ui.conflictBannerTitle.textContent = t('conflictDetectedBanner', { count });
+        ui.conflictBannerDetail.textContent = t('conflictBannerDetail');
+    }
+
+    function openConflictForItem(item) {
+        if (!item?.syncId) return false;
+        const index = state.sync.conflicts.findIndex((conflict) => conflict.syncId === item.syncId);
+        if (index < 0) return false;
+        state.sync.conflictIndex = index;
+        openConflictCenter();
+        return true;
+    }
+
+    function openConflictCenter() {
+        if (!state.sync.conflicts.length) return;
+        if (ui.syncDialog.open) ui.syncDialog.close();
+        state.sync.conflictIndex = Math.min(
+            state.sync.conflictIndex,
+            state.sync.conflicts.length - 1,
+        );
+        renderConflictCenter();
+        if (!ui.conflictDialog.open) ui.conflictDialog.showModal();
+    }
+
+    function closeConflictCenter() {
+        if (ui.conflictDialog.open) ui.conflictDialog.close();
+    }
+
+    function navigateConflict(offset) {
+        const count = state.sync.conflicts.length;
+        if (!count) return;
+        state.sync.conflictIndex = (state.sync.conflictIndex + offset + count) % count;
+        renderConflictCenter();
+    }
+
+    function renderConflictCenter() {
+        const conflicts = state.sync.conflicts;
+        if (!conflicts.length) {
+            closeConflictCenter();
+            renderConflictBanner();
+            return;
+        }
+        const conflict = conflicts[state.sync.conflictIndex] || conflicts[0];
+        const localItem = conflict.local?.kind === 'item' ? conflict.local.value : null;
+        const remoteItem = conflict.remote?.kind === 'item' ? conflict.remote.value : null;
+        const displayItem = localItem || remoteItem || (conflict.base?.kind === 'item' ? conflict.base.value : null);
+        const isFolderConflict = displayItem ? !displayItem.url : false;
+
+        ui.conflictProgressLabel.textContent = `${state.sync.conflictIndex + 1} / ${conflicts.length}`;
+        ui.conflictDetectedTime.textContent = formatConflictTime(conflict.detectedAt);
+        ui.conflictKindLabel.textContent = t(isFolderConflict ? 'conflictKindFolder' : 'conflictKindBookmark');
+        ui.conflictItemTitle.textContent = displayItem?.title || t('untitled');
+        ui.conflictExplanation.textContent = t(
+            conflict.type === 'delete-edit' ? 'conflictDeleteEditExplanation' : 'conflictFieldsExplanation',
+        );
+
+        renderConflictVersion(ui.conflictLocalSummary, conflict.local);
+        renderConflictVersion(ui.conflictRemoteSummary, conflict.remote);
+        ui.conflictLocalDevice.textContent = formatConflictDevice(conflict.local);
+        ui.conflictRemoteDevice.textContent = formatConflictDevice(conflict.remote);
+
+        const fieldConflict = conflict.type === 'fields';
+        ui.fieldMergeSection.classList.toggle('hidden', !fieldConflict);
+        ui.applyFieldMergeButton.classList.toggle('hidden', !fieldConflict);
+        ui.keepBothButton.classList.toggle(
+            'hidden',
+            !(
+                localItem
+                && remoteItem
+                && localItem.url
+                && remoteItem.url
+            ),
+        );
+        ui.keepLocalButton.textContent = t(localItem ? 'keepLocal' : 'keepDeletion');
+        ui.keepRemoteButton.textContent = t(remoteItem ? 'keepRemote' : 'keepDeletion');
+        ui.conflictPreviousButton.disabled = conflicts.length < 2;
+        ui.conflictNextButton.disabled = conflicts.length < 2;
+
+        ui.conflictFields.replaceChildren();
+        if (fieldConflict) {
+            const selections = state.sync.conflictSelections[conflict.id]
+                || Object.fromEntries(conflict.fields.map((field) => [field, 'local']));
+            state.sync.conflictSelections[conflict.id] = selections;
+            conflict.fields.forEach((field) => {
+                ui.conflictFields.append(createConflictFieldRow(conflict, field, selections));
+            });
+        }
+    }
+
+    function renderConflictVersion(container, entity) {
+        container.replaceChildren();
+        if (!entity || entity.kind !== 'item') {
+            container.append(createElement('p', 'deleted-version', t('conflictDeletedVersion')));
+            return;
+        }
+        const item = entity.value;
+        const fields = [
+            ['title', item.title],
+            ['url', item.url],
+            ['description', item.description],
+            ['tags', item.tags],
+            ['parentSyncId', item.parentSyncId],
+            ['isPinned', item.isPinned],
+        ];
+        fields.forEach(([field, value]) => {
+            const row = createElement('div', 'version-field');
+            row.append(
+                createElement('span', '', conflictFieldLabel(field)),
+                createElement('strong', '', formatConflictValue(field, value)),
+            );
+            container.append(row);
+        });
+    }
+
+    function createConflictFieldRow(conflict, field, selections) {
+        const row = createElement('div', 'conflict-field-row');
+        const label = conflictFieldLabel(field);
+        row.append(createElement('strong', 'conflict-field-name', label));
+        const options = createElement('div', 'conflict-field-options');
+        const localButton = createElement(
+            'button',
+            `conflict-value-option${selections[field] === 'local' ? ' selected' : ''}`,
+            formatConflictValue(field, conflict.local.value[field]),
+        );
+        localButton.type = 'button';
+        localButton.setAttribute('aria-label', t('conflictChooseLocal', { field: label }));
+        localButton.dataset.side = 'local';
+        localButton.addEventListener('click', () => {
+            selections[field] = 'local';
+            renderConflictCenter();
+        });
+        const remoteButton = createElement(
+            'button',
+            `conflict-value-option${selections[field] === 'remote' ? ' selected' : ''}`,
+            formatConflictValue(field, conflict.remote.value[field]),
+        );
+        remoteButton.type = 'button';
+        remoteButton.setAttribute('aria-label', t('conflictChooseRemote', { field: label }));
+        remoteButton.dataset.side = 'remote';
+        remoteButton.addEventListener('click', () => {
+            selections[field] = 'remote';
+            renderConflictCenter();
+        });
+        options.append(localButton, remoteButton);
+        row.append(options);
+        return row;
+    }
+
+    function conflictFieldLabel(field) {
+        const labels = {
+            title: 'conflictFieldTitle',
+            url: 'conflictFieldUrl',
+            description: 'conflictFieldDescription',
+            tags: 'conflictFieldTags',
+            isPinned: 'conflictFieldFavorite',
+            parentSyncId: 'conflictFieldParent',
+        };
+        return t(labels[field] || field);
+    }
+
+    function formatConflictValue(field, value) {
+        if (field === 'tags') return parseTags(value).join(', ') || t('conflictValueEmpty');
+        if (field === 'isPinned') return t(value ? 'conflictValueFavorite' : 'conflictValueNotFavorite');
+        if (field === 'parentSyncId') {
+            if (!value) return t('conflictRootFolder');
+            const folder = state.items.find((item) => item.syncId === value);
+            return folder?.title || String(value).slice(0, 8);
+        }
+        return String(value || '').trim() || t('conflictValueEmpty');
+    }
+
+    function formatConflictDevice(entity) {
+        if (!entity || entity.kind === 'absent') return '';
+        const value = entity.value;
+        const time = formatConflictTime(entity.kind === 'deleted' ? value.deletedAt : value.updatedAt);
+        const device = String(value.modifiedBy || '').slice(0, 8);
+        return [
+            device ? t('conflictDeviceId', { device }) : '',
+            time ? t('conflictModifiedAt', { time }) : '',
+        ].filter(Boolean).join(' · ');
+    }
+
+    function formatConflictTime(value) {
+        if (!validDate(value)) return '';
+        return new Intl.DateTimeFormat(currentLocale(), {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(new Date(value));
+    }
+
+    async function resolveCurrentConflict(strategy) {
+        const conflict = state.sync.conflicts[state.sync.conflictIndex];
+        if (!conflict) return;
+        const endpointKey = conflict.endpointKey;
+        await flushBackupBeforeDestructiveChange();
+
+        if (strategy === 'both') {
+            if (conflict.local?.kind === 'item') {
+                await restoreResolvedSyncItems([
+                    conflict.local.value,
+                    ...(conflict.localRelated || []),
+                ]);
+            }
+            if (conflict.remote?.kind === 'item') {
+                const duplicate = {
+                    ...conflict.remote.value,
+                    syncId: createUuid(),
+                    title: `${conflict.remote.value.title} (${t('conflictCopySuffix')})`,
+                    parentSyncId: conflict.remote.value.parentSyncId,
+                    tags: [...conflict.remote.value.tags],
+                };
+                await restoreResolvedSyncItems([duplicate]);
+            }
+        } else {
+            let entity = strategy === 'remote' ? conflict.remote : conflict.local;
+            let related = strategy === 'remote' ? conflict.remoteRelated : conflict.localRelated;
+            if (strategy === 'merge') {
+                const selections = state.sync.conflictSelections[conflict.id] || {};
+                const item = {
+                    ...conflict.suggested,
+                    tags: [...conflict.suggested.tags],
+                };
+                conflict.fields.forEach((field) => {
+                    const source = selections[field] === 'remote' ? conflict.remote.value : conflict.local.value;
+                    item[field] = Array.isArray(source[field]) ? [...source[field]] : source[field];
+                });
+                entity = { kind: 'item', value: item };
+                related = [];
+            }
+            await applyResolvedConflictEntity(conflict.syncId, entity, related || []);
+        }
+
+        await deleteSyncConflict(conflict.id);
+        state.sync.conflicts = state.sync.conflicts.filter((item) => item.id !== conflict.id);
+        delete state.sync.conflictSelections[conflict.id];
+        state.sync.conflictIndex = Math.min(
+            state.sync.conflictIndex,
+            Math.max(0, state.sync.conflicts.length - 1),
+        );
+        await refreshData();
+        scheduleAutoBackup();
+        renderConflictBanner();
+        renderSyncSettings();
+
+        if (state.sync.conflicts.length) {
+            renderConflictCenter();
+            showToast(t('conflictResolved'));
+            return;
+        }
+
+        const pendingRemote = await getPendingSyncBaseline(endpointKey);
+        if (pendingRemote) await saveSyncBaseline(endpointKey, pendingRemote);
+        await deleteSyncBaseline(pendingSyncBaselineKey(endpointKey));
+        closeConflictCenter();
+        showToast(t('allConflictsResolved'));
+        if (state.sync.password && state.sync.passphrase) {
+            window.setTimeout(() => runWebDavSync({ notify: true }), 120);
+        }
+    }
+
+    async function applyResolvedConflictEntity(syncId, entity, relatedItems) {
+        if (entity?.kind === 'item') {
+            await restoreResolvedSyncItems([
+                { ...entity.value, syncId },
+                ...relatedItems,
+            ]);
+            return;
+        }
+        const existing = state.items.find((item) => item.syncId === syncId);
+        if (existing) {
+            const descendantIds = isFolder(existing) ? getAllDescendantIds(existing.id) : [];
+            const deletingIds = new Set([existing.id, ...descendantIds]);
+            await deleteItems(state.items.filter((item) => deletingIds.has(item.id)));
+        } else {
+            await putResolvedTombstone(syncId);
+        }
+    }
+
+    function putResolvedTombstone(syncId) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(TOMBSTONE_STORE_NAME, 'readwrite');
+            transaction.objectStore(TOMBSTONE_STORE_NAME).put({
+                syncId,
+                deletedAt: new Date().toISOString(),
+                modifiedBy: state.sync.deviceId,
+            });
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    function restoreResolvedSyncItems(items) {
+        if (!items.length) return Promise.resolve();
+        let uniqueItems = [...new Map(items.map((item) => [item.syncId, { ...item, tags: [...item.tags] }])).values()];
+        const parentSyncIds = new Map(state.items.map((item) => [item.id, item.syncId]));
+        const hierarchy = new Map(state.items.map((item) => [item.syncId, {
+            syncId: item.syncId,
+            url: item.url,
+            parentSyncId: item.parentId == null ? null : (parentSyncIds.get(item.parentId) || null),
+        }]));
+        uniqueItems.forEach((item) => hierarchy.set(item.syncId, {
+            syncId: item.syncId,
+            url: item.url,
+            parentSyncId: item.parentSyncId || null,
+        }));
+        const hierarchyItems = [...hierarchy.values()];
+        sanitizeSyncHierarchy(hierarchyItems);
+        const safeParents = new Map(hierarchyItems.map((item) => [item.syncId, item.parentSyncId]));
+        uniqueItems = uniqueItems.map((item) => ({
+            ...item,
+            parentSyncId: safeParents.get(item.syncId) || null,
+        }));
+        const existingBySyncId = new Map(state.items.map((item) => [item.syncId, item]));
+        const numericIds = new Map(state.items.map((item) => [item.syncId, item.id]));
+        const now = new Date().toISOString();
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
+            const bookmarkStore = transaction.objectStore(STORE_NAME);
+            const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
+            const records = [];
+            let upsertIndex = 0;
+            let parentIndex = 0;
+
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+
+            const updateParents = () => {
+                if (parentIndex >= records.length) return;
+                const record = records[parentIndex++];
+                record.parentId = record.parentSyncId ? (numericIds.get(record.parentSyncId) || null) : null;
+                delete record.parentSyncId;
+                const request = bookmarkStore.put(record);
+                request.onsuccess = updateParents;
+            };
+            const upsertNext = () => {
+                if (upsertIndex >= uniqueItems.length) {
+                    updateParents();
+                    return;
+                }
+                const item = uniqueItems[upsertIndex++];
+                const existing = existingBySyncId.get(item.syncId);
+                const record = {
+                    ...(existing ? { id: existing.id } : {}),
+                    syncId: item.syncId,
+                    parentSyncId: item.parentSyncId || null,
+                    parentId: null,
+                    title: item.title,
+                    url: item.url,
+                    description: item.description || '',
+                    tags: parseTags(item.tags),
+                    isPinned: item.isPinned === true,
+                    collapsed: existing?.collapsed === true,
+                    createdAt: validDate(item.createdAt) ? item.createdAt : now,
+                    updatedAt: now,
+                    modifiedBy: state.sync.deviceId,
+                };
+                tombstoneStore.delete(item.syncId);
+                const request = existing ? bookmarkStore.put(record) : bookmarkStore.add(record);
+                request.onsuccess = () => {
+                    record.id = existing?.id ?? request.result;
+                    numericIds.set(item.syncId, record.id);
+                    records.push(record);
+                    upsertNext();
+                };
+            };
+            upsertNext();
+        });
     }
 
     async function saveSyncPreferences() {
@@ -1600,10 +2229,19 @@
 
     function updateSyncSecretsFromForm() {
         const previousFingerprint = syncSessionFingerprint();
+        const previousEndpointKey = syncEndpointKey();
         state.sync.endpoint = ui.syncEndpointInput.value.trim();
         state.sync.username = ui.syncUsernameInput.value.trim();
         state.sync.password = ui.syncPasswordInput.value;
         state.sync.passphrase = ui.syncPassphraseInput.value;
+        const nextEndpointKey = syncEndpointKey();
+        if (previousEndpointKey !== nextEndpointKey) {
+            state.sync.conflicts = [];
+            state.sync.conflictEndpointKey = nextEndpointKey;
+            state.sync.conflictIndex = 0;
+            state.sync.conflictSelections = {};
+            renderConflictBanner();
+        }
         if (state.sync.unlocked && previousFingerprint !== syncSessionFingerprint()) {
             state.sync.unlocked = false;
         }
@@ -1626,6 +2264,7 @@
         let status = 'ready';
         if (!sync.supported) status = 'unsupported';
         else if (sync.running) status = 'running';
+        else if (sync.conflicts.length) status = 'conflict';
         else if (sync.error) status = 'error';
         else if (!sync.endpoint) status = 'not-configured';
         else if (!sync.unlocked) status = 'locked';
@@ -1634,6 +2273,11 @@
             unsupported: [t('syncUnsupportedTitle'), t('syncUnsupportedDetail'), t('syncMenuUnsupported')],
             running: [t('syncRunningTitle'), sync.phase ? t(sync.phase) : t('syncRunningDetail'), t('syncMenuRunning')],
             error: [t('syncErrorTitle'), t('syncErrorDetail', { message: sync.error }), t('syncMenuError')],
+            conflict: [
+                t('syncConflictStatusTitle'),
+                t('syncConflictStatusDetail', { count: sync.conflicts.length }),
+                t('syncMenuConflicts', { count: sync.conflicts.length }),
+            ],
             'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
             locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
             ready: [
@@ -1654,6 +2298,7 @@
         ui.autoSyncToggle.checked = sync.automatic;
         ui.autoSyncToggle.disabled = !sync.supported || sync.running;
         ui.syncNowButton.disabled = !sync.supported || sync.running;
+        ui.syncNowButton.textContent = t(sync.conflicts.length ? 'reviewConflicts' : 'syncNow');
         ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
         ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
         ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
@@ -1689,8 +2334,10 @@
     async function disconnectWebDavSync() {
         if (!window.confirm(t('confirmDisconnectSync'))) return;
         window.clearTimeout(state.sync.timer);
+        const endpointKey = syncEndpointKey();
         try {
             await deleteSetting(SYNC_PREFERENCES_KEY);
+            if (state.sync.endpoint) await deleteSyncState(endpointKey);
         } catch (error) {
             console.warn('Unable to remove WebDAV sync preferences:', error);
         }
@@ -1705,6 +2352,10 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            conflicts: [],
+            conflictEndpointKey: '',
+            conflictIndex: 0,
+            conflictSelections: {},
             phase: '',
             pending: false,
             cancelRequested: false,
@@ -1716,12 +2367,13 @@
         ui.syncPasswordInput.value = '';
         ui.syncPassphraseInput.value = '';
         renderSyncSettings();
+        renderConflictBanner();
         showToast(t('syncDisconnected'));
     }
 
     function scheduleWebDavSync(delay = 1800) {
         const sync = state.sync;
-        if (!sync.supported || !sync.automatic || !sync.unlocked || !sync.endpoint) return;
+        if (!sync.supported || !sync.automatic || !sync.unlocked || !sync.endpoint || sync.conflicts.length) return;
         window.clearTimeout(sync.timer);
         sync.timer = window.setTimeout(() => runWebDavSync({ notify: false }), delay);
     }
@@ -1729,6 +2381,14 @@
     function scheduleDataProtection() {
         scheduleAutoBackup();
         scheduleWebDavSync();
+    }
+
+    function handleSyncNow() {
+        if (state.sync.conflicts.length) {
+            openConflictCenter();
+            return;
+        }
+        runWebDavSync({ notify: true });
     }
 
     function setSyncPhase(phase) {
@@ -1762,6 +2422,12 @@
 
         sync.endpoint = endpoint;
         ui.syncEndpointInput.value = endpoint;
+        const endpointKey = syncEndpointKey(endpoint, sync.username);
+        if (sync.conflictEndpointKey !== endpointKey) await loadSyncConflicts();
+        if (sync.conflicts.length) {
+            openConflictCenter();
+            return false;
+        }
         sync.running = true;
         sync.error = '';
         sync.phase = 'syncPhasePreparing';
@@ -1776,6 +2442,7 @@
         const operation = (async () => {
             const remoteContext = await createSyncRemoteContext(endpoint);
             sync.provider = remoteContext.provider;
+            const baseline = await getSyncBaseline(endpointKey);
             let merged = null;
             for (let attempt = 0; attempt < 3; attempt += 1) {
                 setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
@@ -1787,7 +2454,29 @@
                 setSyncPhase('syncPhaseMerging');
                 await refreshData();
                 const local = await createLocalSyncDataset();
-                merged = mergeSyncDatasets(local, remote.data);
+                const mergeResult = baseline
+                    ? threeWayMergeSyncDatasets(baseline, local, remote.data)
+                    : { dataset: mergeSyncDatasets(local, remote.data), conflicts: [] };
+                if (mergeResult.conflicts.length) {
+                    const detectedAt = new Date().toISOString();
+                    const conflicts = mergeResult.conflicts.map((conflict) => ({ ...conflict, detectedAt }));
+                    await replaceSyncConflicts(endpointKey, conflicts);
+                    await savePendingSyncBaseline(endpointKey, remote.data);
+                    await flushBackupBeforeDestructiveChange();
+                    await replaceLocalSyncDataset(mergeResult.dataset);
+                    await refreshData();
+                    scheduleAutoBackup();
+                    sync.conflicts = await getSyncConflicts(endpointKey);
+                    sync.conflictEndpointKey = endpointKey;
+                    sync.conflictIndex = 0;
+                    sync.conflictSelections = {};
+                    sync.unlocked = true;
+                    renderConflictBanner();
+                    renderSyncSettings();
+                    showToast(t('conflictDetectedToast', { count: sync.conflicts.length }));
+                    return 'conflicts';
+                }
+                merged = mergeResult.dataset;
                 setSyncPhase('syncPhaseEncrypting');
                 const encrypted = await encryptSyncData(merged, sync.passphrase);
                 setSyncPhase('syncPhaseWriting');
@@ -1816,6 +2505,11 @@
             sync.unlocked = true;
             sync.lastSyncAt = new Date().toISOString();
             sync.lastNotifiedError = '';
+            sync.conflicts = [];
+            sync.conflictEndpointKey = endpointKey;
+            await saveSyncBaseline(endpointKey, merged);
+            await deleteSyncBaseline(pendingSyncBaselineKey(endpointKey));
+            await replaceSyncConflicts(endpointKey, []);
             await saveSyncPreferences();
             scheduleAutoBackup();
             if (notify) showToast(t('syncComplete', {
@@ -2389,6 +3083,217 @@
         };
     }
 
+    function threeWayMergeSyncDatasets(base, local, remote) {
+        const baseEntities = createSyncEntityMap(base);
+        const localEntities = createSyncEntityMap(local);
+        const remoteEntities = createSyncEntityMap(remote);
+        const syncIds = new Set([
+            ...baseEntities.keys(),
+            ...localEntities.keys(),
+            ...remoteEntities.keys(),
+        ]);
+        const dataset = emptySyncDataset();
+        const conflicts = [];
+
+        syncIds.forEach((syncId) => {
+            const baseEntity = baseEntities.get(syncId) || { kind: 'absent' };
+            const localEntity = localEntities.get(syncId) || { kind: 'absent' };
+            const remoteEntity = remoteEntities.get(syncId) || { kind: 'absent' };
+            const localChanged = !syncEntitiesEquivalent(localEntity, baseEntity);
+            const remoteChanged = !syncEntitiesEquivalent(remoteEntity, baseEntity);
+
+            if (!localChanged && !remoteChanged) {
+                appendSyncEntity(dataset, newerSyncEntity(localEntity, remoteEntity));
+                return;
+            }
+            if (localChanged && !remoteChanged) {
+                appendSyncEntity(dataset, localEntity);
+                return;
+            }
+            if (!localChanged && remoteChanged) {
+                appendSyncEntity(dataset, remoteEntity);
+                return;
+            }
+            if (syncEntitiesEquivalent(localEntity, remoteEntity)) {
+                appendSyncEntity(dataset, newerSyncEntity(localEntity, remoteEntity));
+                return;
+            }
+
+            if (localEntity.kind === 'item' && remoteEntity.kind === 'item') {
+                const fieldResult = mergeConcurrentSyncItems(
+                    baseEntity.kind === 'item' ? baseEntity.value : null,
+                    localEntity.value,
+                    remoteEntity.value,
+                );
+                if (!fieldResult.fields.length) {
+                    dataset.items.push(fieldResult.suggested);
+                    return;
+                }
+                conflicts.push({
+                    syncId,
+                    type: 'fields',
+                    base: cloneSyncEntity(baseEntity),
+                    local: cloneSyncEntity(localEntity),
+                    remote: cloneSyncEntity(remoteEntity),
+                    suggested: fieldResult.suggested,
+                    fields: fieldResult.fields,
+                });
+                dataset.items.push(fieldResult.suggested);
+                return;
+            }
+
+            conflicts.push({
+                syncId,
+                type: 'delete-edit',
+                base: cloneSyncEntity(baseEntity),
+                local: cloneSyncEntity(localEntity),
+                remote: cloneSyncEntity(remoteEntity),
+                suggested: localEntity.kind === 'item'
+                    ? { ...localEntity.value }
+                    : remoteEntity.kind === 'item' ? { ...remoteEntity.value } : null,
+                localRelated: localEntity.kind === 'item' && !localEntity.value.url
+                    ? collectSyncDescendants(local, syncId)
+                    : [],
+                remoteRelated: remoteEntity.kind === 'item' && !remoteEntity.value.url
+                    ? collectSyncDescendants(remote, syncId)
+                    : [],
+                fields: [],
+            });
+            appendSyncEntity(dataset, localEntity.kind === 'absent' ? remoteEntity : localEntity);
+        });
+
+        sanitizeSyncHierarchy(dataset.items);
+        dataset.items.sort((left, right) => left.syncId.localeCompare(right.syncId));
+        dataset.tombstones.sort((left, right) => left.syncId.localeCompare(right.syncId));
+        return { dataset, conflicts };
+    }
+
+    function collectSyncDescendants(dataset, parentSyncId) {
+        const result = [];
+        const queue = [parentSyncId];
+        const visited = new Set(queue);
+        while (queue.length) {
+            const current = queue.shift();
+            (dataset?.items || []).forEach((item) => {
+                if (item.parentSyncId !== current || visited.has(item.syncId)) return;
+                visited.add(item.syncId);
+                result.push({ ...item, tags: [...item.tags] });
+                if (!item.url) queue.push(item.syncId);
+            });
+        }
+        return result;
+    }
+
+    function createSyncEntityMap(dataset) {
+        const entities = new Map();
+        (dataset?.items || []).forEach((item) => entities.set(item.syncId, { kind: 'item', value: item }));
+        (dataset?.tombstones || []).forEach((tombstone) => {
+            const current = entities.get(tombstone.syncId);
+            if (!current || current.kind !== 'item' || tombstoneWins(tombstone, current.value)) {
+                entities.set(tombstone.syncId, { kind: 'deleted', value: tombstone });
+            }
+        });
+        return entities;
+    }
+
+    function syncEntitiesEquivalent(left, right) {
+        if (left.kind !== right.kind) return false;
+        if (left.kind === 'absent' || left.kind === 'deleted') return true;
+        return syncItemFields().every((field) => syncFieldValuesEqual(left.value[field], right.value[field]));
+    }
+
+    function syncItemFields() {
+        return ['title', 'url', 'description', 'tags', 'isPinned', 'parentSyncId'];
+    }
+
+    function syncFieldValuesEqual(left, right) {
+        if (Array.isArray(left) || Array.isArray(right)) {
+            const leftValues = parseTags(left).slice().sort();
+            const rightValues = parseTags(right).slice().sort();
+            return JSON.stringify(leftValues) === JSON.stringify(rightValues);
+        }
+        return (left ?? null) === (right ?? null);
+    }
+
+    function newerSyncEntity(left, right) {
+        if (left.kind === 'absent') return right;
+        if (right.kind === 'absent') return left;
+        if (left.kind !== right.kind) return left;
+        const dateField = left.kind === 'deleted' ? 'deletedAt' : 'updatedAt';
+        return compareSyncRecords(left.value, right.value, dateField) >= 0 ? left : right;
+    }
+
+    function appendSyncEntity(dataset, entity) {
+        if (entity.kind === 'item') dataset.items.push({ ...entity.value, tags: [...entity.value.tags] });
+        if (entity.kind === 'deleted') dataset.tombstones.push({ ...entity.value });
+    }
+
+    function cloneSyncEntity(entity) {
+        if (entity.kind === 'absent') return { kind: 'absent' };
+        return {
+            kind: entity.kind,
+            value: {
+                ...entity.value,
+                ...(entity.kind === 'item' ? { tags: [...entity.value.tags] } : {}),
+            },
+        };
+    }
+
+    function mergeConcurrentSyncItems(base, local, remote) {
+        const suggested = {
+            ...local,
+            tags: [...local.tags],
+            createdAt: earliestSyncDate(local.createdAt, remote.createdAt),
+        };
+        const conflictFields = [];
+
+        for (const field of syncItemFields()) {
+            if (field === 'tags') {
+                suggested.tags = mergeSyncTagSets(base?.tags || [], local.tags, remote.tags);
+                continue;
+            }
+            const baseValue = base ? base[field] : undefined;
+            const localValue = local[field];
+            const remoteValue = remote[field];
+            if (syncFieldValuesEqual(localValue, remoteValue)) {
+                suggested[field] = localValue;
+            } else if (base && syncFieldValuesEqual(localValue, baseValue)) {
+                suggested[field] = remoteValue;
+            } else if (base && syncFieldValuesEqual(remoteValue, baseValue)) {
+                suggested[field] = localValue;
+            } else {
+                suggested[field] = localValue;
+                conflictFields.push(field);
+            }
+        }
+
+        const newest = compareSyncRecords(local, remote, 'updatedAt') >= 0 ? local : remote;
+        suggested.updatedAt = newest.updatedAt;
+        suggested.modifiedBy = newest.modifiedBy;
+        return { suggested, fields: conflictFields };
+    }
+
+    function mergeSyncTagSets(base, local, remote) {
+        const baseSet = new Set(parseTags(base));
+        const localSet = new Set(parseTags(local));
+        const remoteSet = new Set(parseTags(remote));
+        const allTags = new Set([...baseSet, ...localSet, ...remoteSet]);
+        const result = [];
+        allTags.forEach((tag) => {
+            const inBase = baseSet.has(tag);
+            const inLocal = localSet.has(tag);
+            const inRemote = remoteSet.has(tag);
+            if (inLocal === inRemote ? inLocal : inLocal === inBase ? inRemote : inLocal) result.push(tag);
+        });
+        return result.sort((left, right) => left.localeCompare(right, currentLocale()));
+    }
+
+    function earliestSyncDate(left, right) {
+        if (!validDate(left)) return right;
+        if (!validDate(right)) return left;
+        return Date.parse(left) <= Date.parse(right) ? left : right;
+    }
+
     function compareSyncRecords(left, right, dateField) {
         const timeDifference = Date.parse(left[dateField]) - Date.parse(right[dateField]);
         if (timeDifference) return timeDifference;
@@ -2526,6 +3431,7 @@
         renderSidebar();
         renderBreadcrumbs();
         renderContent();
+        renderConflictBanner();
     }
 
     function renderSidebar() {
@@ -2572,6 +3478,7 @@
         const children = (childrenMap.get(folder.id) || []).filter((child) => !ancestors.has(child.id));
         const row = createElement('div', `folder-tree-row${state.view.type === 'folder' && state.view.value === folder.id ? ' active' : ''}`);
         row.dataset.id = String(folder.id);
+        row.classList.toggle('has-conflict', state.sync.conflicts.some((conflict) => conflict.syncId === folder.syncId));
 
         const toggle = createElement('button', `folder-toggle${children.length ? '' : ' is-placeholder'}`);
         toggle.type = 'button';
@@ -2743,6 +3650,7 @@
     function createFolderCard(folder) {
         const card = createElement('article', 'folder-card');
         card.dataset.id = String(folder.id);
+        card.classList.toggle('has-conflict', state.sync.conflicts.some((conflict) => conflict.syncId === folder.syncId));
 
         const openButton = createElement('button', 'folder-card-main');
         openButton.type = 'button';
@@ -2771,6 +3679,7 @@
     function createBookmarkCard(bookmark) {
         const card = createElement('article', 'bookmark-card');
         card.dataset.id = String(bookmark.id);
+        card.classList.toggle('has-conflict', state.sync.conflicts.some((conflict) => conflict.syncId === bookmark.syncId));
         const href = getSafeHref(bookmark.url);
         const hostname = getHostname(href || bookmark.url);
 
@@ -2874,6 +3783,7 @@
     }
 
     function openItemDialog(kind, item = null) {
+        if (item && openConflictForItem(item)) return;
         const isFolderItem = kind === 'folder';
         ui.itemId.value = item ? String(item.id) : '';
         ui.itemKind.value = kind;
@@ -3008,6 +3918,7 @@
     }
 
     async function toggleFavorite(bookmark) {
+        if (openConflictForItem(bookmark)) return;
         const updated = toStorageRecord(bookmark);
         updated.isPinned = !bookmark.isPinned;
         updated.updatedAt = new Date().toISOString();
@@ -3019,6 +3930,7 @@
     }
 
     async function deleteItem(item) {
+        if (openConflictForItem(item)) return;
         const descendantIds = isFolder(item) ? getAllDescendantIds(item.id) : [];
         if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
 
@@ -3090,6 +4002,10 @@
 
     async function moveItem(itemId, parentId) {
         const item = findItem(itemId);
+        if (openConflictForItem(item)) {
+            clearDragState();
+            return;
+        }
         if (!item || item.parentId === parentId) {
             clearDragState();
             return;

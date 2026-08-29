@@ -12,7 +12,7 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/script.js?v=20260829-2" defer></script>
+    <script src="js/script.js?v=20260829-4" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -140,6 +140,12 @@
             </header>
 
             <section class="content">
+                <section class="conflict-banner hidden" id="conflict-banner" aria-live="polite">
+                    <span class="conflict-banner-icon"><svg><use href="#icon-database"></use></svg></span>
+                    <span class="conflict-banner-copy"><strong id="conflict-banner-title">发现同步冲突</strong><small id="conflict-banner-detail">双方版本均已安全保留，请在应用内选择处理方式。</small></span>
+                    <button class="button button-secondary" id="open-conflict-center-button" type="button" data-i18n="reviewConflicts">处理冲突</button>
+                </section>
+
                 <nav class="breadcrumbs hidden" id="breadcrumbs" aria-label="文件夹路径" data-i18n-aria-label="folderPathLabel"></nav>
 
                 <div class="page-heading">
@@ -362,6 +368,52 @@
                 <span class="dialog-footer-spacer"></span>
                 <button class="button button-secondary" id="sync-dialog-cancel-button" type="button" data-i18n="close">关闭</button>
                 <button class="button button-primary" id="sync-now-button" type="button" data-i18n="syncNow">立即同步</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog class="item-dialog conflict-dialog" id="conflict-dialog">
+        <div class="dialog-panel">
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="conflictEyebrow">同步安全</p><h2 id="conflict-dialog-title" data-i18n="conflictCenter">冲突中心</h2></div>
+                <button class="icon-button dialog-close" id="conflict-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="conflict-content">
+                <div class="conflict-progress"><span id="conflict-progress-label">1 / 1</span><span id="conflict-detected-time"></span></div>
+                <div class="conflict-heading">
+                    <span class="conflict-kind" id="conflict-kind-label">书签</span>
+                    <h3 id="conflict-item-title">未命名</h3>
+                    <p id="conflict-explanation"></p>
+                </div>
+
+                <div class="conflict-version-grid">
+                    <section class="conflict-version-card local-version">
+                        <header><strong data-i18n="localVersion">本机版本</strong><small id="conflict-local-device"></small></header>
+                        <div id="conflict-local-summary"></div>
+                    </section>
+                    <section class="conflict-version-card remote-version">
+                        <header><strong data-i18n="remoteVersion">远端版本</strong><small id="conflict-remote-device"></small></header>
+                        <div id="conflict-remote-summary"></div>
+                    </section>
+                </div>
+
+                <section class="field-merge-section" id="field-merge-section">
+                    <div class="field-merge-header"><strong data-i18n="choosePerField">逐字段选择</strong><small data-i18n="choosePerFieldHint">只列出双方同时修改且结果不同的字段</small></div>
+                    <div class="conflict-fields" id="conflict-fields"></div>
+                </section>
+            </div>
+
+            <footer class="dialog-footer conflict-dialog-footer">
+                <button class="button button-quiet" id="conflict-previous-button" type="button" data-i18n="previousConflict">上一项</button>
+                <button class="button button-quiet" id="conflict-next-button" type="button" data-i18n="nextConflict">下一项</button>
+                <span class="dialog-footer-spacer"></span>
+                <button class="button button-secondary" id="keep-both-button" type="button" data-i18n="keepBoth">保留两个副本</button>
+                <button class="button button-secondary" id="keep-local-button" type="button" data-i18n="keepLocal">保留本机</button>
+                <button class="button button-secondary" id="keep-remote-button" type="button" data-i18n="keepRemote">保留远端</button>
+                <button class="button button-primary" id="apply-field-merge-button" type="button" data-i18n="applySelectedMerge">应用所选合并</button>
             </footer>
         </div>
     </dialog>
