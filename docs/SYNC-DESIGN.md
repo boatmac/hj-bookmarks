@@ -90,14 +90,14 @@ UI
 - WebDAV/Koofr 密码或应用密码
 - 加密口令
 
-用户明确开启“在当前标签页中记住凭据”后，上述两个敏感值写入 `sessionStorage`：
+用户明确开启“刷新本标签页时保留凭据”后，上述两个敏感值写入 `sessionStorage`。恢复时同时检查 Navigation Timing：
 
-- 刷新时恢复；
-- 取消选项或移除同步配置时立即删除；
-- 关闭标签页后通常由浏览器清除；
-- 不写入 IndexedDB 或 localStorage。
+- `reload`：允许恢复；
+- `navigate`：先删除再保持锁定；
+- `back_forward`：先删除再保持锁定；
+- 无法识别导航类型：按非刷新处理。
 
-浏览器的会话恢复功能可能恢复 sessionStorage，因此共享设备默认保持关闭。
+取消选项或移除同步配置时立即删除；不写入 IndexedDB 或 localStorage。这样即使浏览器复用了 sessionStorage，普通重新打开和会话恢复也不会自动解锁。
 
 ## 标准 WebDAV Adapter
 

@@ -127,8 +127,8 @@
             autoCreateWebDavFolderHint: '目录不存在时仅创建同步文件所在的最后一级目录',
             automaticSync: '页面打开时自动同步',
             automaticSyncHint: '解锁成功后，数据变化会自动同步至 WebDAV',
-            rememberSessionCredentials: '在当前标签页中记住凭据',
-            rememberSessionCredentialsHint: '刷新后保留，取消勾选或关闭标签页后清除',
+            rememberSessionCredentials: '刷新本标签页时保留凭据',
+            rememberSessionCredentialsHint: '仅刷新时恢复；关闭、重新打开或离开页面后清除',
             lastSync: '最近同步',
             syncSecurityNote: '书签会先在本机加密后再上传；密码和加密口令不会写入远端文件。',
             syncCorsNote: '如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。',
@@ -237,7 +237,7 @@
             syncFailed: ({ message }) => `同步失败：${message}`,
             syncAutoEnabled: '自动同步已开启；本次会话解锁后将自动运行',
             syncAutoPaused: '自动同步已暂停',
-            sessionCredentialsRemembered: '刷新后将保持凭据；关闭标签页后自动清除',
+            sessionCredentialsRemembered: '已开启：刷新本标签页时会恢复凭据',
             sessionCredentialsCleared: '已停止记住凭据，并从当前标签页存储中清除',
             sessionStorageUnavailable: '当前浏览器不允许使用标签页存储，凭据不会被记住',
             syncDisconnected: '同步配置已移除，远端文件未被删除',
@@ -465,8 +465,8 @@
             autoCreateWebDavFolderHint: 'Create only the final folder containing the sync file when it does not exist',
             automaticSync: 'Sync automatically while open',
             automaticSyncHint: 'After unlocking, data changes are synchronized to WebDAV automatically',
-            rememberSessionCredentials: 'Remember credentials in this tab',
-            rememberSessionCredentialsHint: 'Keep across refreshes; clear when unchecked or when the tab is closed',
+            rememberSessionCredentials: 'Keep credentials when refreshing this tab',
+            rememberSessionCredentialsHint: 'Restore only on refresh; clear after closing, reopening, or leaving the page',
             lastSync: 'Last sync',
             syncSecurityNote: 'Bookmarks are encrypted on this device before upload; passwords and the encryption passphrase are never written to the remote file.',
             syncCorsNote: 'If the connection fails, check the sync URL and app password, or contact the sync service administrator.',
@@ -575,7 +575,7 @@
             syncFailed: ({ message }) => `Sync failed: ${message}`,
             syncAutoEnabled: 'Automatic sync enabled; it will run after this session is unlocked',
             syncAutoPaused: 'Automatic sync paused',
-            sessionCredentialsRemembered: 'Credentials will survive refreshes and clear when this tab closes',
+            sessionCredentialsRemembered: 'Enabled: credentials will be restored when this tab is refreshed',
             sessionCredentialsCleared: 'Credential retention disabled and tab storage cleared',
             sessionStorageUnavailable: 'Tab storage is unavailable in this browser; credentials will not be remembered',
             syncDisconnected: 'Sync configuration removed; the remote file was not deleted',
@@ -1847,6 +1847,10 @@
     }
 
     function restoreSessionSyncCredentials() {
+        if (!isPageReload()) {
+            safeSessionStorageRemove(SYNC_SESSION_CREDENTIALS_KEY);
+            return false;
+        }
         const raw = safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY);
         if (!raw) return false;
         try {
@@ -1866,6 +1870,12 @@
             safeSessionStorageRemove(SYNC_SESSION_CREDENTIALS_KEY);
             return false;
         }
+    }
+
+    function isPageReload() {
+        const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
+        if (navigationEntry?.type) return navigationEntry.type === 'reload';
+        return performance.navigation?.type === 1;
     }
 
     function saveSessionSyncCredentials() {
