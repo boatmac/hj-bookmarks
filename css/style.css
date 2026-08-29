@@ -2038,6 +2038,21 @@ svg {
     opacity: 0.65;
 }
 
+.remember-credentials-option {
+    min-height: 62px;
+    background: color-mix(in srgb, var(--accent-soft) 58%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+    border-radius: 12px;
+}
+
+.remember-credentials-option .setting-copy strong {
+    color: var(--accent);
+}
+
+.remember-credentials-option:focus-within {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
 .sync-options-list .setting-row {
     min-height: 61px;
 }

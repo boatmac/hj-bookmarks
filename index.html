@@ -12,7 +12,7 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/script.js?v=20260829-7" defer></script>
+    <script src="js/script.js?v=20260829-8" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -340,6 +340,14 @@
                     </label>
                 </div>
 
+                <label class="setting-row settings-switch-row remember-credentials-option">
+                    <span class="setting-copy"><strong data-i18n="rememberSessionCredentials">在当前标签页中记住凭据</strong><small data-i18n="rememberSessionCredentialsHint">刷新后保留，取消勾选或关闭标签页后清除</small></span>
+                    <span class="switch-control">
+                        <input id="remember-session-credentials-toggle" type="checkbox">
+                        <span></span>
+                    </span>
+                </label>
+
                 <div class="settings-list sync-options-list">
                     <label class="setting-row settings-switch-row">
                         <span class="setting-copy"><strong data-i18n="autoCreateWebDavFolder">自动创建同步目录</strong><small data-i18n="autoCreateWebDavFolderHint">目录不存在时仅创建同步文件所在的最后一级目录</small></span>
@@ -355,13 +363,6 @@
                             <span></span>
                         </span>
                     </label>
-                    <label class="setting-row settings-switch-row">
-                        <span class="setting-copy"><strong data-i18n="rememberSessionCredentials">在当前标签页中记住凭据</strong><small data-i18n="rememberSessionCredentialsHint">刷新后保留，取消勾选或关闭标签页后清除</small></span>
-                        <span class="switch-control">
-                            <input id="remember-session-credentials-toggle" type="checkbox">
-                            <span></span>
-                        </span>
-                    </label>
                     <div class="setting-row information-row">
                         <span class="setting-copy"><strong data-i18n="lastSync">最近同步</strong><small id="last-sync-value">从未同步</small></span>
                     </div>
@@ -370,7 +371,7 @@
                     </div>
                 </div>
 
-                <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。</p>
+                <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。凭据默认仅存内存；勾选后只写入当前标签页的 sessionStorage。</p>
                 <p class="sync-compatibility" data-i18n="syncCorsNote">Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需配置跨域许可。</p>
             </div>
 
