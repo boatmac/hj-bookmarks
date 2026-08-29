@@ -44,12 +44,15 @@
             searchPlaceholder: '搜索标题、网址、描述或标签……',
             clearSearch: '清除搜索',
             importTooltip: '合并导入 JSON 或浏览器书签 HTML',
-            import: '导入',
+            import: '导入数据',
             exportTooltip: '备份、同步与数据管理',
             export: '备份/同步',
-            jsonBackup: 'JSON 备份',
+            syncSection: '同步与冲突',
+            backupTransferSection: '备份与迁移',
+            dataManagementSection: '数据管理',
+            jsonBackup: '导出 JSON 备份',
             jsonBackupDescription: '保留全部应用数据',
-            browserHtml: '浏览器 HTML',
+            browserHtml: '导出浏览器 HTML',
             browserHtmlDescription: '可导入其他浏览器',
             automaticBackup: '自动本地备份',
             backupEyebrow: '数据保护',
@@ -370,12 +373,15 @@
             searchPlaceholder: 'Search titles, URLs, descriptions, or tags…',
             clearSearch: 'Clear search',
             importTooltip: 'Merge a JSON backup or browser bookmark HTML',
-            import: 'Import',
+            import: 'Import data',
             exportTooltip: 'Backups, synchronization, and data management',
             export: 'Backup & sync',
-            jsonBackup: 'JSON backup',
+            syncSection: 'SYNC & CONFLICTS',
+            backupTransferSection: 'BACKUP & TRANSFER',
+            dataManagementSection: 'DATA MANAGEMENT',
+            jsonBackup: 'Export JSON backup',
             jsonBackupDescription: 'Preserves all application data',
-            browserHtml: 'Browser HTML',
+            browserHtml: 'Export browser HTML',
             browserHtmlDescription: 'Import into another browser',
             automaticBackup: 'Automatic local backup',
             backupEyebrow: 'DATA PROTECTION',
@@ -1460,6 +1466,7 @@
         }[status];
 
         ui.backupStatusCard.dataset.state = status;
+        ui.backupSettingsButton.dataset.state = status;
         ui.exportMenu.dataset.backupState = status;
         ui.backupStatusTitle.textContent = statusContent[0];
         ui.backupStatusDetail.textContent = statusContent[1];
@@ -2319,6 +2326,7 @@
         }[status];
 
         ui.syncStatusCard.dataset.state = status;
+        ui.syncSettingsButton.dataset.state = status;
         ui.exportMenu.dataset.syncState = status;
         ui.syncStatusTitle.textContent = statusContent[0];
         ui.syncStatusDetail.textContent = statusContent[1];

@@ -818,8 +818,11 @@ svg {
     top: calc(100% + 9px);
     right: 0;
     z-index: 60;
-    width: 230px;
+    width: 250px;
+    max-height: calc(100vh - 96px);
     padding: 7px;
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--panel);
     border: 1px solid var(--border-strong);
     border-radius: 13px;
@@ -862,22 +865,24 @@ svg {
 
 .export-popover hr {
     height: 1px;
-    margin: 6px 4px;
+    margin: 7px 4px;
     background: var(--border);
     border: 0;
+}
+
+.export-section-label {
+    margin: 0;
+    padding: 7px 11px 4px;
+    color: var(--text-faint);
+    font-size: 8px;
+    font-weight: 780;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .export-popover .danger-menu-item strong,
 .export-popover .danger-menu-item small {
     color: var(--danger);
-}
-
-.export-popover .backup-menu-item {
-    background: var(--accent-soft);
-}
-
-.export-popover .backup-menu-item strong {
-    color: var(--accent);
 }
 
 .export-popover .backup-menu-item small,
@@ -888,13 +893,40 @@ svg {
     white-space: nowrap;
 }
 
-.export-popover .sync-menu-item {
-    margin-top: 3px;
-    background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+.export-popover .backup-menu-item[data-state="ready"],
+.export-popover .backup-menu-item[data-state="running"],
+.export-popover .sync-menu-item[data-state="ready"],
+.export-popover .sync-menu-item[data-state="running"] {
+    background: color-mix(in srgb, var(--accent-soft) 72%, transparent);
 }
 
-.export-popover .sync-menu-item strong {
+.export-popover .backup-menu-item[data-state="ready"] strong,
+.export-popover .backup-menu-item[data-state="running"] strong,
+.export-popover .sync-menu-item[data-state="ready"] strong,
+.export-popover .sync-menu-item[data-state="running"] strong {
     color: var(--accent);
+}
+
+.export-popover .backup-menu-item[data-state="error"],
+.export-popover .sync-menu-item[data-state="error"] {
+    background: var(--danger-soft);
+}
+
+.export-popover .backup-menu-item[data-state="error"] strong,
+.export-popover .backup-menu-item[data-state="error"] small,
+.export-popover .sync-menu-item[data-state="error"] strong,
+.export-popover .sync-menu-item[data-state="error"] small {
+    color: var(--danger);
+}
+
+.export-popover .backup-menu-item[data-state="permission"],
+.export-popover .sync-menu-item[data-state="conflict"] {
+    background: color-mix(in srgb, #d69724 12%, var(--panel));
+}
+
+.export-popover .backup-menu-item[data-state="permission"] strong,
+.export-popover .sync-menu-item[data-state="conflict"] strong {
+    color: #b97a12;
 }
 
 .export-popover .conflict-menu-item.has-conflicts {
