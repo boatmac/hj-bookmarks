@@ -123,7 +123,7 @@
             automaticSyncHint: '解锁成功后，数据变化会自动同步至 WebDAV',
             lastSync: '最近同步',
             syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。',
-            syncCorsNote: '跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头；从本地文件打开时 Origin 通常为 null。',
+            syncCorsNote: 'Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头。',
             disconnectSync: '移除同步配置',
             syncNow: '立即同步',
             syncLastNever: '从未同步',
@@ -141,10 +141,12 @@
             syncLockedDetail: '请输入 WebDAV 密码和加密口令，然后点击“立即同步”。',
             syncReadyTitle: 'WebDAV 同步已解锁',
             syncReadyDetail: '本页保持打开时，书签变更可以自动同步。',
+            syncReadyKoofrDetail: '已通过支持浏览器 CORS 的 Koofr REST API 连接。',
             syncRunningTitle: '正在进行加密同步',
             syncRunningDetail: '正在读取远端数据、合并更改并安全写回…',
             syncPhasePreparing: '正在准备同步并保存本机配置…',
-            syncPhaseReading: '正在连接 WebDAV 并读取远端文件…',
+            syncPhaseReading: '正在连接远端并读取同步文件…',
+            syncPhaseResolvingKoofr: '检测到 Koofr，正在查找对应的存储空间…',
             syncPhaseCreatingFolder: '远端目录不存在，正在创建最后一级目录…',
             syncPhaseMerging: '正在比较本机与远端版本并合并更改…',
             syncPhaseEncrypting: '正在使用 AES-GCM 加密合并后的数据…',
@@ -166,7 +168,9 @@
             syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
             syncWriteFailed: ({ status }) => `写入远端文件失败（HTTP ${status}）。`,
             syncCreateDirectoryFailed: ({ status }) => `创建 WebDAV 同步目录失败（HTTP ${status}）。`,
-            syncParentDirectoryMissing: '更上层的 WebDAV 路径不存在；应用只会自动创建最后一级目录，请先创建其父目录。',
+            syncParentDirectoryMissing: '更上层的远端路径不存在；应用只会自动创建最后一级目录，请先创建其父目录。',
+            koofrMountNotFound: ({ name }) => `没有找到名为“${name}”的 Koofr 存储空间。`,
+            koofrApiInvalid: 'Koofr API 返回了无法识别的数据。',
             syncConflictRetryFailed: '远端文件在同步期间持续变化，请稍后重试。',
             syncDecryptFailed: '无法解密远端文件，请确认加密口令是否正确。',
             syncRemoteInvalid: '远端同步文件格式不正确。',
@@ -398,7 +402,7 @@
             automaticSyncHint: 'After unlocking, data changes are synchronized to WebDAV automatically',
             lastSync: 'Last sync',
             syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. The WebDAV password and encryption passphrase are never persisted and must be entered again after reopening the page.',
-            syncCorsNote: 'Cross-origin WebDAV must allow Origin, Authorization, GET, PUT, MKCOL, and conditional request headers. Pages opened from a local file usually send Origin: null.',
+            syncCorsNote: 'Koofr WebDAV URLs automatically use the CORS-enabled official REST API. Other WebDAV services must allow Origin, Authorization, GET, PUT, MKCOL, and conditional request headers.',
             disconnectSync: 'Remove sync configuration',
             syncNow: 'Sync now',
             syncLastNever: 'Never',
@@ -416,10 +420,12 @@
             syncLockedDetail: 'Enter the WebDAV password and encryption passphrase, then click “Sync now”.',
             syncReadyTitle: 'WebDAV sync is unlocked',
             syncReadyDetail: 'Bookmark changes can sync automatically while this page remains open.',
+            syncReadyKoofrDetail: 'Connected through the browser-compatible Koofr REST API.',
             syncRunningTitle: 'Encrypted synchronization in progress',
             syncRunningDetail: 'Reading remote data, merging changes, and writing them back securely…',
             syncPhasePreparing: 'Preparing synchronization and saving local settings…',
-            syncPhaseReading: 'Connecting to WebDAV and reading the remote file…',
+            syncPhaseReading: 'Connecting to remote storage and reading the sync file…',
+            syncPhaseResolvingKoofr: 'Koofr detected; locating the corresponding storage mount…',
             syncPhaseCreatingFolder: 'The remote folder is missing; creating the final folder…',
             syncPhaseMerging: 'Comparing local and remote versions and merging changes…',
             syncPhaseEncrypting: 'Encrypting the merged data with AES-GCM…',
@@ -441,7 +447,9 @@
             syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
             syncWriteFailed: ({ status }) => `Could not write the remote file (HTTP ${status}).`,
             syncCreateDirectoryFailed: ({ status }) => `Could not create the WebDAV sync folder (HTTP ${status}).`,
-            syncParentDirectoryMissing: 'A higher-level WebDAV path does not exist. The app creates only the final folder; create its parent first.',
+            syncParentDirectoryMissing: 'A higher-level remote path does not exist. The app creates only the final folder; create its parent first.',
+            koofrMountNotFound: ({ name }) => `No Koofr storage mount named “${name}” was found.`,
+            koofrApiInvalid: 'The Koofr API returned unrecognized data.',
             syncConflictRetryFailed: 'The remote file kept changing during synchronization. Try again later.',
             syncDecryptFailed: 'Could not decrypt the remote file. Check the encryption passphrase.',
             syncRemoteInvalid: 'The remote synchronization file has an invalid format.',
@@ -583,6 +591,7 @@
             supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
             deviceId: '',
             endpoint: '',
+            provider: '',
             username: '',
             password: '',
             passphrase: '',
@@ -1629,7 +1638,7 @@
             locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
             ready: [
                 t('syncReadyTitle'),
-                t('syncReadyDetail'),
+                t(sync.provider === 'koofr' ? 'syncReadyKoofrDetail' : 'syncReadyDetail'),
                 t('syncMenuReady', { time: formatBackupTime(sync.lastSyncAt, true) }),
             ],
         }[status];
@@ -1687,6 +1696,7 @@
         }
         Object.assign(state.sync, {
             endpoint: '',
+            provider: '',
             username: '',
             password: '',
             passphrase: '',
@@ -1764,13 +1774,15 @@
         await saveSyncPreferences();
 
         const operation = (async () => {
+            const remoteContext = await createSyncRemoteContext(endpoint);
+            sync.provider = remoteContext.provider;
             let merged = null;
             for (let attempt = 0; attempt < 3; attempt += 1) {
                 setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
-                const remote = await readRemoteSyncFile(endpoint);
+                const remote = await readRemoteSyncFile(endpoint, remoteContext);
                 if (!remote.exists && sync.createDirectory) {
                     setSyncPhase('syncPhaseCreatingFolder');
-                    await ensureWebDavParentDirectory(endpoint);
+                    await ensureRemoteParentDirectory(endpoint, remoteContext);
                 }
                 setSyncPhase('syncPhaseMerging');
                 await refreshData();
@@ -1779,7 +1791,7 @@
                 setSyncPhase('syncPhaseEncrypting');
                 const encrypted = await encryptSyncData(merged, sync.passphrase);
                 setSyncPhase('syncPhaseWriting');
-                const writeResult = await writeRemoteSyncFile(endpoint, encrypted, remote);
+                const writeResult = await writeRemoteSyncFile(endpoint, encrypted, remote, remoteContext);
                 if (writeResult === 'conflict') {
                     merged = null;
                     continue;
@@ -1902,7 +1914,74 @@
         }
     }
 
-    async function readRemoteSyncFile(endpoint) {
+    async function createSyncRemoteContext(endpoint) {
+        const url = new URL(endpoint);
+        const isKoofr = /(^|\.)koofr\.net$/i.test(url.hostname) && /^\/dav\//i.test(url.pathname);
+        if (!isKoofr) return { provider: 'webdav' };
+
+        setSyncPhase('syncPhaseResolvingKoofr');
+        const segments = url.pathname.split('/').filter(Boolean).map((segment) => {
+            try {
+                return decodeURIComponent(segment);
+            } catch {
+                throw new Error(t('syncUrlInvalid'));
+            }
+        });
+        if (segments.length < 3 || segments[0].toLowerCase() !== 'dav' || segments.some((segment) => segment.includes('/'))) {
+            throw new Error(t('syncUrlInvalid'));
+        }
+
+        const mountName = segments[1];
+        const mountsUrl = new URL('/api/v2/mounts', url.origin);
+        const response = await fetchWebDav(mountsUrl.toString(), {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
+        if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
+
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            throw new Error(t('koofrApiInvalid'));
+        }
+        const mounts = Array.isArray(payload?.mounts) ? payload.mounts : [];
+        const normalizedName = mountName.toLocaleLowerCase('en-US');
+        const mount = mounts.find((candidate) => String(candidate?.name || '').toLocaleLowerCase('en-US') === normalizedName)
+            || (normalizedName === 'koofr' ? mounts.find((candidate) => candidate?.isPrimary === true) : null);
+        if (!mount?.id) throw new Error(t('koofrMountNotFound', { name: mountName }));
+
+        const pathSegments = segments.slice(2);
+        const fileName = pathSegments.pop();
+        const directoryPath = pathSegments.length ? `/${pathSegments.join('/')}` : '/';
+        const filePath = directoryPath === '/' ? `/${fileName}` : `${directoryPath}/${fileName}`;
+        return {
+            provider: 'koofr',
+            origin: url.origin,
+            mountId: String(mount.id),
+            mountName,
+            directoryPath,
+            fileName,
+            filePath,
+        };
+    }
+
+    function createKoofrApiUrl(context, action, { content = false, path = null, parameters = {} } = {}) {
+        const prefix = content ? '/content/api/v2' : '/api/v2';
+        const url = new URL(`${prefix}/mounts/${encodeURIComponent(context.mountId)}/files/${action}`, context.origin);
+        if (path !== null) url.searchParams.set('path', path);
+        Object.entries(parameters).forEach(([name, value]) => {
+            if (value !== null && value !== undefined && value !== '') url.searchParams.set(name, String(value));
+        });
+        return url.toString();
+    }
+
+    async function readRemoteSyncFile(endpoint, context) {
+        if (context.provider === 'koofr') return readKoofrSyncFile(context);
         const response = await fetchWebDav(endpoint, {
             method: 'GET',
             headers: createWebDavHeaders(),
@@ -1925,7 +2004,55 @@
         };
     }
 
-    async function ensureWebDavParentDirectory(endpoint) {
+    async function readKoofrSyncFile(context) {
+        const infoResponse = await fetchWebDav(createKoofrApiUrl(context, 'info', { path: context.filePath }), {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if (infoResponse.status === 404) return { exists: false, token: null, data: emptySyncDataset() };
+        if (infoResponse.status === 401 || infoResponse.status === 403) throw new Error(t('syncAuthFailed'));
+        if (!infoResponse.ok) throw new Error(t('syncReadFailed', { status: infoResponse.status }));
+
+        let info;
+        try {
+            info = await infoResponse.json();
+        } catch {
+            throw new Error(t('koofrApiInvalid'));
+        }
+        if (info?.type !== 'file') throw new Error(t('koofrApiInvalid'));
+
+        const contentResponse = await fetchWebDav(createKoofrApiUrl(context, 'get', {
+            content: true,
+            path: context.filePath,
+        }), {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if (contentResponse.status === 404) return { exists: false, token: null, data: emptySyncDataset() };
+        if (contentResponse.status === 401 || contentResponse.status === 403) throw new Error(t('syncAuthFailed'));
+        if (!contentResponse.ok) throw new Error(t('syncReadFailed', { status: contentResponse.status }));
+        const text = await contentResponse.text();
+        const data = text.trim()
+            ? parseRemoteSyncDataset(await decryptSyncData(text, state.sync.passphrase))
+            : emptySyncDataset();
+        return {
+            exists: true,
+            token: {
+                hash: typeof info.hash === 'string' ? info.hash : '',
+                modified: Number.isFinite(Number(info.modified)) ? Number(info.modified) : null,
+            },
+            data,
+        };
+    }
+
+    async function ensureRemoteParentDirectory(endpoint, context) {
+        if (context.provider === 'koofr') return ensureKoofrParentDirectory(context);
         const directory = new URL(endpoint);
         directory.pathname = directory.pathname.slice(0, directory.pathname.lastIndexOf('/') + 1);
         if (directory.pathname === '/') return false;
@@ -1944,7 +2071,59 @@
         throw new Error(t('syncCreateDirectoryFailed', { status: response.status }));
     }
 
-    async function writeRemoteSyncFile(endpoint, content, remote) {
+    async function ensureKoofrParentDirectory(context) {
+        if (context.directoryPath === '/') return false;
+        const infoUrl = createKoofrApiUrl(context, 'info', { path: context.directoryPath });
+        const infoResponse = await fetchWebDav(infoUrl, {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if (infoResponse.ok) {
+            let info;
+            try {
+                info = await infoResponse.json();
+            } catch {
+                throw new Error(t('koofrApiInvalid'));
+            }
+            if (info?.type !== 'dir') throw new Error(t('syncCreateDirectoryFailed', { status: 409 }));
+            return false;
+        }
+        if (infoResponse.status === 401 || infoResponse.status === 403) throw new Error(t('syncAuthFailed'));
+        if (infoResponse.status !== 404) throw new Error(t('syncCreateDirectoryFailed', { status: infoResponse.status }));
+
+        const parts = context.directoryPath.split('/').filter(Boolean);
+        const name = parts.pop();
+        const parentPath = parts.length ? `/${parts.join('/')}` : '/';
+        const createResponse = await fetchWebDav(createKoofrApiUrl(context, 'folder', { path: parentPath }), {
+            method: 'POST',
+            headers: createWebDavHeaders(true),
+            body: JSON.stringify({ name }),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if ([200, 201, 204].includes(createResponse.status)) return true;
+        if (createResponse.status === 401 || createResponse.status === 403) throw new Error(t('syncAuthFailed'));
+        if (createResponse.status === 404) throw new Error(t('syncParentDirectoryMissing'));
+        if (createResponse.status === 409) {
+            const retryInfo = await fetchWebDav(infoUrl, {
+                method: 'GET',
+                headers: createWebDavHeaders(),
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'follow',
+            });
+            if (retryInfo.ok) return false;
+            throw new Error(t('syncParentDirectoryMissing'));
+        }
+        throw new Error(t('syncCreateDirectoryFailed', { status: createResponse.status }));
+    }
+
+    async function writeRemoteSyncFile(endpoint, content, remote, context) {
+        if (context.provider === 'koofr') return writeKoofrSyncFile(content, remote, context);
         const headers = createWebDavHeaders(true);
         if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
         else if (!remote.exists) headers.set('If-None-Match', '*');
@@ -1960,6 +2139,36 @@
         if (response.status === 412) return 'conflict';
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
         if (response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
+        if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
+        return 'written';
+    }
+
+    async function writeKoofrSyncFile(content, remote, context) {
+        const parameters = {
+            path: context.directoryPath,
+            info: true,
+            filename: context.fileName,
+            overwrite: true,
+            autorename: false,
+        };
+        if (remote.exists && remote.token?.hash) parameters.overwriteIfHash = remote.token.hash;
+        if (remote.exists && remote.token?.modified !== null) parameters.overwriteIfModified = remote.token.modified;
+        const form = new FormData();
+        form.append('file', new Blob([content], { type: 'application/json' }), context.fileName);
+        const response = await fetchWebDav(createKoofrApiUrl(context, 'put', {
+            content: true,
+            parameters,
+        }), {
+            method: 'POST',
+            headers: createWebDavHeaders(),
+            body: form,
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
+        if (response.status === 409 && remote.exists) return 'conflict';
+        if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
+        if (response.status === 404 || response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
         if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
         return 'written';
     }

@@ -94,7 +94,19 @@ https://dav.example.com/bookmarks/
 └── bookmarks-sync.enc.json
 ```
 
-也可以直接填写完整的 `.json` 文件地址。默认开启“自动创建同步目录”：首次同步时会通过 `MKCOL` 创建同步文件所在的最后一级目录；更上层路径仍需提前存在。该选项可以在同步设置中关闭。
+也可以直接填写完整的 `.json` 文件地址。默认开启“自动创建同步目录”：首次同步时会创建同步文件所在的最后一级目录；更上层路径仍需提前存在。该选项可以在同步设置中关闭。
+
+### Koofr
+
+应用会自动识别 `https://app.koofr.net/dav/...` 地址，并透明改用 Koofr 官方 REST API。该 API 明确允许本地 `file://` 页面通过 CORS 访问，因此不需要反向代理，也不会向不支持浏览器跨域的 Koofr WebDAV 端点发送请求。
+
+可直接继续填写 Koofr WebDAV 地址，例如：
+
+```text
+https://app.koofr.net/dav/Koofr/Example-Bookmarks/
+```
+
+用户名使用 Koofr 登录邮箱，密码使用 Koofr 生成的应用密码。应用会通过 Koofr API 查找 URL 中的 `Koofr` 存储空间、创建最后一级目录并上传加密同步文件。普通 WebDAV 服务仍使用标准 `GET`、`PUT` 和 `MKCOL`。
 
 同步特性：
 
@@ -116,9 +128,9 @@ https://dav.example.com/bookmarks/
 
 加密口令不会上传，也无法找回。所有设备必须使用完全相同的口令；遗失口令将无法解密远端文件。
 
-### WebDAV CORS 要求
+### 其他 WebDAV 服务的 CORS 要求
 
-普通网页不能绕过浏览器跨域策略。WebDAV 服务至少需要允许：
+Koofr 已通过专用 REST API 适配，无需以下配置。其他普通 WebDAV 服务不能绕过浏览器跨域策略，至少需要允许：
 
 ```text
 Methods: GET, PUT, MKCOL, OPTIONS

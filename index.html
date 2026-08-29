@@ -351,7 +351,7 @@
                 </div>
 
                 <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。</p>
-                <p class="sync-compatibility" data-i18n="syncCorsNote">跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头；从本地文件打开时 Origin 通常为 null。</p>
+                <p class="sync-compatibility" data-i18n="syncCorsNote">Koofr WebDAV 地址会自动改用支持 CORS 的官方 REST API；其他 WebDAV 服务仍需配置跨域许可。</p>
             </div>
 
             <footer class="dialog-footer sync-dialog-footer">
