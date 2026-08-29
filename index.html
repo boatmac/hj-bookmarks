@@ -332,6 +332,13 @@
 
                 <div class="settings-list sync-options-list">
                     <label class="setting-row settings-switch-row">
+                        <span class="setting-copy"><strong data-i18n="autoCreateWebDavFolder">自动创建同步目录</strong><small data-i18n="autoCreateWebDavFolderHint">目录不存在时仅创建同步文件所在的最后一级目录</small></span>
+                        <span class="switch-control">
+                            <input id="auto-create-directory-toggle" type="checkbox" checked>
+                            <span></span>
+                        </span>
+                    </label>
+                    <label class="setting-row settings-switch-row">
                         <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动同步至 WebDAV</small></span>
                         <span class="switch-control">
                             <input id="auto-sync-toggle" type="checkbox">
@@ -344,7 +351,7 @@
                 </div>
 
                 <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。</p>
-                <p class="sync-compatibility" data-i18n="syncCorsNote">跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT 和条件请求标头；从本地文件打开时 Origin 通常为 null。</p>
+                <p class="sync-compatibility" data-i18n="syncCorsNote">跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头；从本地文件打开时 Origin 通常为 null。</p>
             </div>
 
             <footer class="dialog-footer sync-dialog-footer">

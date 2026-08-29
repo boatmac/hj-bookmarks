@@ -94,7 +94,7 @@ https://dav.example.com/bookmarks/
 └── bookmarks-sync.enc.json
 ```
 
-也可以直接填写完整的 `.json` 文件地址。WebDAV 上级目录必须已经存在。
+也可以直接填写完整的 `.json` 文件地址。默认开启“自动创建同步目录”：首次同步时会通过 `MKCOL` 创建同步文件所在的最后一级目录；更上层路径仍需提前存在。该选项可以在同步设置中关闭。
 
 同步特性：
 
@@ -102,7 +102,8 @@ https://dav.example.com/bookmarks/
 - 地址、用户名和自动同步偏好保存在本机
 - WebDAV 密码及加密口令只保留在当前页面内存中
 - 重新打开页面后必须再次输入敏感凭据进行解锁
-- 首次同步会创建远端文件
+- 首次同步可自动创建最后一级 WebDAV 目录及远端文件
+- 不会递归创建更上层目录，避免误建路径
 - 后续同步会合并本机和远端数据
 - 使用稳定 UUID 识别同一条书签
 - 删除操作通过墓碑记录同步到其他设备
@@ -120,7 +121,7 @@ https://dav.example.com/bookmarks/
 普通网页不能绕过浏览器跨域策略。WebDAV 服务至少需要允许：
 
 ```text
-Methods: GET, PUT, OPTIONS
+Methods: GET, PUT, MKCOL, OPTIONS
 Headers: Authorization, Content-Type, If-Match, If-None-Match
 Expose:  ETag
 Origin:  应用所在站点；从 index.html 直接打开时通常为 null

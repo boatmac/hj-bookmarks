@@ -116,11 +116,13 @@
             sessionOnly: '仅保留在当前页面内存中',
             encryptionPassphrase: '加密口令',
             encryptionPassphraseHint: '至少 8 个字符；遗失后无法解密远端数据',
+            autoCreateWebDavFolder: '自动创建同步目录',
+            autoCreateWebDavFolderHint: '目录不存在时仅创建同步文件所在的最后一级目录',
             automaticSync: '页面打开时自动同步',
             automaticSyncHint: '解锁成功后，数据变化会自动同步至 WebDAV',
             lastSync: '最近同步',
             syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。',
-            syncCorsNote: '跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT 和条件请求标头；从本地文件打开时 Origin 通常为 null。',
+            syncCorsNote: '跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT、MKCOL 和条件请求标头；从本地文件打开时 Origin 通常为 null。',
             disconnectSync: '移除同步配置',
             syncNow: '立即同步',
             syncLastNever: '从未同步',
@@ -150,6 +152,8 @@
             syncNetworkError: '无法连接 WebDAV。请检查网络、证书及 CORS 设置。',
             syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
             syncWriteFailed: ({ status }) => `写入远端文件失败（HTTP ${status}）。`,
+            syncCreateDirectoryFailed: ({ status }) => `创建 WebDAV 同步目录失败（HTTP ${status}）。`,
+            syncParentDirectoryMissing: '更上层的 WebDAV 路径不存在；应用只会自动创建最后一级目录，请先创建其父目录。',
             syncConflictRetryFailed: '远端文件在同步期间持续变化，请稍后重试。',
             syncDecryptFailed: '无法解密远端文件，请确认加密口令是否正确。',
             syncRemoteInvalid: '远端同步文件格式不正确。',
@@ -375,11 +379,13 @@
             sessionOnly: 'Kept in memory for this page session only',
             encryptionPassphrase: 'Encryption passphrase',
             encryptionPassphraseHint: 'At least 8 characters; remote data cannot be recovered if this is lost',
+            autoCreateWebDavFolder: 'Create sync folder automatically',
+            autoCreateWebDavFolderHint: 'Create only the final folder containing the sync file when it does not exist',
             automaticSync: 'Sync automatically while open',
             automaticSyncHint: 'After unlocking, data changes are synchronized to WebDAV automatically',
             lastSync: 'Last sync',
             syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. The WebDAV password and encryption passphrase are never persisted and must be entered again after reopening the page.',
-            syncCorsNote: 'Cross-origin WebDAV must allow Origin, Authorization, GET, PUT, and conditional request headers. Pages opened from a local file usually send Origin: null.',
+            syncCorsNote: 'Cross-origin WebDAV must allow Origin, Authorization, GET, PUT, MKCOL, and conditional request headers. Pages opened from a local file usually send Origin: null.',
             disconnectSync: 'Remove sync configuration',
             syncNow: 'Sync now',
             syncLastNever: 'Never',
@@ -409,6 +415,8 @@
             syncNetworkError: 'Could not connect to WebDAV. Check the network, certificate, and CORS settings.',
             syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
             syncWriteFailed: ({ status }) => `Could not write the remote file (HTTP ${status}).`,
+            syncCreateDirectoryFailed: ({ status }) => `Could not create the WebDAV sync folder (HTTP ${status}).`,
+            syncParentDirectoryMissing: 'A higher-level WebDAV path does not exist. The app creates only the final folder; create its parent first.',
             syncConflictRetryFailed: 'The remote file kept changing during synchronization. Try again later.',
             syncDecryptFailed: 'Could not decrypt the remote file. Check the encryption passphrase.',
             syncRemoteInvalid: 'The remote synchronization file has an invalid format.',
@@ -553,6 +561,7 @@
             username: '',
             password: '',
             passphrase: '',
+            createDirectory: true,
             automatic: false,
             unlocked: false,
             lastSyncAt: '',
@@ -637,7 +646,8 @@
             'sync-dialog-close-button', 'sync-dialog-cancel-button',
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
             'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
-            'sync-passphrase-input', 'auto-sync-toggle', 'last-sync-value',
+            'sync-passphrase-input', 'auto-create-directory-toggle',
+            'auto-sync-toggle', 'last-sync-value',
             'disconnect-sync-button', 'sync-now-button', 'toast', 'toast-message',
         ];
 
@@ -781,6 +791,7 @@
         ui.syncUsernameInput.addEventListener('change', saveSyncPreferences);
         ui.syncPasswordInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
+        ui.autoCreateDirectoryToggle.addEventListener('change', handleAutoCreateDirectoryToggle);
         ui.autoSyncToggle.addEventListener('change', handleAutoSyncToggle);
         ui.disconnectSyncButton.addEventListener('click', disconnectWebDavSync);
         ui.syncNowButton.addEventListener('click', () => runWebDavSync({ notify: true }));
@@ -1491,6 +1502,7 @@
             if (preferences && typeof preferences === 'object') {
                 state.sync.endpoint = typeof preferences.endpoint === 'string' ? preferences.endpoint : '';
                 state.sync.username = typeof preferences.username === 'string' ? preferences.username : '';
+                state.sync.createDirectory = preferences.createDirectory !== false;
                 state.sync.automatic = preferences.automatic === true;
                 state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
             }
@@ -1508,6 +1520,7 @@
             await saveSetting(SYNC_PREFERENCES_KEY, {
                 endpoint: state.sync.endpoint,
                 username: state.sync.username,
+                createDirectory: state.sync.createDirectory,
                 automatic: state.sync.automatic,
                 lastSyncAt: state.sync.lastSyncAt,
             });
@@ -1585,6 +1598,8 @@
         ui.syncStatusDetail.textContent = statusContent[1];
         ui.syncMenuStatus.textContent = statusContent[2];
         ui.lastSyncValue.textContent = formatBackupTime(sync.lastSyncAt) || t('syncLastNever');
+        ui.autoCreateDirectoryToggle.checked = sync.createDirectory;
+        ui.autoCreateDirectoryToggle.disabled = !sync.supported || sync.running;
         ui.autoSyncToggle.checked = sync.automatic;
         ui.autoSyncToggle.disabled = !sync.supported || sync.running;
         ui.syncNowButton.disabled = !sync.supported || sync.running;
@@ -1594,6 +1609,12 @@
         ui.syncPassphraseInput.disabled = sync.running;
         ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
         ui.disconnectSyncButton.disabled = sync.running;
+    }
+
+    async function handleAutoCreateDirectoryToggle() {
+        state.sync.createDirectory = ui.autoCreateDirectoryToggle.checked;
+        await saveSyncPreferences();
+        renderSyncSettings();
     }
 
     async function handleAutoSyncToggle() {
@@ -1624,6 +1645,7 @@
             username: '',
             password: '',
             passphrase: '',
+            createDirectory: true,
             automatic: false,
             unlocked: false,
             lastSyncAt: '',
@@ -1689,6 +1711,7 @@
             let merged = null;
             for (let attempt = 0; attempt < 3; attempt += 1) {
                 const remote = await readRemoteSyncFile(endpoint);
+                if (!remote.exists && sync.createDirectory) await ensureWebDavParentDirectory(endpoint);
                 await refreshData();
                 const local = await createLocalSyncDataset();
                 merged = mergeSyncDatasets(local, remote.data);
@@ -1808,6 +1831,30 @@
         };
     }
 
+    async function ensureWebDavParentDirectory(endpoint) {
+        const directory = new URL(endpoint);
+        directory.pathname = directory.pathname.slice(0, directory.pathname.lastIndexOf('/') + 1);
+        if (directory.pathname === '/') return false;
+
+        let response;
+        try {
+            response = await fetch(directory.toString(), {
+                method: 'MKCOL',
+                headers: createWebDavHeaders(),
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'follow',
+            });
+        } catch {
+            throw new Error(t('syncNetworkError'));
+        }
+
+        if ([200, 201, 204, 405].includes(response.status)) return response.status === 201;
+        if (response.status === 401) throw new Error(t('syncAuthFailed'));
+        if (response.status === 404 || response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
+        throw new Error(t('syncCreateDirectoryFailed', { status: response.status }));
+    }
+
     async function writeRemoteSyncFile(endpoint, content, remote) {
         const headers = createWebDavHeaders(true);
         if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
@@ -1828,6 +1875,7 @@
         }
         if (response.status === 412) return 'conflict';
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
+        if (response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
         if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
         return 'written';
     }
