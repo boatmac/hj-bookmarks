@@ -118,6 +118,8 @@
                             <svg><use href="#icon-download"></use></svg><span data-i18n="export">导出</span>
                         </summary>
                         <div class="export-popover">
+                            <button class="backup-menu-item" id="backup-settings-button" type="button"><strong data-i18n="automaticBackup">自动本地备份</strong><small id="backup-menu-status">尚未设置</small></button>
+                            <hr>
                             <button id="export-json-button" type="button"><strong data-i18n="jsonBackup">JSON 备份</strong><small data-i18n="jsonBackupDescription">保留全部应用数据</small></button>
                             <button id="export-html-button" type="button"><strong data-i18n="browserHtml">浏览器 HTML</strong><small data-i18n="browserHtmlDescription">可导入其他浏览器</small></button>
                             <hr>
@@ -229,6 +231,66 @@
                 <button class="button button-primary" id="dialog-submit-button" type="submit" data-i18n="addBookmark">添加书签</button>
             </footer>
         </form>
+    </dialog>
+
+    <dialog class="item-dialog backup-dialog" id="backup-dialog">
+        <div class="dialog-panel">
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="backupEyebrow">数据保护</p><h2 id="backup-dialog-title" data-i18n="backupSettings">自动备份设置</h2></div>
+                <button class="icon-button dialog-close" id="backup-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="backup-settings-content">
+                <section class="backup-status-card" id="backup-status-card" aria-live="polite">
+                    <span class="backup-status-icon"><svg><use href="#icon-database"></use></svg></span>
+                    <span><strong id="backup-status-title">尚未设置备份目录</strong><small id="backup-status-detail">选择一个本地文件夹后，数据变更时会自动写入备份。</small></span>
+                </section>
+
+                <div class="settings-list">
+                    <label class="setting-row settings-switch-row">
+                        <span class="setting-copy"><strong data-i18n="automaticBackup">自动本地备份</strong><small data-i18n="automaticBackupHint">每次数据变化后自动更新最新备份并创建历史快照</small></span>
+                        <span class="switch-control">
+                            <input id="auto-backup-toggle" type="checkbox">
+                            <span></span>
+                        </span>
+                    </label>
+
+                    <div class="setting-row">
+                        <span class="setting-copy"><strong data-i18n="backupDirectory">备份目录</strong><small id="backup-directory-name">尚未选择</small></span>
+                        <button class="button button-secondary compact-button" id="choose-backup-directory-button" type="button" data-i18n="chooseFolder">选择目录</button>
+                    </div>
+
+                    <label class="setting-row">
+                        <span class="setting-copy"><strong data-i18n="historyRetention">历史快照</strong><small data-i18n="historyRetentionHint">自动清理更早的快照，最新备份始终保留</small></span>
+                        <select class="settings-select" id="backup-retention-select">
+                            <option value="7" data-i18n="keep7Snapshots">保留 7 份</option>
+                            <option value="30" data-i18n="keep30Snapshots">保留 30 份</option>
+                            <option value="90" data-i18n="keep90Snapshots">保留 90 份</option>
+                        </select>
+                    </label>
+
+                    <div class="setting-row information-row">
+                        <span class="setting-copy"><strong data-i18n="lastBackup">最近备份</strong><small id="last-backup-value">从未备份</small></span>
+                    </div>
+
+                    <div class="setting-row">
+                        <span class="setting-copy"><strong data-i18n="persistentStorage">浏览器持久存储</strong><small id="persistence-status-value">正在检查…</small></span>
+                        <button class="button button-secondary compact-button hidden" id="request-persistence-button" type="button" data-i18n="requestAgain">重新请求</button>
+                    </div>
+                </div>
+
+                <p class="backup-compatibility" data-i18n="backupCompatibility">自动写入目录需要 Edge 或 Chrome。其他浏览器仍可使用 JSON 手动导出。</p>
+            </div>
+
+            <footer class="dialog-footer backup-dialog-footer">
+                <button class="button button-danger-quiet hidden" id="disconnect-backup-button" type="button" data-i18n="disconnectBackup">断开备份目录</button>
+                <span class="dialog-footer-spacer"></span>
+                <button class="button button-secondary" id="backup-dialog-cancel-button" type="button" data-i18n="close">关闭</button>
+                <button class="button button-primary" id="backup-now-button" type="button" data-i18n="backupNow">立即备份</button>
+            </footer>
+        </div>
     </dialog>
 
     <div class="toast hidden" id="toast" role="status" aria-live="polite">

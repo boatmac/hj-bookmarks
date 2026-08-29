@@ -2,8 +2,11 @@
     'use strict';
 
     const DB_NAME = 'BookmarkDB_v3';
-    const DB_VERSION = 4;
+    const DB_VERSION = 5;
     const STORE_NAME = 'bookmarks';
+    const SETTINGS_STORE_NAME = 'settings';
+    const BACKUP_HANDLE_KEY = 'backup-directory-handle';
+    const BACKUP_PREFERENCES_KEY = 'backup-preferences';
     const THEME_KEY = 'bookmark-manager.theme';
     const SORT_KEY = 'bookmark-manager.sort';
     const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -40,6 +43,62 @@
             jsonBackupDescription: '保留全部应用数据',
             browserHtml: '浏览器 HTML',
             browserHtmlDescription: '可导入其他浏览器',
+            automaticBackup: '自动本地备份',
+            backupEyebrow: '数据保护',
+            backupSettings: '自动备份设置',
+            automaticBackupHint: '每次数据变化后自动更新最新备份并创建历史快照',
+            backupDirectory: '备份目录',
+            chooseFolder: '选择目录',
+            historyRetention: '历史快照',
+            historyRetentionHint: '自动清理更早的快照，最新备份始终保留',
+            keep7Snapshots: '保留 7 份',
+            keep30Snapshots: '保留 30 份',
+            keep90Snapshots: '保留 90 份',
+            lastBackup: '最近备份',
+            persistentStorage: '浏览器持久存储',
+            requestAgain: '重新请求',
+            backupCompatibility: '自动写入目录需要 Edge 或 Chrome。其他浏览器仍可使用 JSON 手动导出。',
+            disconnectBackup: '断开备份目录',
+            backupNow: '立即备份',
+            backupNotSelected: '尚未选择',
+            lastBackupNever: '从未备份',
+            persistenceChecking: '正在检查…',
+            persistenceGranted: '已获得持久存储保护',
+            persistenceNotGranted: '未获授权，浏览器仍可能清理站点数据',
+            persistenceUnsupported: '当前浏览器不支持持久存储请求',
+            backupMenuUnsupported: '仅支持手动导出',
+            backupMenuNotConfigured: '尚未设置',
+            backupMenuPaused: '自动备份已暂停',
+            backupMenuPermission: '需要重新授权',
+            backupMenuRunning: '正在备份…',
+            backupMenuError: '上次备份失败',
+            backupMenuReady: ({ time }) => time ? `上次：${time}` : '已启用',
+            backupUnsupportedTitle: '当前浏览器不支持自动目录备份',
+            backupUnsupportedDetail: '你仍可从导出菜单下载 JSON 备份。',
+            backupNotConfiguredTitle: '尚未设置备份目录',
+            backupNotConfiguredDetail: '选择一个本地文件夹后，数据变更时会自动写入备份。',
+            backupPausedTitle: '自动备份已暂停',
+            backupPausedDetail: '已有备份目录，开启开关即可继续自动备份。',
+            backupPermissionTitle: '需要重新授权备份目录',
+            backupPermissionDetail: '浏览器重启后可能需要再次确认权限；点击“立即备份”即可重新授权。',
+            backupReadyTitle: '自动备份运行正常',
+            backupReadyDetail: ({ name }) => `备份将写入“${name}”目录。`,
+            backupRunningTitle: '正在写入备份',
+            backupRunningDetail: '正在更新最新文件并创建历史快照…',
+            backupErrorTitle: '上次备份失败',
+            backupErrorDetail: ({ message }) => message || '请检查目录写入权限后重试。',
+            backupPermissionDenied: '未获得备份目录写入权限',
+            backupFolderSelected: ({ name }) => `已选择备份目录：${name}`,
+            backupComplete: ({ count }) => `备份完成，共 ${count} 项`,
+            backupUpToDate: '当前数据已经是最新备份',
+            backupFailed: ({ message }) => `备份失败：${message}`,
+            backupDisconnected: '已断开备份目录',
+            confirmDisconnect: '确定断开当前备份目录吗？已有备份文件不会被删除。',
+            autoBackupEnabled: '自动备份已开启',
+            autoBackupPaused: '自动备份已暂停',
+            persistenceGrantedToast: '浏览器持久存储保护已开启',
+            persistenceDeniedToast: '浏览器未授予持久存储权限',
+            backupHandleNotRemembered: '目录已可用于当前会话，但浏览器无法记住它；下次打开需要重新选择。',
             clearAll: '清空全部数据',
             irreversible: '此操作无法撤销',
             addBookmark: '添加书签',
@@ -187,6 +246,62 @@
             jsonBackupDescription: 'Preserves all application data',
             browserHtml: 'Browser HTML',
             browserHtmlDescription: 'Import into another browser',
+            automaticBackup: 'Automatic local backup',
+            backupEyebrow: 'DATA PROTECTION',
+            backupSettings: 'Automatic backup settings',
+            automaticBackupHint: 'Update the latest backup and create a snapshot after every data change',
+            backupDirectory: 'Backup folder',
+            chooseFolder: 'Choose folder',
+            historyRetention: 'History snapshots',
+            historyRetentionHint: 'Older snapshots are removed automatically; the latest backup is always kept',
+            keep7Snapshots: 'Keep 7',
+            keep30Snapshots: 'Keep 30',
+            keep90Snapshots: 'Keep 90',
+            lastBackup: 'Last backup',
+            persistentStorage: 'Persistent browser storage',
+            requestAgain: 'Request again',
+            backupCompatibility: 'Automatic folder writes require Edge or Chrome. Other browsers can still export JSON manually.',
+            disconnectBackup: 'Disconnect folder',
+            backupNow: 'Back up now',
+            backupNotSelected: 'Not selected',
+            lastBackupNever: 'Never',
+            persistenceChecking: 'Checking…',
+            persistenceGranted: 'Protected by persistent browser storage',
+            persistenceNotGranted: 'Not granted; the browser may still clear site data',
+            persistenceUnsupported: 'Persistent storage requests are not supported',
+            backupMenuUnsupported: 'Manual export only',
+            backupMenuNotConfigured: 'Not configured',
+            backupMenuPaused: 'Automatic backup paused',
+            backupMenuPermission: 'Permission required',
+            backupMenuRunning: 'Backing up…',
+            backupMenuError: 'Last backup failed',
+            backupMenuReady: ({ time }) => time ? `Last: ${time}` : 'Enabled',
+            backupUnsupportedTitle: 'Automatic folder backup is not supported',
+            backupUnsupportedDetail: 'You can still download JSON backups from the Export menu.',
+            backupNotConfiguredTitle: 'No backup folder selected',
+            backupNotConfiguredDetail: 'Choose a local folder to automatically back up every data change.',
+            backupPausedTitle: 'Automatic backup is paused',
+            backupPausedDetail: 'A backup folder is available. Turn the switch on to resume automatic backups.',
+            backupPermissionTitle: 'Backup folder permission is required',
+            backupPermissionDetail: 'The browser may require permission again after a restart; click “Back up now” to reauthorize.',
+            backupReadyTitle: 'Automatic backup is running',
+            backupReadyDetail: ({ name }) => `Backups will be written to “${name}”.`,
+            backupRunningTitle: 'Writing backup',
+            backupRunningDetail: 'Updating the latest file and creating a history snapshot…',
+            backupErrorTitle: 'The last backup failed',
+            backupErrorDetail: ({ message }) => message || 'Check folder write permission and try again.',
+            backupPermissionDenied: 'Write permission for the backup folder was not granted',
+            backupFolderSelected: ({ name }) => `Backup folder selected: ${name}`,
+            backupComplete: ({ count }) => `Backup complete: ${count} item${count === 1 ? '' : 's'}`,
+            backupUpToDate: 'The current data is already backed up',
+            backupFailed: ({ message }) => `Backup failed: ${message}`,
+            backupDisconnected: 'Backup folder disconnected',
+            confirmDisconnect: 'Disconnect the current backup folder? Existing backup files will not be deleted.',
+            autoBackupEnabled: 'Automatic backup enabled',
+            autoBackupPaused: 'Automatic backup paused',
+            persistenceGrantedToast: 'Persistent browser storage enabled',
+            persistenceDeniedToast: 'The browser did not grant persistent storage',
+            backupHandleNotRemembered: 'The folder is available for this session, but the browser could not remember it. Select it again next time.',
             clearAll: 'Clear all data',
             irreversible: 'This action cannot be undone',
             addBookmark: 'Add bookmark',
@@ -313,6 +428,24 @@
         query: '',
         sort: safeStorageGet(SORT_KEY) || 'newest',
         language: getInitialLanguage(),
+        persistence: 'checking',
+        backup: {
+            supported: typeof window.showDirectoryPicker === 'function',
+            handle: null,
+            enabled: false,
+            retention: 30,
+            lastBackupAt: '',
+            lastHash: '',
+            permission: 'unknown',
+            error: '',
+            handleRemembered: true,
+            running: false,
+            pending: false,
+            currentPromise: null,
+            permissionNoticeShown: false,
+            lastNotifiedError: '',
+            timer: null,
+        },
         draggedId: null,
         toastTimer: null,
     };
@@ -331,6 +464,7 @@
             state.db = await openDatabase();
             ui.storageStatus.textContent = t('dbConnected');
             await refreshData();
+            await Promise.all([initializePersistentStorage(), initializeBackup()]);
         } catch (error) {
             console.error('Unable to initialize bookmark manager:', error);
             showFatalError(error);
@@ -344,7 +478,8 @@
             'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
             'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
             'search-shortcut', 'import-file-input', 'import-button', 'export-menu',
-            'export-json-button', 'export-html-button', 'clear-all-button',
+            'backup-settings-button', 'backup-menu-status', 'export-json-button',
+            'export-html-button', 'clear-all-button',
             'add-bookmark-button', 'breadcrumbs', 'page-eyebrow', 'page-title',
             'page-description', 'result-count', 'add-folder-button', 'results-label',
             'sort-select', 'folder-grid', 'bookmark-grid', 'empty-state',
@@ -354,7 +489,14 @@
             'dialog-close-button', 'dialog-cancel-button', 'dialog-submit-button',
             'item-title-input', 'item-url-input', 'item-description-input',
             'item-parent-select', 'item-tags-input', 'item-favorite-input',
-            'form-error', 'toast', 'toast-message',
+            'form-error', 'backup-dialog', 'backup-dialog-title',
+            'backup-dialog-close-button', 'backup-dialog-cancel-button',
+            'backup-status-card', 'backup-status-title', 'backup-status-detail',
+            'auto-backup-toggle', 'backup-directory-name',
+            'choose-backup-directory-button', 'backup-retention-select',
+            'last-backup-value', 'persistence-status-value',
+            'request-persistence-button', 'disconnect-backup-button',
+            'backup-now-button', 'toast', 'toast-message',
         ];
 
         for (const id of ids) ui[toCamelCase(id)] = document.getElementById(id);
@@ -411,6 +553,7 @@
         const dialogItem = ui.itemId.value ? findItem(Number(ui.itemId.value)) : null;
         updateDialogLabels(ui.itemKind.value || 'bookmark', dialogItem);
         if (state.db) renderAll();
+        if (ui.backupMenuStatus) renderBackupSettings();
     }
 
     function bindStaticEvents() {
@@ -438,6 +581,7 @@
 
         ui.importButton.addEventListener('click', () => ui.importFileInput.click());
         ui.importFileInput.addEventListener('change', handleImport);
+        ui.backupSettingsButton.addEventListener('click', openBackupDialog);
         ui.exportJsonButton.addEventListener('click', exportJson);
         ui.exportHtmlButton.addEventListener('click', exportHtml);
         ui.clearAllButton.addEventListener('click', clearAllData);
@@ -457,6 +601,23 @@
         ui.itemDialog.addEventListener('mousedown', (event) => {
             if (event.target === ui.itemDialog) closeItemDialog();
         });
+
+        ui.backupDialogCloseButton.addEventListener('click', closeBackupDialog);
+        ui.backupDialogCancelButton.addEventListener('click', closeBackupDialog);
+        ui.backupDialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            closeBackupDialog();
+        });
+        ui.backupDialog.addEventListener('mousedown', (event) => {
+            if (event.target === ui.backupDialog) closeBackupDialog();
+        });
+        ui.autoBackupToggle.addEventListener('change', handleAutoBackupToggle);
+        ui.chooseBackupDirectoryButton.addEventListener('click', chooseBackupDirectory);
+        ui.backupRetentionSelect.addEventListener('change', handleBackupRetentionChange);
+        ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
+        ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);
+        ui.backupNowButton.addEventListener('click', handleBackupNow);
+
         ui.emptyActionButton.addEventListener('click', handleEmptyAction);
 
         document.addEventListener('keydown', handleGlobalKeydown);
@@ -497,6 +658,9 @@
                 }
                 if (!store.indexNames.contains('parentId')) store.createIndex('parentId', 'parentId', { unique: false });
                 if (!store.indexNames.contains('isPinned')) store.createIndex('isPinned', 'isPinned', { unique: false });
+                if (!database.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+                    database.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'key' });
+                }
             };
 
             request.onerror = () => reject(request.error || new Error(t('dbOpenFailed')));
@@ -544,6 +708,41 @@
             transaction.objectStore(STORE_NAME).clear();
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    function getSetting(key) {
+        return new Promise((resolve, reject) => {
+            const request = state.db.transaction(SETTINGS_STORE_NAME, 'readonly')
+                .objectStore(SETTINGS_STORE_NAME)
+                .get(key);
+            request.onsuccess = () => resolve(request.result?.value ?? null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    function saveSetting(key, value) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SETTINGS_STORE_NAME, 'readwrite');
+            try {
+                transaction.objectStore(SETTINGS_STORE_NAME).put({ key, value });
+            } catch (error) {
+                reject(error);
+                return;
+            }
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
+    function deleteSetting(key) {
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(SETTINGS_STORE_NAME, 'readwrite');
+            transaction.objectStore(SETTINGS_STORE_NAME).delete(key);
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
         });
     }
 
@@ -600,6 +799,434 @@
         state.items = records.map(normalizeItem);
         renderAll();
         ui.storageStatus.textContent = t('storageStatus', { count: state.items.length });
+    }
+
+    async function initializePersistentStorage() {
+        if (!navigator.storage?.persisted || !navigator.storage?.persist) {
+            state.persistence = 'unsupported';
+            renderBackupSettings();
+            return;
+        }
+
+        try {
+            if (await navigator.storage.persisted()) {
+                state.persistence = 'granted';
+            } else {
+                state.persistence = await navigator.storage.persist() ? 'granted' : 'not-granted';
+            }
+        } catch {
+            state.persistence = 'not-granted';
+        }
+        renderBackupSettings();
+    }
+
+    async function requestPersistentStorage(notify = false) {
+        if (!navigator.storage?.persist) {
+            state.persistence = 'unsupported';
+            renderBackupSettings();
+            return false;
+        }
+
+        try {
+            state.persistence = await navigator.storage.persist() ? 'granted' : 'not-granted';
+        } catch {
+            state.persistence = 'not-granted';
+        }
+        renderBackupSettings();
+        if (notify) showToast(t(state.persistence === 'granted' ? 'persistenceGrantedToast' : 'persistenceDeniedToast'));
+        return state.persistence === 'granted';
+    }
+
+    async function initializeBackup() {
+        renderBackupSettings();
+        if (!state.backup.supported) return;
+
+        try {
+            const [handle, preferences] = await Promise.all([
+                getSetting(BACKUP_HANDLE_KEY),
+                getSetting(BACKUP_PREFERENCES_KEY),
+            ]);
+            if (handle?.kind === 'directory') state.backup.handle = handle;
+            if (preferences && typeof preferences === 'object') {
+                state.backup.enabled = preferences.enabled === true;
+                state.backup.retention = [7, 30, 90].includes(Number(preferences.retention))
+                    ? Number(preferences.retention)
+                    : 30;
+                state.backup.lastBackupAt = validDate(preferences.lastBackupAt) ? preferences.lastBackupAt : '';
+                state.backup.lastHash = typeof preferences.lastHash === 'string' ? preferences.lastHash : '';
+            }
+            if (state.backup.handle) {
+                state.backup.permission = await getBackupPermission(state.backup.handle, false);
+            }
+        } catch (error) {
+            console.error('Unable to restore automatic backup settings:', error);
+            state.backup.error = error?.message || String(error);
+        }
+
+        renderBackupSettings();
+        if (state.backup.enabled && state.backup.permission === 'granted') scheduleAutoBackup(250);
+    }
+
+    async function saveBackupPreferences() {
+        try {
+            await saveSetting(BACKUP_PREFERENCES_KEY, {
+                enabled: state.backup.enabled,
+                retention: state.backup.retention,
+                lastBackupAt: state.backup.lastBackupAt,
+                lastHash: state.backup.lastHash,
+            });
+            return true;
+        } catch (error) {
+            console.warn('Unable to save automatic backup preferences:', error);
+            return false;
+        }
+    }
+
+    function openBackupDialog() {
+        closeExportMenu();
+        renderBackupSettings();
+        ui.backupDialog.showModal();
+    }
+
+    function closeBackupDialog() {
+        if (ui.backupDialog.open) ui.backupDialog.close();
+    }
+
+    function renderBackupSettings() {
+        if (!ui.backupMenuStatus) return;
+        const backup = state.backup;
+        let status = 'ready';
+        if (!backup.supported) status = 'unsupported';
+        else if (backup.running) status = 'running';
+        else if (backup.error) status = 'error';
+        else if (!backup.handle) status = 'not-configured';
+        else if (!backup.enabled) status = 'paused';
+        else if (backup.permission !== 'granted') status = 'permission';
+
+        const statusContent = {
+            unsupported: [t('backupUnsupportedTitle'), t('backupUnsupportedDetail'), t('backupMenuUnsupported')],
+            running: [t('backupRunningTitle'), t('backupRunningDetail'), t('backupMenuRunning')],
+            error: [t('backupErrorTitle'), t('backupErrorDetail', { message: backup.error }), t('backupMenuError')],
+            'not-configured': [t('backupNotConfiguredTitle'), t('backupNotConfiguredDetail'), t('backupMenuNotConfigured')],
+            paused: [t('backupPausedTitle'), t('backupPausedDetail'), t('backupMenuPaused')],
+            permission: [t('backupPermissionTitle'), t('backupPermissionDetail'), t('backupMenuPermission')],
+            ready: [
+                t('backupReadyTitle'),
+                backup.handleRemembered === false
+                    ? t('backupHandleNotRemembered')
+                    : t('backupReadyDetail', { name: backup.handle?.name || t('backupNotSelected') }),
+                t('backupMenuReady', { time: formatBackupTime(backup.lastBackupAt, true) }),
+            ],
+        }[status];
+
+        ui.backupStatusCard.dataset.state = status;
+        ui.exportMenu.dataset.backupState = status;
+        ui.backupStatusTitle.textContent = statusContent[0];
+        ui.backupStatusDetail.textContent = statusContent[1];
+        ui.backupMenuStatus.textContent = statusContent[2];
+        ui.backupDirectoryName.textContent = backup.handle?.name || t('backupNotSelected');
+        ui.lastBackupValue.textContent = formatBackupTime(backup.lastBackupAt) || t('lastBackupNever');
+        ui.autoBackupToggle.checked = backup.enabled;
+        ui.autoBackupToggle.disabled = !backup.supported || backup.running;
+        ui.backupRetentionSelect.value = String(backup.retention);
+        ui.backupRetentionSelect.disabled = !backup.supported || !backup.handle || backup.running;
+        ui.chooseBackupDirectoryButton.disabled = !backup.supported || backup.running;
+        ui.backupNowButton.disabled = backup.running;
+        ui.backupNowButton.textContent = backup.supported ? t('backupNow') : t('jsonBackup');
+        ui.disconnectBackupButton.classList.toggle('hidden', !backup.handle);
+
+        const persistenceText = {
+            checking: t('persistenceChecking'),
+            granted: t('persistenceGranted'),
+            'not-granted': t('persistenceNotGranted'),
+            unsupported: t('persistenceUnsupported'),
+        }[state.persistence] || t('persistenceChecking');
+        ui.persistenceStatusValue.textContent = persistenceText;
+        ui.requestPersistenceButton.classList.toggle(
+            'hidden',
+            state.persistence === 'granted' || state.persistence === 'unsupported' || state.persistence === 'checking',
+        );
+    }
+
+    async function handleAutoBackupToggle() {
+        if (!state.backup.supported) {
+            ui.autoBackupToggle.checked = false;
+            return;
+        }
+        if (ui.autoBackupToggle.checked && !state.backup.handle) {
+            ui.autoBackupToggle.checked = false;
+            await chooseBackupDirectory();
+            return;
+        }
+
+        if (ui.autoBackupToggle.checked) {
+            const permission = await getBackupPermission(state.backup.handle, true);
+            state.backup.permission = permission;
+            if (permission !== 'granted') {
+                state.backup.enabled = false;
+                ui.autoBackupToggle.checked = false;
+                renderBackupSettings();
+                showToast(t('backupPermissionDenied'));
+                return;
+            }
+            state.backup.enabled = true;
+            state.backup.error = '';
+            state.backup.permissionNoticeShown = false;
+            await saveBackupPreferences();
+            renderBackupSettings();
+            showToast(t('autoBackupEnabled'));
+            await runAutomaticBackup({ force: false, notify: false });
+        } else {
+            state.backup.enabled = false;
+            window.clearTimeout(state.backup.timer);
+            await saveBackupPreferences();
+            renderBackupSettings();
+            showToast(t('autoBackupPaused'));
+        }
+    }
+
+    async function chooseBackupDirectory() {
+        if (!state.backup.supported) return;
+        try {
+            const handle = await window.showDirectoryPicker({
+                id: 'bookmark-manager-backup',
+                mode: 'readwrite',
+            });
+            const permission = await getBackupPermission(handle, true);
+            if (permission !== 'granted') {
+                showToast(t('backupPermissionDenied'));
+                return;
+            }
+
+            state.backup.handle = handle;
+            state.backup.permission = permission;
+            state.backup.enabled = true;
+            state.backup.error = '';
+            state.backup.permissionNoticeShown = false;
+            state.backup.lastNotifiedError = '';
+            state.backup.lastHash = '';
+            state.backup.handleRemembered = true;
+            try {
+                await saveSetting(BACKUP_HANDLE_KEY, handle);
+            } catch (error) {
+                console.warn('The browser could not persist the directory handle:', error);
+                state.backup.handleRemembered = false;
+            }
+            await saveBackupPreferences();
+            renderBackupSettings();
+            await runAutomaticBackup({ force: true, notify: true });
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            console.error('Unable to select backup directory:', error);
+            state.backup.error = error?.message || String(error);
+            renderBackupSettings();
+            showToast(t('backupFailed', { message: state.backup.error }));
+        }
+    }
+
+    async function handleBackupRetentionChange() {
+        const retention = Number(ui.backupRetentionSelect.value);
+        state.backup.retention = [7, 30, 90].includes(retention) ? retention : 30;
+        await saveBackupPreferences();
+        if (state.backup.handle && state.backup.permission === 'granted') {
+            try {
+                const history = await state.backup.handle.getDirectoryHandle('history', { create: true });
+                await pruneBackupHistory(history, state.backup.retention);
+            } catch (error) {
+                console.warn('Unable to prune backup history:', error);
+            }
+        }
+        renderBackupSettings();
+    }
+
+    async function disconnectBackupDirectory() {
+        if (!state.backup.handle || !window.confirm(t('confirmDisconnect'))) return;
+        window.clearTimeout(state.backup.timer);
+        try {
+            await deleteSetting(BACKUP_HANDLE_KEY);
+        } catch (error) {
+            console.warn('Unable to remove stored directory handle:', error);
+        }
+        state.backup.handle = null;
+        state.backup.enabled = false;
+        state.backup.permission = 'unknown';
+        state.backup.error = '';
+        state.backup.permissionNoticeShown = false;
+        state.backup.lastNotifiedError = '';
+        state.backup.lastHash = '';
+        state.backup.lastBackupAt = '';
+        state.backup.handleRemembered = true;
+        await saveBackupPreferences();
+        renderBackupSettings();
+        showToast(t('backupDisconnected'));
+    }
+
+    async function handleBackupNow() {
+        if (!state.backup.supported) {
+            closeBackupDialog();
+            exportJson();
+            return;
+        }
+        if (!state.backup.handle) {
+            await chooseBackupDirectory();
+            return;
+        }
+        state.backup.permission = await getBackupPermission(state.backup.handle, true);
+        if (state.backup.permission !== 'granted') {
+            renderBackupSettings();
+            showToast(t('backupPermissionDenied'));
+            return;
+        }
+        await runAutomaticBackup({ force: true, notify: true, allowWhenPaused: true });
+    }
+
+    async function getBackupPermission(handle, requestPermission) {
+        if (!handle) return 'unknown';
+        if (typeof handle.queryPermission !== 'function') return 'granted';
+        try {
+            let permission = await handle.queryPermission({ mode: 'readwrite' });
+            if (permission === 'prompt' && requestPermission && typeof handle.requestPermission === 'function') {
+                permission = await handle.requestPermission({ mode: 'readwrite' });
+            }
+            return permission;
+        } catch {
+            return 'denied';
+        }
+    }
+
+    function scheduleAutoBackup(delay = 900) {
+        if (!state.backup.supported || !state.backup.enabled || !state.backup.handle) return;
+        window.clearTimeout(state.backup.timer);
+        state.backup.timer = window.setTimeout(() => {
+            runAutomaticBackup({ force: false, notify: false });
+        }, delay);
+    }
+
+    async function flushBackupBeforeDestructiveChange() {
+        if (!state.backup.enabled || !state.backup.handle) return;
+        window.clearTimeout(state.backup.timer);
+        await runAutomaticBackup({ force: false, notify: false });
+    }
+
+    async function runAutomaticBackup({ force = false, notify = false, allowWhenPaused = false } = {}) {
+        const backup = state.backup;
+        if (!backup.supported || (!backup.enabled && !allowWhenPaused) || !backup.handle) return false;
+        if (backup.running) {
+            backup.pending = true;
+            return backup.currentPromise || false;
+        }
+
+        backup.running = true;
+        backup.error = '';
+        window.clearTimeout(backup.timer);
+        renderBackupSettings();
+
+        const operation = (async () => {
+            backup.permission = await getBackupPermission(backup.handle, false);
+            if (backup.permission !== 'granted') {
+                if (notify || !backup.permissionNoticeShown) showToast(t('backupPermissionDenied'));
+                backup.permissionNoticeShown = true;
+                return false;
+            }
+            backup.permissionNoticeShown = false;
+
+            const stableContent = JSON.stringify(state.items.map(toStorageRecord));
+            const contentHash = `${hashString(stableContent)}-${stableContent.length}`;
+            if (!force && contentHash === backup.lastHash) {
+                if (notify) showToast(t('backupUpToDate'));
+                return true;
+            }
+
+            const payload = createBackupPayload();
+            const content = `${JSON.stringify(payload, null, 2)}\n`;
+            await writeBackupFile(backup.handle, 'bookmarks-latest.json', content);
+            const history = await backup.handle.getDirectoryHandle('history', { create: true });
+            const snapshotName = `bookmarks-${fileTimestamp(new Date())}.json`;
+            await writeBackupFile(history, snapshotName, content);
+            try {
+                await pruneBackupHistory(history, backup.retention);
+            } catch (error) {
+                console.warn('Unable to prune backup history:', error);
+            }
+
+            backup.lastHash = contentHash;
+            backup.lastBackupAt = payload.exportedAt;
+            backup.lastNotifiedError = '';
+            try {
+                await saveBackupPreferences();
+            } catch (error) {
+                console.warn('Unable to save backup metadata:', error);
+            }
+            if (notify) showToast(t('backupComplete', { count: state.items.length }));
+            return true;
+        })();
+
+        backup.currentPromise = operation;
+        try {
+            return await operation;
+        } catch (error) {
+            console.error('Automatic backup failed:', error);
+            backup.error = error?.message || String(error);
+            if (notify || backup.lastNotifiedError !== backup.error) {
+                showToast(t('backupFailed', { message: backup.error }));
+                backup.lastNotifiedError = backup.error;
+            }
+            return false;
+        } finally {
+            backup.running = false;
+            backup.currentPromise = null;
+            renderBackupSettings();
+            if (backup.pending) {
+                backup.pending = false;
+                scheduleAutoBackup(150);
+            }
+        }
+    }
+
+    async function writeBackupFile(directory, filename, content) {
+        const fileHandle = await directory.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        try {
+            await writable.write(content);
+            await writable.close();
+        } catch (error) {
+            try {
+                await writable.abort();
+            } catch {
+                // Ignore a secondary abort failure and preserve the original error.
+            }
+            throw error;
+        }
+    }
+
+    async function pruneBackupHistory(directory, retention) {
+        const snapshots = [];
+        for await (const [name, handle] of directory.entries()) {
+            if (handle.kind === 'file' && /^bookmarks-\d{4}-\d{2}-\d{2}T.*\.json$/.test(name)) snapshots.push(name);
+        }
+        snapshots.sort().reverse();
+        await Promise.all(snapshots.slice(retention).map((name) => directory.removeEntry(name)));
+    }
+
+    function createBackupPayload() {
+        return {
+            format: 'bookmark-manager',
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            bookmarks: state.items.map(toStorageRecord),
+        };
+    }
+
+    function fileTimestamp(date) {
+        return date.toISOString().replace(/[:.]/g, '-');
+    }
+
+    function formatBackupTime(value, compact = false) {
+        if (!validDate(value)) return '';
+        const options = compact
+            ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+            : { dateStyle: 'medium', timeStyle: 'short' };
+        return new Intl.DateTimeFormat(currentLocale(), options).format(new Date(value));
     }
 
     function normalizeItem(input) {
@@ -679,6 +1306,7 @@
                 event.stopPropagation();
                 folder.collapsed = !folder.collapsed;
                 await saveItem(toStorageRecord(folder));
+                scheduleAutoBackup();
                 renderSidebar();
             });
         }
@@ -1087,6 +1715,7 @@
             await saveItem(record);
             closeItemDialog();
             await refreshData();
+            scheduleAutoBackup();
             showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
         } catch (error) {
             console.error(error);
@@ -1105,6 +1734,7 @@
         updated.updatedAt = new Date().toISOString();
         await saveItem(updated);
         await refreshData();
+        scheduleAutoBackup();
         showToast(t(updated.isPinned ? 'favoriteAdded' : 'favoriteRemoved'));
     }
 
@@ -1112,11 +1742,13 @@
         const descendantIds = isFolder(item) ? getAllDescendantIds(item.id) : [];
         if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
 
+        await flushBackupBeforeDestructiveChange();
         await deleteItems([item.id, ...descendantIds]);
         if (state.view.type === 'folder' && (state.view.value === item.id || descendantIds.includes(state.view.value))) {
             state.view = { type: 'all', value: null };
         }
         await refreshData();
+        scheduleAutoBackup();
         showToast(t('deleted'));
     }
 
@@ -1193,6 +1825,7 @@
         await saveItem(updated);
         clearDragState();
         await refreshData();
+        scheduleAutoBackup();
         showToast(t(parentId == null ? 'movedRoot' : 'movedFolder'));
     }
 
@@ -1218,6 +1851,7 @@
             const prepared = prepareImportMerge(parsed.records);
             const importedCount = await addImportedRecords(prepared.records);
             await refreshData();
+            scheduleAutoBackup();
             const skipped = parsed.skipped + prepared.duplicateCount;
             const details = [
                 prepared.mergedFolderCount ? t('reusedFolders', { count: prepared.mergedFolderCount }) : '',
@@ -1452,12 +2086,7 @@
 
     function exportJson() {
         closeExportMenu();
-        const payload = {
-            format: 'bookmark-manager',
-            version: 2,
-            exportedAt: new Date().toISOString(),
-            bookmarks: state.items.map(toStorageRecord),
-        };
+        const payload = createBackupPayload();
         downloadFile(
             JSON.stringify(payload, null, 2),
             'application/json',
@@ -1514,10 +2143,12 @@
             return;
         }
         if (!window.confirm(t('confirmClear'))) return;
+        await flushBackupBeforeDestructiveChange();
         await clearDatabase();
         state.view = { type: 'all', value: null };
         clearSearch();
         await refreshData();
+        scheduleAutoBackup();
         showToast(t('cleared'));
     }
 
