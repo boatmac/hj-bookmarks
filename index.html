@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <meta name="description" content="无需安装、数据留在本地的纯前端书签管理器。" data-i18n-content="metaDescription">
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
@@ -119,6 +120,7 @@
                         </summary>
                         <div class="export-popover">
                             <button class="backup-menu-item" id="backup-settings-button" type="button"><strong data-i18n="automaticBackup">自动本地备份</strong><small id="backup-menu-status">尚未设置</small></button>
+                            <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">WebDAV 加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
                             <hr>
                             <button id="export-json-button" type="button"><strong data-i18n="jsonBackup">JSON 备份</strong><small data-i18n="jsonBackupDescription">保留全部应用数据</small></button>
                             <button id="export-html-button" type="button"><strong data-i18n="browserHtml">浏览器 HTML</strong><small data-i18n="browserHtmlDescription">可导入其他浏览器</small></button>
@@ -289,6 +291,66 @@
                 <span class="dialog-footer-spacer"></span>
                 <button class="button button-secondary" id="backup-dialog-cancel-button" type="button" data-i18n="close">关闭</button>
                 <button class="button button-primary" id="backup-now-button" type="button" data-i18n="backupNow">立即备份</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog class="item-dialog sync-dialog" id="sync-dialog">
+        <div class="dialog-panel">
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="syncEyebrow">跨设备同步</p><h2 id="sync-dialog-title" data-i18n="syncSettings">WebDAV 加密同步</h2></div>
+                <button class="icon-button dialog-close" id="sync-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="sync-settings-content">
+                <section class="backup-status-card sync-status-card" id="sync-status-card" aria-live="polite">
+                    <span class="backup-status-icon"><svg><use href="#icon-database"></use></svg></span>
+                    <span><strong id="sync-status-title">尚未配置 WebDAV</strong><small id="sync-status-detail">填写远端地址和凭据后即可进行加密同步。</small></span>
+                </section>
+
+                <div class="sync-fields">
+                    <label class="settings-field">
+                        <span><strong data-i18n="webDavUrl">WebDAV 地址</strong><small data-i18n="webDavUrlHint">可填写目录或完整 JSON 文件地址</small></span>
+                        <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="url">
+                    </label>
+                    <label class="settings-field">
+                        <span><strong data-i18n="webDavUsername">用户名</strong><small data-i18n="webDavUsernameHint">地址和用户名会保存在本机</small></span>
+                        <input id="sync-username-input" type="text" autocomplete="username">
+                    </label>
+                    <label class="settings-field">
+                        <span><strong data-i18n="webDavPassword">密码或应用密码</strong><small data-i18n="sessionOnly">仅保留在当前页面内存中</small></span>
+                        <input id="sync-password-input" type="password" autocomplete="off">
+                    </label>
+                    <label class="settings-field">
+                        <span><strong data-i18n="encryptionPassphrase">加密口令</strong><small data-i18n="encryptionPassphraseHint">至少 8 个字符；遗失后无法解密远端数据</small></span>
+                        <input id="sync-passphrase-input" type="password" minlength="8" autocomplete="off">
+                    </label>
+                </div>
+
+                <div class="settings-list sync-options-list">
+                    <label class="setting-row settings-switch-row">
+                        <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动同步至 WebDAV</small></span>
+                        <span class="switch-control">
+                            <input id="auto-sync-toggle" type="checkbox">
+                            <span></span>
+                        </span>
+                    </label>
+                    <div class="setting-row information-row">
+                        <span class="setting-copy"><strong data-i18n="lastSync">最近同步</strong><small id="last-sync-value">从未同步</small></span>
+                    </div>
+                </div>
+
+                <p class="sync-security-note" data-i18n="syncSecurityNote">远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。</p>
+                <p class="sync-compatibility" data-i18n="syncCorsNote">跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT 和条件请求标头；从本地文件打开时 Origin 通常为 null。</p>
+            </div>
+
+            <footer class="dialog-footer sync-dialog-footer">
+                <button class="button button-danger-quiet hidden" id="disconnect-sync-button" type="button" data-i18n="disconnectSync">移除同步配置</button>
+                <span class="dialog-footer-spacer"></span>
+                <button class="button button-secondary" id="sync-dialog-cancel-button" type="button" data-i18n="close">关闭</button>
+                <button class="button button-primary" id="sync-now-button" type="button" data-i18n="syncNow">立即同步</button>
             </footer>
         </div>
     </dialog>

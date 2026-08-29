@@ -2,11 +2,16 @@
     'use strict';
 
     const DB_NAME = 'BookmarkDB_v3';
-    const DB_VERSION = 5;
+    const DB_VERSION = 6;
     const STORE_NAME = 'bookmarks';
     const SETTINGS_STORE_NAME = 'settings';
+    const TOMBSTONE_STORE_NAME = 'tombstones';
     const BACKUP_HANDLE_KEY = 'backup-directory-handle';
     const BACKUP_PREFERENCES_KEY = 'backup-preferences';
+    const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
+    const DEVICE_ID_KEY = 'sync-device-id';
+    const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
+    const PBKDF2_ITERATIONS = 250000;
     const THEME_KEY = 'bookmark-manager.theme';
     const SORT_KEY = 'bookmark-manager.sort';
     const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -99,6 +104,62 @@
             persistenceGrantedToast: '浏览器持久存储保护已开启',
             persistenceDeniedToast: '浏览器未授予持久存储权限',
             backupHandleNotRemembered: '目录已可用于当前会话，但浏览器无法记住它；下次打开需要重新选择。',
+            encryptedWebDavSync: 'WebDAV 加密同步',
+            syncEyebrow: '跨设备同步',
+            syncSettings: 'WebDAV 加密同步',
+            webDavUrl: 'WebDAV 地址',
+            webDavUrlHint: '可填写目录或完整 JSON 文件地址',
+            webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
+            webDavUsername: '用户名',
+            webDavUsernameHint: '地址和用户名会保存在本机',
+            webDavPassword: '密码或应用密码',
+            sessionOnly: '仅保留在当前页面内存中',
+            encryptionPassphrase: '加密口令',
+            encryptionPassphraseHint: '至少 8 个字符；遗失后无法解密远端数据',
+            automaticSync: '页面打开时自动同步',
+            automaticSyncHint: '解锁成功后，数据变化会自动同步至 WebDAV',
+            lastSync: '最近同步',
+            syncSecurityNote: '远端文件使用 PBKDF2 + AES-GCM 加密。WebDAV 密码和加密口令不会持久保存，重新打开页面后需要再次输入。',
+            syncCorsNote: '跨域 WebDAV 必须允许 Origin、Authorization、GET、PUT 和条件请求标头；从本地文件打开时 Origin 通常为 null。',
+            disconnectSync: '移除同步配置',
+            syncNow: '立即同步',
+            syncLastNever: '从未同步',
+            syncMenuUnsupported: '当前环境不支持加密同步',
+            syncMenuNotConfigured: '尚未设置',
+            syncMenuLocked: '等待输入凭据',
+            syncMenuRunning: '正在同步…',
+            syncMenuError: '上次同步失败',
+            syncMenuReady: ({ time }) => time ? `上次：${time}` : '已解锁',
+            syncUnsupportedTitle: '当前环境不支持加密同步',
+            syncUnsupportedDetail: '需要支持 Web Crypto 和 Fetch API 的现代浏览器。',
+            syncNotConfiguredTitle: '尚未配置 WebDAV',
+            syncNotConfiguredDetail: '填写远端地址和凭据后即可进行加密同步。',
+            syncLockedTitle: '同步配置等待解锁',
+            syncLockedDetail: '请输入 WebDAV 密码和加密口令，然后点击“立即同步”。',
+            syncReadyTitle: 'WebDAV 同步已解锁',
+            syncReadyDetail: '本页保持打开时，书签变更可以自动同步。',
+            syncRunningTitle: '正在进行加密同步',
+            syncRunningDetail: '正在读取远端数据、合并更改并安全写回…',
+            syncErrorTitle: '上次同步失败',
+            syncErrorDetail: ({ message }) => message || '请检查地址、凭据和 WebDAV 跨域配置。',
+            syncUrlRequired: '请输入 WebDAV 地址。',
+            syncUrlInvalid: '请输入有效的 http 或 https WebDAV 地址。',
+            syncPasswordRequired: '填写用户名时必须输入密码或应用密码。',
+            syncPassphraseRequired: '请输入至少 8 个字符的加密口令。',
+            syncAuthFailed: 'WebDAV 身份验证失败，请检查用户名和密码。',
+            syncNetworkError: '无法连接 WebDAV。请检查网络、证书及 CORS 设置。',
+            syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
+            syncWriteFailed: ({ status }) => `写入远端文件失败（HTTP ${status}）。`,
+            syncConflictRetryFailed: '远端文件在同步期间持续变化，请稍后重试。',
+            syncDecryptFailed: '无法解密远端文件，请确认加密口令是否正确。',
+            syncRemoteInvalid: '远端同步文件格式不正确。',
+            syncComplete: ({ items, deleted }) => `同步完成：${items} 项，${deleted} 个删除记录`,
+            syncFailed: ({ message }) => `同步失败：${message}`,
+            syncAutoEnabled: '自动同步已开启；本次会话解锁后将自动运行',
+            syncAutoPaused: '自动同步已暂停',
+            syncDisconnected: '同步配置已移除，远端文件未被删除',
+            confirmDisconnectSync: '确定移除本机的 WebDAV 同步配置吗？远端加密文件不会被删除。',
+            syncSecretsSessionOnly: '敏感凭据只在本次页面打开期间使用',
             clearAll: '清空全部数据',
             irreversible: '此操作无法撤销',
             addBookmark: '添加书签',
@@ -302,6 +363,62 @@
             persistenceGrantedToast: 'Persistent browser storage enabled',
             persistenceDeniedToast: 'The browser did not grant persistent storage',
             backupHandleNotRemembered: 'The folder is available for this session, but the browser could not remember it. Select it again next time.',
+            encryptedWebDavSync: 'Encrypted WebDAV sync',
+            syncEyebrow: 'CROSS-DEVICE SYNC',
+            syncSettings: 'Encrypted WebDAV sync',
+            webDavUrl: 'WebDAV URL',
+            webDavUrlHint: 'Enter a folder URL or the complete JSON file URL',
+            webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
+            webDavUsername: 'Username',
+            webDavUsernameHint: 'The URL and username are stored on this device',
+            webDavPassword: 'Password or app password',
+            sessionOnly: 'Kept in memory for this page session only',
+            encryptionPassphrase: 'Encryption passphrase',
+            encryptionPassphraseHint: 'At least 8 characters; remote data cannot be recovered if this is lost',
+            automaticSync: 'Sync automatically while open',
+            automaticSyncHint: 'After unlocking, data changes are synchronized to WebDAV automatically',
+            lastSync: 'Last sync',
+            syncSecurityNote: 'Remote data is encrypted with PBKDF2 + AES-GCM. The WebDAV password and encryption passphrase are never persisted and must be entered again after reopening the page.',
+            syncCorsNote: 'Cross-origin WebDAV must allow Origin, Authorization, GET, PUT, and conditional request headers. Pages opened from a local file usually send Origin: null.',
+            disconnectSync: 'Remove sync configuration',
+            syncNow: 'Sync now',
+            syncLastNever: 'Never',
+            syncMenuUnsupported: 'Encrypted sync unsupported',
+            syncMenuNotConfigured: 'Not configured',
+            syncMenuLocked: 'Credentials required',
+            syncMenuRunning: 'Syncing…',
+            syncMenuError: 'Last sync failed',
+            syncMenuReady: ({ time }) => time ? `Last: ${time}` : 'Unlocked',
+            syncUnsupportedTitle: 'Encrypted sync is not supported',
+            syncUnsupportedDetail: 'A modern browser with Web Crypto and Fetch API support is required.',
+            syncNotConfiguredTitle: 'WebDAV is not configured',
+            syncNotConfiguredDetail: 'Enter the remote URL and credentials to start encrypted synchronization.',
+            syncLockedTitle: 'Sync configuration is locked',
+            syncLockedDetail: 'Enter the WebDAV password and encryption passphrase, then click “Sync now”.',
+            syncReadyTitle: 'WebDAV sync is unlocked',
+            syncReadyDetail: 'Bookmark changes can sync automatically while this page remains open.',
+            syncRunningTitle: 'Encrypted synchronization in progress',
+            syncRunningDetail: 'Reading remote data, merging changes, and writing them back securely…',
+            syncErrorTitle: 'The last sync failed',
+            syncErrorDetail: ({ message }) => message || 'Check the URL, credentials, and WebDAV CORS configuration.',
+            syncUrlRequired: 'Enter a WebDAV URL.',
+            syncUrlInvalid: 'Enter a valid http or https WebDAV URL.',
+            syncPasswordRequired: 'A password or app password is required when a username is provided.',
+            syncPassphraseRequired: 'Enter an encryption passphrase of at least 8 characters.',
+            syncAuthFailed: 'WebDAV authentication failed. Check the username and password.',
+            syncNetworkError: 'Could not connect to WebDAV. Check the network, certificate, and CORS settings.',
+            syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
+            syncWriteFailed: ({ status }) => `Could not write the remote file (HTTP ${status}).`,
+            syncConflictRetryFailed: 'The remote file kept changing during synchronization. Try again later.',
+            syncDecryptFailed: 'Could not decrypt the remote file. Check the encryption passphrase.',
+            syncRemoteInvalid: 'The remote synchronization file has an invalid format.',
+            syncComplete: ({ items, deleted }) => `Sync complete: ${items} item${items === 1 ? '' : 's'}, ${deleted} deletion record${deleted === 1 ? '' : 's'}`,
+            syncFailed: ({ message }) => `Sync failed: ${message}`,
+            syncAutoEnabled: 'Automatic sync enabled; it will run after this session is unlocked',
+            syncAutoPaused: 'Automatic sync paused',
+            syncDisconnected: 'Sync configuration removed; the remote file was not deleted',
+            confirmDisconnectSync: 'Remove the WebDAV sync configuration from this device? The encrypted remote file will not be deleted.',
+            syncSecretsSessionOnly: 'Sensitive credentials are used only while this page remains open',
             clearAll: 'Clear all data',
             irreversible: 'This action cannot be undone',
             addBookmark: 'Add bookmark',
@@ -429,6 +546,23 @@
         sort: safeStorageGet(SORT_KEY) || 'newest',
         language: getInitialLanguage(),
         persistence: 'checking',
+        sync: {
+            supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
+            deviceId: '',
+            endpoint: '',
+            username: '',
+            password: '',
+            passphrase: '',
+            automatic: false,
+            unlocked: false,
+            lastSyncAt: '',
+            error: '',
+            running: false,
+            pending: false,
+            currentPromise: null,
+            timer: null,
+            lastNotifiedError: '',
+        },
         backup: {
             supported: typeof window.showDirectoryPicker === 'function',
             handle: null,
@@ -463,8 +597,10 @@
         try {
             state.db = await openDatabase();
             ui.storageStatus.textContent = t('dbConnected');
+            await initializeSyncIdentity();
+            await ensureSyncMetadata();
             await refreshData();
-            await Promise.all([initializePersistentStorage(), initializeBackup()]);
+            await Promise.all([initializePersistentStorage(), initializeBackup(), initializeWebDavSync()]);
         } catch (error) {
             console.error('Unable to initialize bookmark manager:', error);
             showFatalError(error);
@@ -473,13 +609,13 @@
 
     function cacheElements() {
         const ids = [
-            'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
+            'app', 'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
             'all-view-button', 'favorites-view-button', 'all-count', 'favorites-count',
             'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
             'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
             'search-shortcut', 'import-file-input', 'import-button', 'export-menu',
-            'backup-settings-button', 'backup-menu-status', 'export-json-button',
-            'export-html-button', 'clear-all-button',
+            'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
+            'sync-menu-status', 'export-json-button', 'export-html-button', 'clear-all-button',
             'add-bookmark-button', 'breadcrumbs', 'page-eyebrow', 'page-title',
             'page-description', 'result-count', 'add-folder-button', 'results-label',
             'sort-select', 'folder-grid', 'bookmark-grid', 'empty-state',
@@ -496,7 +632,12 @@
             'choose-backup-directory-button', 'backup-retention-select',
             'last-backup-value', 'persistence-status-value',
             'request-persistence-button', 'disconnect-backup-button',
-            'backup-now-button', 'toast', 'toast-message',
+            'backup-now-button', 'sync-dialog', 'sync-dialog-title',
+            'sync-dialog-close-button', 'sync-dialog-cancel-button',
+            'sync-status-card', 'sync-status-title', 'sync-status-detail',
+            'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
+            'sync-passphrase-input', 'auto-sync-toggle', 'last-sync-value',
+            'disconnect-sync-button', 'sync-now-button', 'toast', 'toast-message',
         ];
 
         for (const id of ids) ui[toCamelCase(id)] = document.getElementById(id);
@@ -554,6 +695,7 @@
         updateDialogLabels(ui.itemKind.value || 'bookmark', dialogItem);
         if (state.db) renderAll();
         if (ui.backupMenuStatus) renderBackupSettings();
+        if (ui.syncMenuStatus) renderSyncSettings();
     }
 
     function bindStaticEvents() {
@@ -582,6 +724,7 @@
         ui.importButton.addEventListener('click', () => ui.importFileInput.click());
         ui.importFileInput.addEventListener('change', handleImport);
         ui.backupSettingsButton.addEventListener('click', openBackupDialog);
+        ui.syncSettingsButton.addEventListener('click', openSyncDialog);
         ui.exportJsonButton.addEventListener('click', exportJson);
         ui.exportHtmlButton.addEventListener('click', exportHtml);
         ui.clearAllButton.addEventListener('click', clearAllData);
@@ -617,6 +760,25 @@
         ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
         ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);
         ui.backupNowButton.addEventListener('click', handleBackupNow);
+
+        ui.syncDialogCloseButton.addEventListener('click', closeSyncDialog);
+        ui.syncDialogCancelButton.addEventListener('click', closeSyncDialog);
+        ui.syncDialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            closeSyncDialog();
+        });
+        ui.syncDialog.addEventListener('mousedown', (event) => {
+            if (event.target === ui.syncDialog) closeSyncDialog();
+        });
+        ui.syncEndpointInput.addEventListener('input', updateSyncSecretsFromForm);
+        ui.syncUsernameInput.addEventListener('input', updateSyncSecretsFromForm);
+        ui.syncEndpointInput.addEventListener('change', saveSyncPreferences);
+        ui.syncUsernameInput.addEventListener('change', saveSyncPreferences);
+        ui.syncPasswordInput.addEventListener('input', updateSyncSecretsFromForm);
+        ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
+        ui.autoSyncToggle.addEventListener('change', handleAutoSyncToggle);
+        ui.disconnectSyncButton.addEventListener('click', disconnectWebDavSync);
+        ui.syncNowButton.addEventListener('click', () => runWebDavSync({ notify: true }));
 
         ui.emptyActionButton.addEventListener('click', handleEmptyAction);
 
@@ -661,6 +823,9 @@
                 if (!database.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
                     database.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'key' });
                 }
+                if (!database.objectStoreNames.contains(TOMBSTONE_STORE_NAME)) {
+                    database.createObjectStore(TOMBSTONE_STORE_NAME, { keyPath: 'syncId' });
+                }
             };
 
             request.onerror = () => reject(request.error || new Error(t('dbOpenFailed')));
@@ -691,23 +856,46 @@
         });
     }
 
-    function deleteItems(ids) {
+    function deleteItems(items) {
         return new Promise((resolve, reject) => {
-            const transaction = state.db.transaction(STORE_NAME, 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            for (const id of ids) store.delete(id);
+            const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
+            const bookmarkStore = transaction.objectStore(STORE_NAME);
+            const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
+            const deletedAt = new Date().toISOString();
+            items.forEach((item) => {
+                bookmarkStore.delete(item.id);
+                if (item.syncId) {
+                    tombstoneStore.put({
+                        syncId: item.syncId,
+                        deletedAt,
+                        modifiedBy: state.sync.deviceId,
+                    });
+                }
+            });
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
             transaction.onabort = () => reject(transaction.error || new Error(t('deleteCanceled')));
         });
     }
 
-    function clearDatabase() {
+    function clearDatabase(items = state.items) {
         return new Promise((resolve, reject) => {
-            const transaction = state.db.transaction(STORE_NAME, 'readwrite');
+            const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
+            const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
+            const deletedAt = new Date().toISOString();
             transaction.objectStore(STORE_NAME).clear();
+            items.forEach((item) => {
+                if (item.syncId) {
+                    tombstoneStore.put({
+                        syncId: item.syncId,
+                        deletedAt,
+                        modifiedBy: state.sync.deviceId,
+                    });
+                }
+            });
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('deleteCanceled')));
         });
     }
 
@@ -746,6 +934,54 @@
         });
     }
 
+    function getAllTombstones() {
+        return new Promise((resolve, reject) => {
+            const request = state.db.transaction(TOMBSTONE_STORE_NAME, 'readonly')
+                .objectStore(TOMBSTONE_STORE_NAME)
+                .getAll();
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function initializeSyncIdentity() {
+        const storedId = await getSetting(DEVICE_ID_KEY);
+        state.sync.deviceId = typeof storedId === 'string' && storedId
+            ? storedId
+            : createUuid();
+        if (storedId !== state.sync.deviceId) await saveSetting(DEVICE_ID_KEY, state.sync.deviceId);
+    }
+
+    async function ensureSyncMetadata() {
+        const items = await getAllItems();
+        const now = new Date().toISOString();
+        let changed = false;
+        items.forEach((item) => {
+            if (typeof item.syncId !== 'string' || !item.syncId) {
+                item.syncId = createUuid();
+                changed = true;
+            }
+            if (!validDate(item.updatedAt)) {
+                item.updatedAt = validDate(item.createdAt) ? item.createdAt : now;
+                changed = true;
+            }
+            if (typeof item.modifiedBy !== 'string' || !item.modifiedBy) {
+                item.modifiedBy = state.sync.deviceId;
+                changed = true;
+            }
+        });
+        if (!changed) return;
+
+        await new Promise((resolve, reject) => {
+            const transaction = state.db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            items.forEach((item) => store.put(item));
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+        });
+    }
+
     function addImportedRecords(records) {
         return new Promise((resolve, reject) => {
             if (!records.length) {
@@ -753,9 +989,11 @@
                 return;
             }
 
-            const transaction = state.db.transaction(STORE_NAME, 'readwrite');
+            const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
+            const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
             const insertedIds = new Map();
+            const usedSyncIds = new Set(state.items.map((item) => item.syncId).filter(Boolean));
             let index = 0;
             let insertedCount = 0;
 
@@ -771,7 +1009,13 @@
                 if (index >= records.length) return;
 
                 const source = records[index++];
+                const preferredSyncId = typeof source.syncId === 'string' ? source.syncId : '';
+                const syncId = preferredSyncId && !usedSyncIds.has(preferredSyncId)
+                    ? preferredSyncId
+                    : createUuid();
+                usedSyncIds.add(syncId);
                 const item = {
+                    syncId,
                     title: source.title,
                     url: source.url,
                     description: source.description,
@@ -781,7 +1025,11 @@
                     collapsed: false,
                     createdAt: source.createdAt,
                     updatedAt: source.updatedAt,
+                    modifiedBy: typeof source.modifiedBy === 'string' && source.modifiedBy
+                        ? source.modifiedBy
+                        : state.sync.deviceId,
                 };
+                tombstoneStore.delete(syncId);
                 const request = store.add(item);
                 request.onsuccess = () => {
                     insertedCount += 1;
@@ -934,6 +1182,7 @@
         ui.backupNowButton.disabled = backup.running;
         ui.backupNowButton.textContent = backup.supported ? t('backupNow') : t('jsonBackup');
         ui.disconnectBackupButton.classList.toggle('hidden', !backup.handle);
+        ui.disconnectBackupButton.disabled = backup.running;
 
         const persistenceText = {
             checking: t('persistenceChecking'),
@@ -1229,10 +1478,681 @@
         return new Intl.DateTimeFormat(currentLocale(), options).format(new Date(value));
     }
 
+    async function initializeWebDavSync() {
+        renderSyncSettings();
+        if (!state.sync.supported) return;
+        try {
+            const preferences = await getSetting(SYNC_PREFERENCES_KEY);
+            if (preferences && typeof preferences === 'object') {
+                state.sync.endpoint = typeof preferences.endpoint === 'string' ? preferences.endpoint : '';
+                state.sync.username = typeof preferences.username === 'string' ? preferences.username : '';
+                state.sync.automatic = preferences.automatic === true;
+                state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
+            }
+            ui.syncEndpointInput.value = state.sync.endpoint;
+            ui.syncUsernameInput.value = state.sync.username;
+        } catch (error) {
+            console.error('Unable to restore WebDAV sync settings:', error);
+            state.sync.error = error?.message || String(error);
+        }
+        renderSyncSettings();
+    }
+
+    async function saveSyncPreferences() {
+        try {
+            await saveSetting(SYNC_PREFERENCES_KEY, {
+                endpoint: state.sync.endpoint,
+                username: state.sync.username,
+                automatic: state.sync.automatic,
+                lastSyncAt: state.sync.lastSyncAt,
+            });
+            return true;
+        } catch (error) {
+            console.warn('Unable to save WebDAV sync preferences:', error);
+            return false;
+        }
+    }
+
+    function openSyncDialog() {
+        closeExportMenu();
+        ui.syncEndpointInput.value = state.sync.endpoint;
+        ui.syncUsernameInput.value = state.sync.username;
+        ui.syncPasswordInput.value = state.sync.password;
+        ui.syncPassphraseInput.value = state.sync.passphrase;
+        renderSyncSettings();
+        ui.syncDialog.showModal();
+    }
+
+    function closeSyncDialog() {
+        updateSyncSecretsFromForm();
+        saveSyncPreferences();
+        if (ui.syncDialog.open) ui.syncDialog.close();
+    }
+
+    function updateSyncSecretsFromForm() {
+        const previousFingerprint = syncSessionFingerprint();
+        state.sync.endpoint = ui.syncEndpointInput.value.trim();
+        state.sync.username = ui.syncUsernameInput.value.trim();
+        state.sync.password = ui.syncPasswordInput.value;
+        state.sync.passphrase = ui.syncPassphraseInput.value;
+        if (state.sync.unlocked && previousFingerprint !== syncSessionFingerprint()) {
+            state.sync.unlocked = false;
+        }
+        state.sync.error = '';
+        renderSyncSettings();
+    }
+
+    function syncSessionFingerprint() {
+        return [
+            state.sync.endpoint,
+            state.sync.username,
+            state.sync.password,
+            state.sync.passphrase,
+        ].join('\u0000');
+    }
+
+    function renderSyncSettings() {
+        if (!ui.syncMenuStatus) return;
+        const sync = state.sync;
+        let status = 'ready';
+        if (!sync.supported) status = 'unsupported';
+        else if (sync.running) status = 'running';
+        else if (sync.error) status = 'error';
+        else if (!sync.endpoint) status = 'not-configured';
+        else if (!sync.unlocked) status = 'locked';
+
+        const statusContent = {
+            unsupported: [t('syncUnsupportedTitle'), t('syncUnsupportedDetail'), t('syncMenuUnsupported')],
+            running: [t('syncRunningTitle'), t('syncRunningDetail'), t('syncMenuRunning')],
+            error: [t('syncErrorTitle'), t('syncErrorDetail', { message: sync.error }), t('syncMenuError')],
+            'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
+            locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
+            ready: [
+                t('syncReadyTitle'),
+                t('syncReadyDetail'),
+                t('syncMenuReady', { time: formatBackupTime(sync.lastSyncAt, true) }),
+            ],
+        }[status];
+
+        ui.syncStatusCard.dataset.state = status;
+        ui.exportMenu.dataset.syncState = status;
+        ui.syncStatusTitle.textContent = statusContent[0];
+        ui.syncStatusDetail.textContent = statusContent[1];
+        ui.syncMenuStatus.textContent = statusContent[2];
+        ui.lastSyncValue.textContent = formatBackupTime(sync.lastSyncAt) || t('syncLastNever');
+        ui.autoSyncToggle.checked = sync.automatic;
+        ui.autoSyncToggle.disabled = !sync.supported || sync.running;
+        ui.syncNowButton.disabled = !sync.supported || sync.running;
+        ui.syncEndpointInput.disabled = sync.running;
+        ui.syncUsernameInput.disabled = sync.running;
+        ui.syncPasswordInput.disabled = sync.running;
+        ui.syncPassphraseInput.disabled = sync.running;
+        ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
+        ui.disconnectSyncButton.disabled = sync.running;
+    }
+
+    async function handleAutoSyncToggle() {
+        const enabled = ui.autoSyncToggle.checked;
+        updateSyncSecretsFromForm();
+        state.sync.automatic = enabled;
+        await saveSyncPreferences();
+        renderSyncSettings();
+        if (state.sync.automatic) {
+            showToast(t('syncAutoEnabled'));
+            if (state.sync.unlocked) scheduleWebDavSync(150);
+        } else {
+            window.clearTimeout(state.sync.timer);
+            showToast(t('syncAutoPaused'));
+        }
+    }
+
+    async function disconnectWebDavSync() {
+        if (!window.confirm(t('confirmDisconnectSync'))) return;
+        window.clearTimeout(state.sync.timer);
+        try {
+            await deleteSetting(SYNC_PREFERENCES_KEY);
+        } catch (error) {
+            console.warn('Unable to remove WebDAV sync preferences:', error);
+        }
+        Object.assign(state.sync, {
+            endpoint: '',
+            username: '',
+            password: '',
+            passphrase: '',
+            automatic: false,
+            unlocked: false,
+            lastSyncAt: '',
+            error: '',
+            pending: false,
+            lastNotifiedError: '',
+        });
+        ui.syncEndpointInput.value = '';
+        ui.syncUsernameInput.value = '';
+        ui.syncPasswordInput.value = '';
+        ui.syncPassphraseInput.value = '';
+        renderSyncSettings();
+        showToast(t('syncDisconnected'));
+    }
+
+    function scheduleWebDavSync(delay = 1800) {
+        const sync = state.sync;
+        if (!sync.supported || !sync.automatic || !sync.unlocked || !sync.endpoint) return;
+        window.clearTimeout(sync.timer);
+        sync.timer = window.setTimeout(() => runWebDavSync({ notify: false }), delay);
+    }
+
+    function scheduleDataProtection() {
+        scheduleAutoBackup();
+        scheduleWebDavSync();
+    }
+
+    async function runWebDavSync({ notify = false } = {}) {
+        updateSyncSecretsFromForm();
+        const sync = state.sync;
+        if (!sync.supported) {
+            if (notify) showToast(t('syncFailed', { message: t('syncUnsupportedDetail') }));
+            return false;
+        }
+        if (sync.running) {
+            sync.pending = true;
+            return sync.currentPromise || false;
+        }
+
+        let endpoint;
+        try {
+            endpoint = normalizeWebDavEndpoint(sync.endpoint);
+            if (sync.username && !sync.password) throw new Error(t('syncPasswordRequired'));
+            if (sync.passphrase.length < 8) throw new Error(t('syncPassphraseRequired'));
+        } catch (error) {
+            sync.error = error.message;
+            renderSyncSettings();
+            if (notify) showToast(t('syncFailed', { message: sync.error }));
+            return false;
+        }
+
+        sync.endpoint = endpoint;
+        ui.syncEndpointInput.value = endpoint;
+        sync.running = true;
+        sync.error = '';
+        window.clearTimeout(sync.timer);
+        ui.app.inert = true;
+        document.body.classList.add('syncing');
+        renderSyncSettings();
+        await saveSyncPreferences();
+
+        const operation = (async () => {
+            let merged = null;
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+                const remote = await readRemoteSyncFile(endpoint);
+                await refreshData();
+                const local = await createLocalSyncDataset();
+                merged = mergeSyncDatasets(local, remote.data);
+                const encrypted = await encryptSyncData(merged, sync.passphrase);
+                const writeResult = await writeRemoteSyncFile(endpoint, encrypted, remote);
+                if (writeResult === 'conflict') {
+                    merged = null;
+                    continue;
+                }
+                break;
+            }
+            if (!merged) throw new Error(t('syncConflictRetryFailed'));
+
+            const viewedFolder = state.view.type === 'folder' ? findItem(state.view.value) : null;
+            const viewedFolderSyncId = viewedFolder?.syncId || '';
+            await replaceLocalSyncDataset(merged);
+            await refreshData();
+            if (viewedFolderSyncId) {
+                const replacement = state.items.find((item) => item.syncId === viewedFolderSyncId && isFolder(item));
+                state.view = replacement
+                    ? { type: 'folder', value: replacement.id }
+                    : { type: 'all', value: null };
+                renderAll();
+            }
+
+            sync.unlocked = true;
+            sync.lastSyncAt = new Date().toISOString();
+            sync.lastNotifiedError = '';
+            await saveSyncPreferences();
+            scheduleAutoBackup();
+            if (notify) showToast(t('syncComplete', {
+                items: merged.items.length,
+                deleted: merged.tombstones.length,
+            }));
+            return true;
+        })();
+
+        sync.currentPromise = operation;
+        try {
+            return await operation;
+        } catch (error) {
+            console.error('WebDAV synchronization failed:', error);
+            sync.error = error?.message || String(error);
+            if (notify || sync.lastNotifiedError !== sync.error) {
+                showToast(t('syncFailed', { message: sync.error }));
+                sync.lastNotifiedError = sync.error;
+            }
+            return false;
+        } finally {
+            sync.running = false;
+            sync.currentPromise = null;
+            ui.app.inert = false;
+            document.body.classList.remove('syncing');
+            renderSyncSettings();
+            if (sync.pending) {
+                sync.pending = false;
+                scheduleWebDavSync(200);
+            }
+        }
+    }
+
+    function normalizeWebDavEndpoint(value) {
+        const input = String(value || '').trim();
+        if (!input) throw new Error(t('syncUrlRequired'));
+        let url;
+        try {
+            url = new URL(input);
+        } catch {
+            throw new Error(t('syncUrlInvalid'));
+        }
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+            throw new Error(t('syncUrlInvalid'));
+        }
+        if (!url.pathname.toLowerCase().endsWith('.json')) {
+            if (!url.pathname.endsWith('/')) url.pathname += '/';
+            url.pathname += SYNC_FILE_NAME;
+        }
+        url.hash = '';
+        return url.toString();
+    }
+
+    function createWebDavHeaders(includeContentType = false) {
+        const headers = new Headers({ Accept: 'application/json' });
+        if (includeContentType) headers.set('Content-Type', 'application/json; charset=utf-8');
+        if (state.sync.username) {
+            const credentials = new TextEncoder().encode(`${state.sync.username}:${state.sync.password}`);
+            headers.set('Authorization', `Basic ${bytesToBase64(credentials)}`);
+        }
+        return headers;
+    }
+
+    async function readRemoteSyncFile(endpoint) {
+        let response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'GET',
+                headers: createWebDavHeaders(),
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'follow',
+            });
+        } catch {
+            throw new Error(t('syncNetworkError'));
+        }
+
+        if (response.status === 404) return { exists: false, etag: '', data: emptySyncDataset() };
+        if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
+        if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
+        const text = await response.text();
+        const data = text.trim()
+            ? parseRemoteSyncDataset(await decryptSyncData(text, state.sync.passphrase))
+            : emptySyncDataset();
+        return {
+            exists: true,
+            etag: response.headers.get('ETag') || '',
+            data,
+        };
+    }
+
+    async function writeRemoteSyncFile(endpoint, content, remote) {
+        const headers = createWebDavHeaders(true);
+        if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
+        else if (!remote.exists) headers.set('If-None-Match', '*');
+
+        let response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'PUT',
+                headers,
+                body: content,
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'follow',
+            });
+        } catch {
+            throw new Error(t('syncNetworkError'));
+        }
+        if (response.status === 412) return 'conflict';
+        if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
+        if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
+        return 'written';
+    }
+
+    async function encryptSyncData(dataset, passphrase) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveSyncKey(passphrase, salt, PBKDF2_ITERATIONS, ['encrypt']);
+        const plaintext = new TextEncoder().encode(JSON.stringify({
+            format: 'bookmark-manager-sync',
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            items: dataset.items,
+            tombstones: dataset.tombstones,
+        }));
+        const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+        return `${JSON.stringify({
+            format: 'bookmark-manager-encrypted-sync',
+            version: 1,
+            kdf: {
+                name: 'PBKDF2',
+                hash: 'SHA-256',
+                iterations: PBKDF2_ITERATIONS,
+                salt: bytesToBase64(salt),
+            },
+            cipher: {
+                name: 'AES-GCM',
+                iv: bytesToBase64(iv),
+                data: bytesToBase64(new Uint8Array(ciphertext)),
+            },
+        }, null, 2)}\n`;
+    }
+
+    async function decryptSyncData(content, passphrase) {
+        let envelope;
+        try {
+            envelope = JSON.parse(content);
+        } catch {
+            throw new Error(t('syncRemoteInvalid'));
+        }
+        const iterations = Number(envelope?.kdf?.iterations);
+        if (
+            envelope?.format !== 'bookmark-manager-encrypted-sync'
+            || envelope?.version !== 1
+            || envelope?.kdf?.name !== 'PBKDF2'
+            || envelope?.cipher?.name !== 'AES-GCM'
+            || !Number.isInteger(iterations)
+            || iterations < 10000
+            || iterations > 1000000
+        ) {
+            throw new Error(t('syncRemoteInvalid'));
+        }
+
+        try {
+            const salt = base64ToBytes(envelope.kdf.salt);
+            const iv = base64ToBytes(envelope.cipher.iv);
+            const ciphertext = base64ToBytes(envelope.cipher.data);
+            if (salt.length < 16 || iv.length !== 12 || !ciphertext.length) throw new Error('invalid encrypted data');
+            const key = await deriveSyncKey(passphrase, salt, iterations, ['decrypt']);
+            const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+            return JSON.parse(new TextDecoder().decode(plaintext));
+        } catch {
+            throw new Error(t('syncDecryptFailed'));
+        }
+    }
+
+    async function deriveSyncKey(passphrase, salt, iterations, usages) {
+        const material = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(String(passphrase).normalize('NFKC')),
+            'PBKDF2',
+            false,
+            ['deriveKey'],
+        );
+        return crypto.subtle.deriveKey(
+            { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+            material,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            usages,
+        );
+    }
+
+    function bytesToBase64(value) {
+        const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        }
+        return btoa(binary);
+    }
+
+    function base64ToBytes(value) {
+        const binary = atob(String(value || ''));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        return bytes;
+    }
+
+    async function createLocalSyncDataset() {
+        const parentSyncIds = new Map(state.items.map((item) => [item.id, item.syncId]));
+        const items = state.items.map((item) => ({
+            syncId: item.syncId,
+            parentSyncId: item.parentId == null ? null : (parentSyncIds.get(item.parentId) || null),
+            title: item.title,
+            url: item.url,
+            description: item.description,
+            tags: item.tags,
+            isPinned: item.isPinned,
+            createdAt: item.createdAt || item.updatedAt,
+            updatedAt: item.updatedAt,
+            modifiedBy: item.modifiedBy || state.sync.deviceId,
+        }));
+        const tombstones = (await getAllTombstones()).map(normalizeSyncTombstone).filter(Boolean);
+        return {
+            items: items.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+            tombstones: tombstones.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+        };
+    }
+
+    function parseRemoteSyncDataset(input) {
+        if (
+            !input
+            || input.format !== 'bookmark-manager-sync'
+            || input.version !== 1
+            || !Array.isArray(input.items)
+            || !Array.isArray(input.tombstones)
+        ) {
+            throw new Error(t('syncRemoteInvalid'));
+        }
+        try {
+            const items = input.items.map(normalizeSyncItem);
+            const tombstones = input.tombstones.map(normalizeSyncTombstone).filter(Boolean);
+            return { items, tombstones };
+        } catch (error) {
+            if (error?.message === t('syncRemoteInvalid')) throw error;
+            throw new Error(t('syncRemoteInvalid'));
+        }
+    }
+
+    function emptySyncDataset() {
+        return { items: [], tombstones: [] };
+    }
+
+    function normalizeSyncItem(input) {
+        if (!input || typeof input !== 'object' || typeof input.syncId !== 'string' || !input.syncId) {
+            throw new Error(t('syncRemoteInvalid'));
+        }
+        const title = typeof input.title === 'string' && input.title.trim() ? input.title.trim() : t('untitled');
+        const url = input.url ? normalizeUrl(input.url) : '';
+        const updatedAt = validDate(input.updatedAt) ? input.updatedAt : '1970-01-01T00:00:00.000Z';
+        return {
+            syncId: input.syncId,
+            parentSyncId: typeof input.parentSyncId === 'string' && input.parentSyncId ? input.parentSyncId : null,
+            title,
+            url,
+            description: typeof input.description === 'string' ? input.description.trim() : '',
+            tags: parseTags(input.tags),
+            isPinned: input.isPinned === true,
+            createdAt: validDate(input.createdAt) ? input.createdAt : updatedAt,
+            updatedAt,
+            modifiedBy: typeof input.modifiedBy === 'string' ? input.modifiedBy : '',
+        };
+    }
+
+    function normalizeSyncTombstone(input) {
+        if (!input || typeof input.syncId !== 'string' || !input.syncId || !validDate(input.deletedAt)) return null;
+        return {
+            syncId: input.syncId,
+            deletedAt: input.deletedAt,
+            modifiedBy: typeof input.modifiedBy === 'string' ? input.modifiedBy : '',
+        };
+    }
+
+    function mergeSyncDatasets(local, remote) {
+        const items = new Map();
+        [...local.items, ...remote.items].forEach((item) => {
+            const current = items.get(item.syncId);
+            if (!current || compareSyncRecords(item, current, 'updatedAt') > 0) items.set(item.syncId, { ...item });
+        });
+        const tombstones = new Map();
+        [...local.tombstones, ...remote.tombstones].forEach((tombstone) => {
+            const current = tombstones.get(tombstone.syncId);
+            if (!current || compareSyncRecords(tombstone, current, 'deletedAt') > 0) {
+                tombstones.set(tombstone.syncId, { ...tombstone });
+            }
+        });
+
+        const liveItems = [];
+        const liveTombstones = [];
+        const allSyncIds = new Set([...items.keys(), ...tombstones.keys()]);
+        allSyncIds.forEach((syncId) => {
+            const item = items.get(syncId);
+            const tombstone = tombstones.get(syncId);
+            if (!item) {
+                if (tombstone) liveTombstones.push(tombstone);
+                return;
+            }
+            if (tombstone && tombstoneWins(tombstone, item)) {
+                liveTombstones.push(tombstone);
+            } else {
+                liveItems.push(item);
+            }
+        });
+
+        sanitizeSyncHierarchy(liveItems);
+        return {
+            items: liveItems.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+            tombstones: liveTombstones.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+        };
+    }
+
+    function compareSyncRecords(left, right, dateField) {
+        const timeDifference = Date.parse(left[dateField]) - Date.parse(right[dateField]);
+        if (timeDifference) return timeDifference;
+        const deviceDifference = String(left.modifiedBy || '').localeCompare(String(right.modifiedBy || ''));
+        if (deviceDifference) return deviceDifference;
+        return JSON.stringify(left).localeCompare(JSON.stringify(right));
+    }
+
+    function tombstoneWins(tombstone, item) {
+        const timeDifference = Date.parse(tombstone.deletedAt) - Date.parse(item.updatedAt);
+        if (timeDifference) return timeDifference > 0;
+        return String(tombstone.modifiedBy || '').localeCompare(String(item.modifiedBy || '')) >= 0;
+    }
+
+    function sanitizeSyncHierarchy(items) {
+        const byId = new Map(items.map((item) => [item.syncId, item]));
+        items.forEach((item) => {
+            const parent = item.parentSyncId ? byId.get(item.parentSyncId) : null;
+            if (!parent || parent.url || parent.syncId === item.syncId) item.parentSyncId = null;
+        });
+
+        const visited = new Set();
+        const visiting = new Set();
+        const visit = (item) => {
+            if (visited.has(item.syncId)) return;
+            if (visiting.has(item.syncId)) {
+                item.parentSyncId = null;
+                return;
+            }
+            visiting.add(item.syncId);
+            const parent = item.parentSyncId ? byId.get(item.parentSyncId) : null;
+            if (parent) visit(parent);
+            visiting.delete(item.syncId);
+            visited.add(item.syncId);
+        };
+        items.forEach(visit);
+    }
+
+    function replaceLocalSyncDataset(dataset) {
+        const existingBySyncId = new Map(state.items.map((item) => [item.syncId, item]));
+        const liveSyncIds = new Set(dataset.items.map((item) => item.syncId));
+        const numericIds = new Map(
+            state.items
+                .filter((item) => liveSyncIds.has(item.syncId))
+                .map((item) => [item.syncId, item.id]),
+        );
+
+        return new Promise((resolve, reject) => {
+            const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
+            const bookmarkStore = transaction.objectStore(STORE_NAME);
+            const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
+            const localRecords = [];
+            let upsertIndex = 0;
+            let parentIndex = 0;
+
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
+
+            state.items
+                .filter((item) => !liveSyncIds.has(item.syncId))
+                .forEach((item) => bookmarkStore.delete(item.id));
+
+            const addTombstones = () => {
+                dataset.tombstones.forEach((tombstone) => tombstoneStore.put(tombstone));
+            };
+            const updateParents = () => {
+                if (parentIndex >= localRecords.length) {
+                    addTombstones();
+                    return;
+                }
+                const record = localRecords[parentIndex++];
+                record.parentId = record.parentSyncId ? (numericIds.get(record.parentSyncId) || null) : null;
+                delete record.parentSyncId;
+                const request = bookmarkStore.put(record);
+                request.onsuccess = updateParents;
+            };
+            const upsertItems = () => {
+                if (upsertIndex >= dataset.items.length) {
+                    updateParents();
+                    return;
+                }
+                const item = dataset.items[upsertIndex++];
+                const existing = existingBySyncId.get(item.syncId);
+                const record = {
+                    ...(existing ? { id: existing.id } : {}),
+                    syncId: item.syncId,
+                    parentSyncId: item.parentSyncId,
+                    parentId: null,
+                    title: item.title,
+                    url: item.url,
+                    description: item.description,
+                    tags: item.tags,
+                    isPinned: item.isPinned,
+                    collapsed: existing?.collapsed === true,
+                    createdAt: item.createdAt,
+                    updatedAt: item.updatedAt,
+                    modifiedBy: item.modifiedBy,
+                };
+                const request = existing ? bookmarkStore.put(record) : bookmarkStore.add(record);
+                request.onsuccess = () => {
+                    record.id = existing?.id ?? request.result;
+                    numericIds.set(item.syncId, record.id);
+                    localRecords.push(record);
+                    upsertItems();
+                };
+            };
+
+            const clearTombstones = tombstoneStore.clear();
+            clearTombstones.onsuccess = upsertItems;
+        });
+    }
+
     function normalizeItem(input) {
         const url = typeof input.url === 'string' ? input.url.trim() : '';
         return {
             id: input.id,
+            syncId: typeof input.syncId === 'string' && input.syncId ? input.syncId : createUuid(),
             title: typeof input.title === 'string' && input.title.trim() ? input.title.trim() : t('untitled'),
             url,
             description: typeof input.description === 'string' ? input.description.trim() : '',
@@ -1242,6 +2162,9 @@
             collapsed: input.collapsed === true,
             createdAt: validDate(input.createdAt) ? input.createdAt : '',
             updatedAt: validDate(input.updatedAt) ? input.updatedAt : '',
+            modifiedBy: typeof input.modifiedBy === 'string' && input.modifiedBy
+                ? input.modifiedBy
+                : state.sync.deviceId,
         };
     }
 
@@ -1699,6 +2622,7 @@
         const now = new Date().toISOString();
         const record = {
             ...(existing ? toStorageRecord(existing) : {}),
+            syncId: existing?.syncId || createUuid(),
             title,
             url,
             description: kind === 'bookmark' ? ui.itemDescriptionInput.value.trim() : '',
@@ -1708,6 +2632,7 @@
             collapsed: existing?.collapsed || false,
             createdAt: existing?.createdAt || now,
             updatedAt: now,
+            modifiedBy: state.sync.deviceId,
         };
         if (id != null) record.id = id;
 
@@ -1715,7 +2640,7 @@
             await saveItem(record);
             closeItemDialog();
             await refreshData();
-            scheduleAutoBackup();
+            scheduleDataProtection();
             showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
         } catch (error) {
             console.error(error);
@@ -1732,9 +2657,10 @@
         const updated = toStorageRecord(bookmark);
         updated.isPinned = !bookmark.isPinned;
         updated.updatedAt = new Date().toISOString();
+        updated.modifiedBy = state.sync.deviceId;
         await saveItem(updated);
         await refreshData();
-        scheduleAutoBackup();
+        scheduleDataProtection();
         showToast(t(updated.isPinned ? 'favoriteAdded' : 'favoriteRemoved'));
     }
 
@@ -1743,12 +2669,13 @@
         if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
 
         await flushBackupBeforeDestructiveChange();
-        await deleteItems([item.id, ...descendantIds]);
+        const deletingIds = new Set([item.id, ...descendantIds]);
+        await deleteItems(state.items.filter((candidate) => deletingIds.has(candidate.id)));
         if (state.view.type === 'folder' && (state.view.value === item.id || descendantIds.includes(state.view.value))) {
             state.view = { type: 'all', value: null };
         }
         await refreshData();
-        scheduleAutoBackup();
+        scheduleDataProtection();
         showToast(t('deleted'));
     }
 
@@ -1822,10 +2749,11 @@
         const updated = toStorageRecord(item);
         updated.parentId = parentId;
         updated.updatedAt = new Date().toISOString();
+        updated.modifiedBy = state.sync.deviceId;
         await saveItem(updated);
         clearDragState();
         await refreshData();
-        scheduleAutoBackup();
+        scheduleDataProtection();
         showToast(t(parentId == null ? 'movedRoot' : 'movedFolder'));
     }
 
@@ -1851,7 +2779,7 @@
             const prepared = prepareImportMerge(parsed.records);
             const importedCount = await addImportedRecords(prepared.records);
             await refreshData();
-            scheduleAutoBackup();
+            scheduleDataProtection();
             const skipped = parsed.skipped + prepared.duplicateCount;
             const details = [
                 prepared.mergedFolderCount ? t('reusedFolders', { count: prepared.mergedFolderCount }) : '',
@@ -1967,6 +2895,7 @@
             records.push({
                 sourceKey: `json-${index}`,
                 parentKey: input.parentId == null ? null : (idMap.get(String(input.parentId)) || null),
+                syncId: typeof input.syncId === 'string' ? input.syncId : '',
                 title,
                 url,
                 description: typeof input.description === 'string' ? input.description.trim() : '',
@@ -1974,6 +2903,7 @@
                 isPinned: input.isPinned === true || input.favorite === true,
                 createdAt: validDate(input.createdAt) ? input.createdAt : new Date().toISOString(),
                 updatedAt: validDate(input.updatedAt) ? input.updatedAt : new Date().toISOString(),
+                modifiedBy: typeof input.modifiedBy === 'string' ? input.modifiedBy : state.sync.deviceId,
             });
         });
 
@@ -2148,7 +3078,7 @@
         state.view = { type: 'all', value: null };
         clearSearch();
         await refreshData();
-        scheduleAutoBackup();
+        scheduleDataProtection();
         showToast(t('cleared'));
     }
 
@@ -2282,6 +3212,7 @@
     function toStorageRecord(item) {
         return {
             ...(item.id != null ? { id: item.id } : {}),
+            syncId: item.syncId || createUuid(),
             title: item.title,
             url: item.url,
             description: item.description || '',
@@ -2291,6 +3222,7 @@
             collapsed: item.collapsed === true,
             createdAt: item.createdAt || '',
             updatedAt: item.updatedAt || '',
+            modifiedBy: item.modifiedBy || state.sync.deviceId,
         };
     }
 
@@ -2345,6 +3277,15 @@
 
     function getSiteInitial(hostname) {
         return (hostname || '·').trim().slice(0, 1).toUpperCase();
+    }
+
+    function createUuid() {
+        if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
     }
 
     function hashString(value) {

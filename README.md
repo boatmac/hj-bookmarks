@@ -33,6 +33,8 @@ BoomarkManager/
 - IndexedDB 本地持久化，并请求浏览器持久存储保护
 - Edge / Chrome 自动备份到用户选择的本地目录
 - `bookmarks-latest.json` 最新备份及 7/30/90 份滚动历史快照
+- WebDAV 跨设备双向同步，远端数据使用 PBKDF2 + AES-GCM 加密
+- 稳定 UUID、删除墓碑、ETag 条件写入及冲突重试
 - 合并导入 JSON 备份
 - 合并导入 Chrome、Edge、Firefox 等浏览器导出的书签 HTML
 - 导出完整 JSON 备份
@@ -76,9 +78,59 @@ BoomarkManager/
 
 应用同时调用浏览器持久存储 API，尽量避免 IndexedDB 因存储压力被自动清理；是否授予由浏览器决定，自动备份不依赖这一权限。
 
+## WebDAV 加密同步
+
+在右上角“导出”菜单中选择“WebDAV 加密同步”，填写：
+
+- WebDAV 目录或完整文件地址
+- 用户名
+- 密码或应用密码
+- 至少 8 个字符的加密口令
+
+目录地址会自动使用固定文件名：
+
+```text
+https://dav.example.com/bookmarks/
+└── bookmarks-sync.enc.json
+```
+
+也可以直接填写完整的 `.json` 文件地址。WebDAV 上级目录必须已经存在。
+
+同步特性：
+
+- 远端只保存 PBKDF2 + AES-GCM 加密密文
+- 地址、用户名和自动同步偏好保存在本机
+- WebDAV 密码及加密口令只保留在当前页面内存中
+- 重新打开页面后必须再次输入敏感凭据进行解锁
+- 首次同步会创建远端文件
+- 后续同步会合并本机和远端数据
+- 使用稳定 UUID 识别同一条书签
+- 删除操作通过墓碑记录同步到其他设备
+- 相同记录发生冲突时按 `updatedAt` 和设备 ID 确定版本
+- 使用 ETag / `If-Match` 防止并发覆盖，冲突时自动重新读取并重试
+- 参与同步的设备应保持系统时间准确
+- 手动同步成功后，可在当前页面会话中启用变更自动同步
+
+同一浏览器配置文件中不建议同时打开多个页面进行编辑；同步开始前会重新读取 IndexedDB，但多个标签页在极短时间内并发修改仍可能产生最后写入覆盖。
+
+加密口令不会上传，也无法找回。所有设备必须使用完全相同的口令；遗失口令将无法解密远端文件。
+
+### WebDAV CORS 要求
+
+普通网页不能绕过浏览器跨域策略。WebDAV 服务至少需要允许：
+
+```text
+Methods: GET, PUT, OPTIONS
+Headers: Authorization, Content-Type, If-Match, If-None-Match
+Expose:  ETag
+Origin:  应用所在站点；从 index.html 直接打开时通常为 null
+```
+
+建议使用 HTTPS 和 WebDAV 应用专用密码。如果服务不允许 CORS，应用会显示网络/CORS 错误；这需要在 WebDAV、NAS 或反向代理侧调整，前端无法自行绕过。
+
 ## 数据与隐私
 
-所有书签保存在当前浏览器的 IndexedDB 中，不会上传到任何服务器，也没有遥测或第三方网络请求。自动备份只会写入用户明确选择的本地目录。
+默认情况下，所有书签只保存在当前浏览器的 IndexedDB 中，没有遥测或第三方网络请求。自动备份只会写入用户明确选择的本地目录；只有用户配置并主动解锁 WebDAV 后，应用才会访问对应的同步地址。
 
 需要注意：
 
