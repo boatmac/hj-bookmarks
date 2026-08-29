@@ -12,6 +12,7 @@
     const DEVICE_ID_KEY = 'sync-device-id';
     const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
     const PBKDF2_ITERATIONS = 250000;
+    const SYNC_REQUEST_TIMEOUT_MS = 20000;
     const THEME_KEY = 'bookmark-manager.theme';
     const SORT_KEY = 'bookmark-manager.sort';
     const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -142,6 +143,15 @@
             syncReadyDetail: '本页保持打开时，书签变更可以自动同步。',
             syncRunningTitle: '正在进行加密同步',
             syncRunningDetail: '正在读取远端数据、合并更改并安全写回…',
+            syncPhasePreparing: '正在准备同步并保存本机配置…',
+            syncPhaseReading: '正在连接 WebDAV 并读取远端文件…',
+            syncPhaseCreatingFolder: '远端目录不存在，正在创建最后一级目录…',
+            syncPhaseMerging: '正在比较本机与远端版本并合并更改…',
+            syncPhaseEncrypting: '正在使用 AES-GCM 加密合并后的数据…',
+            syncPhaseWriting: '正在将加密数据写入 WebDAV…',
+            syncPhaseApplying: '远端写入成功，正在更新本机数据…',
+            syncPhaseRetrying: '检测到并发修改，正在重新读取并重试…',
+            syncPhaseCanceling: '正在取消同步…',
             syncErrorTitle: '上次同步失败',
             syncErrorDetail: ({ message }) => message || '请检查地址、凭据和 WebDAV 跨域配置。',
             syncUrlRequired: '请输入 WebDAV 地址。',
@@ -150,6 +160,9 @@
             syncPassphraseRequired: '请输入至少 8 个字符的加密口令。',
             syncAuthFailed: 'WebDAV 身份验证失败，请检查用户名和密码。',
             syncNetworkError: '无法连接 WebDAV。请检查网络、证书及 CORS 设置。',
+            syncTimeout: 'WebDAV 请求超过 20 秒未响应，请检查地址、网络、反向代理或 CORS 配置。',
+            syncCanceled: '同步已取消',
+            cancelSync: '取消同步',
             syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
             syncWriteFailed: ({ status }) => `写入远端文件失败（HTTP ${status}）。`,
             syncCreateDirectoryFailed: ({ status }) => `创建 WebDAV 同步目录失败（HTTP ${status}）。`,
@@ -405,6 +418,15 @@
             syncReadyDetail: 'Bookmark changes can sync automatically while this page remains open.',
             syncRunningTitle: 'Encrypted synchronization in progress',
             syncRunningDetail: 'Reading remote data, merging changes, and writing them back securely…',
+            syncPhasePreparing: 'Preparing synchronization and saving local settings…',
+            syncPhaseReading: 'Connecting to WebDAV and reading the remote file…',
+            syncPhaseCreatingFolder: 'The remote folder is missing; creating the final folder…',
+            syncPhaseMerging: 'Comparing local and remote versions and merging changes…',
+            syncPhaseEncrypting: 'Encrypting the merged data with AES-GCM…',
+            syncPhaseWriting: 'Writing encrypted data to WebDAV…',
+            syncPhaseApplying: 'Remote write succeeded; updating local data…',
+            syncPhaseRetrying: 'A concurrent update was detected; reading again and retrying…',
+            syncPhaseCanceling: 'Canceling synchronization…',
             syncErrorTitle: 'The last sync failed',
             syncErrorDetail: ({ message }) => message || 'Check the URL, credentials, and WebDAV CORS configuration.',
             syncUrlRequired: 'Enter a WebDAV URL.',
@@ -413,6 +435,9 @@
             syncPassphraseRequired: 'Enter an encryption passphrase of at least 8 characters.',
             syncAuthFailed: 'WebDAV authentication failed. Check the username and password.',
             syncNetworkError: 'Could not connect to WebDAV. Check the network, certificate, and CORS settings.',
+            syncTimeout: 'The WebDAV request did not respond within 20 seconds. Check the URL, network, reverse proxy, or CORS configuration.',
+            syncCanceled: 'Synchronization canceled',
+            cancelSync: 'Cancel sync',
             syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
             syncWriteFailed: ({ status }) => `Could not write the remote file (HTTP ${status}).`,
             syncCreateDirectoryFailed: ({ status }) => `Could not create the WebDAV sync folder (HTTP ${status}).`,
@@ -566,8 +591,11 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            phase: '',
             running: false,
             pending: false,
+            cancelRequested: false,
+            abortController: null,
             currentPromise: null,
             timer: null,
             lastNotifiedError: '',
@@ -1542,9 +1570,23 @@
     }
 
     function closeSyncDialog() {
+        if (state.sync.running) {
+            cancelWebDavSync();
+            return;
+        }
         updateSyncSecretsFromForm();
         saveSyncPreferences();
         if (ui.syncDialog.open) ui.syncDialog.close();
+    }
+
+    function cancelWebDavSync() {
+        if (!state.sync.running) return;
+        state.sync.cancelRequested = true;
+        state.sync.pending = false;
+        state.sync.phase = 'syncPhaseCanceling';
+        window.clearTimeout(state.sync.timer);
+        state.sync.abortController?.abort();
+        renderSyncSettings();
     }
 
     function updateSyncSecretsFromForm() {
@@ -1581,7 +1623,7 @@
 
         const statusContent = {
             unsupported: [t('syncUnsupportedTitle'), t('syncUnsupportedDetail'), t('syncMenuUnsupported')],
-            running: [t('syncRunningTitle'), t('syncRunningDetail'), t('syncMenuRunning')],
+            running: [t('syncRunningTitle'), sync.phase ? t(sync.phase) : t('syncRunningDetail'), t('syncMenuRunning')],
             error: [t('syncErrorTitle'), t('syncErrorDetail', { message: sync.error }), t('syncMenuError')],
             'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
             locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
@@ -1603,6 +1645,9 @@
         ui.autoSyncToggle.checked = sync.automatic;
         ui.autoSyncToggle.disabled = !sync.supported || sync.running;
         ui.syncNowButton.disabled = !sync.supported || sync.running;
+        ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
+        ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
+        ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
         ui.syncEndpointInput.disabled = sync.running;
         ui.syncUsernameInput.disabled = sync.running;
         ui.syncPasswordInput.disabled = sync.running;
@@ -1650,7 +1695,10 @@
             unlocked: false,
             lastSyncAt: '',
             error: '',
+            phase: '',
             pending: false,
+            cancelRequested: false,
+            abortController: null,
             lastNotifiedError: '',
         });
         ui.syncEndpointInput.value = '';
@@ -1671,6 +1719,11 @@
     function scheduleDataProtection() {
         scheduleAutoBackup();
         scheduleWebDavSync();
+    }
+
+    function setSyncPhase(phase) {
+        state.sync.phase = phase;
+        renderSyncSettings();
     }
 
     async function runWebDavSync({ notify = false } = {}) {
@@ -1701,6 +1754,9 @@
         ui.syncEndpointInput.value = endpoint;
         sync.running = true;
         sync.error = '';
+        sync.phase = 'syncPhasePreparing';
+        sync.cancelRequested = false;
+        sync.abortController = new AbortController();
         window.clearTimeout(sync.timer);
         ui.app.inert = true;
         document.body.classList.add('syncing');
@@ -1710,12 +1766,19 @@
         const operation = (async () => {
             let merged = null;
             for (let attempt = 0; attempt < 3; attempt += 1) {
+                setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
                 const remote = await readRemoteSyncFile(endpoint);
-                if (!remote.exists && sync.createDirectory) await ensureWebDavParentDirectory(endpoint);
+                if (!remote.exists && sync.createDirectory) {
+                    setSyncPhase('syncPhaseCreatingFolder');
+                    await ensureWebDavParentDirectory(endpoint);
+                }
+                setSyncPhase('syncPhaseMerging');
                 await refreshData();
                 const local = await createLocalSyncDataset();
                 merged = mergeSyncDatasets(local, remote.data);
+                setSyncPhase('syncPhaseEncrypting');
                 const encrypted = await encryptSyncData(merged, sync.passphrase);
+                setSyncPhase('syncPhaseWriting');
                 const writeResult = await writeRemoteSyncFile(endpoint, encrypted, remote);
                 if (writeResult === 'conflict') {
                     merged = null;
@@ -1725,6 +1788,7 @@
             }
             if (!merged) throw new Error(t('syncConflictRetryFailed'));
 
+            setSyncPhase('syncPhaseApplying');
             const viewedFolder = state.view.type === 'folder' ? findItem(state.view.value) : null;
             const viewedFolderSyncId = viewedFolder?.syncId || '';
             await replaceLocalSyncDataset(merged);
@@ -1753,6 +1817,11 @@
         try {
             return await operation;
         } catch (error) {
+            if (sync.cancelRequested) {
+                sync.error = '';
+                showToast(t('syncCanceled'));
+                return false;
+            }
             console.error('WebDAV synchronization failed:', error);
             sync.error = error?.message || String(error);
             if (notify || sync.lastNotifiedError !== sync.error) {
@@ -1761,14 +1830,20 @@
             }
             return false;
         } finally {
+            const wasCanceled = sync.cancelRequested;
             sync.running = false;
             sync.currentPromise = null;
+            sync.abortController = null;
+            sync.cancelRequested = false;
+            sync.phase = '';
             ui.app.inert = false;
             document.body.classList.remove('syncing');
             renderSyncSettings();
-            if (sync.pending) {
+            if (sync.pending && !wasCanceled) {
                 sync.pending = false;
                 scheduleWebDavSync(200);
+            } else {
+                sync.pending = false;
             }
         }
     }
@@ -1803,19 +1878,38 @@
         return headers;
     }
 
-    async function readRemoteSyncFile(endpoint) {
-        let response;
+    async function fetchWebDav(url, options) {
+        const requestController = new AbortController();
+        const sessionSignal = state.sync.abortController?.signal;
+        if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
+        let timedOut = false;
+        const cancelRequest = () => requestController.abort();
+        sessionSignal?.addEventListener('abort', cancelRequest, { once: true });
+        const timeout = window.setTimeout(() => {
+            timedOut = true;
+            requestController.abort();
+        }, SYNC_REQUEST_TIMEOUT_MS);
+
         try {
-            response = await fetch(endpoint, {
-                method: 'GET',
-                headers: createWebDavHeaders(),
-                cache: 'no-store',
-                credentials: 'omit',
-                redirect: 'follow',
-            });
+            return await fetch(url, { ...options, signal: requestController.signal });
         } catch {
+            if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
+            if (timedOut) throw new Error(t('syncTimeout'));
             throw new Error(t('syncNetworkError'));
+        } finally {
+            window.clearTimeout(timeout);
+            sessionSignal?.removeEventListener('abort', cancelRequest);
         }
+    }
+
+    async function readRemoteSyncFile(endpoint) {
+        const response = await fetchWebDav(endpoint, {
+            method: 'GET',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
 
         if (response.status === 404) return { exists: false, etag: '', data: emptySyncDataset() };
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
@@ -1836,18 +1930,13 @@
         directory.pathname = directory.pathname.slice(0, directory.pathname.lastIndexOf('/') + 1);
         if (directory.pathname === '/') return false;
 
-        let response;
-        try {
-            response = await fetch(directory.toString(), {
-                method: 'MKCOL',
-                headers: createWebDavHeaders(),
-                cache: 'no-store',
-                credentials: 'omit',
-                redirect: 'follow',
-            });
-        } catch {
-            throw new Error(t('syncNetworkError'));
-        }
+        const response = await fetchWebDav(directory.toString(), {
+            method: 'MKCOL',
+            headers: createWebDavHeaders(),
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
 
         if ([200, 201, 204, 405].includes(response.status)) return response.status === 201;
         if (response.status === 401) throw new Error(t('syncAuthFailed'));
@@ -1860,19 +1949,14 @@
         if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
         else if (!remote.exists) headers.set('If-None-Match', '*');
 
-        let response;
-        try {
-            response = await fetch(endpoint, {
-                method: 'PUT',
-                headers,
-                body: content,
-                cache: 'no-store',
-                credentials: 'omit',
-                redirect: 'follow',
-            });
-        } catch {
-            throw new Error(t('syncNetworkError'));
-        }
+        const response = await fetchWebDav(endpoint, {
+            method: 'PUT',
+            headers,
+            body: content,
+            cache: 'no-store',
+            credentials: 'omit',
+            redirect: 'follow',
+        });
         if (response.status === 412) return 'conflict';
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
         if (response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
