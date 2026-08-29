@@ -6,7 +6,305 @@
     const STORE_NAME = 'bookmarks';
     const THEME_KEY = 'bookmark-manager.theme';
     const SORT_KEY = 'bookmark-manager.sort';
+    const LANGUAGE_KEY = 'bookmark-manager.language';
     const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'file:', 'ftp:']);
+
+    const TRANSLATIONS = {
+        zh: {
+            documentTitle: '书签库 · 本地书签管理器',
+            metaDescription: '无需安装、数据留在本地的纯前端书签管理器。',
+            sidebarLabel: '侧边栏',
+            brandName: '书签库',
+            brandSubtitle: '本地书签',
+            primaryViewsLabel: '主要视图',
+            allBookmarks: '全部书签',
+            favorites: '我的收藏',
+            folders: '文件夹',
+            tags: '标签',
+            newFolder: '新建文件夹',
+            storageTooltip: '书签数据保存在当前浏览器的 IndexedDB 中',
+            localOnly: '仅存储在此设备',
+            connectingDatabase: '正在连接本地数据库…',
+            languageTitle: '界面语言',
+            themeToggle: '切换显示主题',
+            closeSidebar: '关闭侧边栏',
+            openSidebar: '打开侧边栏',
+            searchBookmarks: '搜索书签',
+            searchPlaceholder: '搜索标题、网址、描述或标签……',
+            clearSearch: '清除搜索',
+            importTooltip: '合并导入 JSON 或浏览器书签 HTML',
+            import: '导入',
+            exportTooltip: '导出备份',
+            export: '导出',
+            jsonBackup: 'JSON 备份',
+            jsonBackupDescription: '保留全部应用数据',
+            browserHtml: '浏览器 HTML',
+            browserHtmlDescription: '可导入其他浏览器',
+            clearAll: '清空全部数据',
+            irreversible: '此操作无法撤销',
+            addBookmark: '添加书签',
+            folderPathLabel: '文件夹路径',
+            allDescription: '把散落在各处的好内容，整理成自己的知识入口。',
+            eyebrowAll: '个人收藏库',
+            eyebrowFavorites: '收藏',
+            eyebrowTag: '标签合集',
+            eyebrowFolder: '文件夹',
+            itemsLabel: '项目',
+            foundLabel: '找到',
+            sort: '排序',
+            newest: '最近添加',
+            oldest: '最早添加',
+            sortByTitle: '按标题',
+            initialResults: '显示 0 条书签',
+            bookmarksLabel: '书签',
+            emptyFirstTitle: '从第一条书签开始',
+            emptyFirstDescription: '所有数据只保存在你的浏览器中。',
+            close: '关闭',
+            fieldTitle: '标题',
+            titlePlaceholder: '例如：设计灵感合集',
+            fieldUrl: '链接',
+            urlHint: '可以省略 https://；仅允许常规网页及本地文件链接',
+            fieldDescription: '描述',
+            descriptionPlaceholder: '写下一句备注，方便以后找到它……',
+            parentFolder: '上级文件夹',
+            fieldTags: '标签',
+            tagsPlaceholder: '设计, 工具, 稍后阅读',
+            tagsHint: '用逗号分隔多个标签',
+            addFavorite: '加入收藏',
+            favoriteHint: '在收藏视图中快速访问',
+            cancel: '取消',
+            dbConnected: 'IndexedDB 已连接',
+            dbUnavailable: '当前浏览器不支持 IndexedDB。',
+            dbOpenFailed: '无法打开本地数据库。',
+            dbBlocked: '数据库升级被其他页面阻止，请关闭其他书签管理器页面后重试。',
+            deleteCanceled: '删除操作已取消。',
+            importTransactionFailed: '导入事务失败。',
+            importTransactionCanceled: '导入事务已取消。',
+            storageStatus: ({ count }) => `IndexedDB · ${count} 项`,
+            untitled: '未命名',
+            noFolders: '还没有文件夹',
+            noTags: '添加标签后会显示在这里',
+            expandFolder: '展开文件夹',
+            collapseFolder: '折叠文件夹',
+            editItem: ({ title }) => `编辑 ${title}`,
+            deleteItem: ({ title }) => `删除 ${title}`,
+            openItem: ({ title }) => `打开 ${title}`,
+            breadcrumbAll: '全部',
+            favoritesDescription: '留住你最常使用和最值得回看的链接。',
+            tagDescription: ({ tag }) => `收录在“${tag}”标签下的链接。`,
+            folderFallback: '文件夹',
+            folderDescription: '浏览并整理这个文件夹中的内容。',
+            folderCount: ({ count }) => `${count} 个文件夹`,
+            bookmarkCount: ({ count }) => `${count} 条书签`,
+            searchResults: ({ query, summary }) => `“${query}”的结果：${summary}`,
+            showResults: ({ summary }) => `显示 ${summary}`,
+            folderMeta: ({ folders, bookmarks }) => `${folders} 个文件夹 · ${bookmarks} 条书签`,
+            unfavorite: '取消收藏',
+            favorite: '加入收藏',
+            unsupportedLink: '这个链接使用了不受支持的协议，请编辑后再打开',
+            invalidLink: '无效链接',
+            emptyNoMatch: '没有找到匹配的内容',
+            emptyTryAgain: '试试其他关键词，或清除当前筛选条件。',
+            clearFilters: '清除筛选',
+            emptyLocalDescription: '数据保存在浏览器中，不需要服务器或账号。',
+            dialogEditFolder: '编辑文件夹',
+            dialogEditBookmark: '编辑书签',
+            dialogAddFolder: '添加新文件夹',
+            dialogAddBookmark: '添加新书签',
+            eyebrowEditFolder: '编辑文件夹',
+            eyebrowEditBookmark: '编辑书签',
+            eyebrowAddFolder: '新建文件夹',
+            eyebrowAddBookmark: '新建书签',
+            saveChanges: '保存修改',
+            addFolder: '添加文件夹',
+            rootFolder: '/ 根目录',
+            titleRequired: '请输入标题。',
+            folderCycle: '文件夹不能移动到自身或其子文件夹中。',
+            saved: '修改已保存',
+            folderAdded: '文件夹已添加',
+            bookmarkAdded: '书签已添加',
+            saveFailed: '保存失败，请检查浏览器是否允许本地存储。',
+            favoriteAdded: '已加入收藏',
+            favoriteRemoved: '已取消收藏',
+            confirmDelete: ({ title, count }) => `确定删除“${title}”${count ? `及其中的 ${count} 个项目` : ''}吗？此操作无法撤销。`,
+            deleted: '已删除',
+            cannotMove: '不能移动到这个文件夹',
+            movedRoot: '已移动到根目录',
+            movedFolder: '已移动到文件夹',
+            reusedFolders: ({ count }) => `复用 ${count} 个文件夹`,
+            skippedItems: ({ count }) => `跳过 ${count} 项`,
+            imported: ({ count, details }) => `已导入 ${count} 项${details ? `，${details}` : ''}`,
+            importFailed: ({ message }) => `导入失败：${message}`,
+            jsonInvalid: 'JSON 文件格式不正确',
+            jsonArrayMissing: '文件中没有可识别的书签数组',
+            noValidItems: '没有找到有效的书签或文件夹',
+            browserHtmlInvalid: '这不是有效的浏览器书签 HTML 文件',
+            unnamedFolder: '未命名文件夹',
+            unnamedBookmark: '未命名书签',
+            htmlNoItems: 'HTML 文件中没有可导入的内容',
+            exportedJson: ({ count }) => `已导出 ${count} 项 JSON 数据`,
+            exportedHtml: ({ count }) => `已导出 ${count} 项浏览器书签`,
+            nothingToClear: '当前没有可清空的数据',
+            confirmClear: '确定清空全部书签和文件夹吗？建议先导出 JSON 备份。此操作无法撤销。',
+            cleared: '全部数据已清空',
+            urlRequired: '请输入链接。',
+            urlInvalid: '请输入有效的链接。',
+            urlProtocol: '仅支持 http、https、ftp 或本地文件链接。',
+            localFile: '本地文件',
+            historicalData: '历史数据',
+            dbConnectionFailed: '本地数据库连接失败',
+            fatalTitle: '无法打开本地数据库',
+            fatalHint: '请使用最新版 Edge、Chrome、Firefox 或 Safari 打开本页面。',
+            listSeparator: '，',
+        },
+        en: {
+            documentTitle: 'Bookmarks · Local Bookmark Manager',
+            metaDescription: 'A zero-install, local-first bookmark manager built with browser-native technologies.',
+            sidebarLabel: 'Sidebar',
+            brandName: 'Bookmarks',
+            brandSubtitle: 'LOCAL BOOKMARKS',
+            primaryViewsLabel: 'Primary views',
+            allBookmarks: 'All bookmarks',
+            favorites: 'Favorites',
+            folders: 'Folders',
+            tags: 'Tags',
+            newFolder: 'New folder',
+            storageTooltip: 'Bookmarks are stored in IndexedDB in this browser',
+            localOnly: 'Stored on this device',
+            connectingDatabase: 'Connecting to local database…',
+            languageTitle: 'Interface language',
+            themeToggle: 'Toggle color theme',
+            closeSidebar: 'Close sidebar',
+            openSidebar: 'Open sidebar',
+            searchBookmarks: 'Search bookmarks',
+            searchPlaceholder: 'Search titles, URLs, descriptions, or tags…',
+            clearSearch: 'Clear search',
+            importTooltip: 'Merge a JSON backup or browser bookmark HTML',
+            import: 'Import',
+            exportTooltip: 'Export backup',
+            export: 'Export',
+            jsonBackup: 'JSON backup',
+            jsonBackupDescription: 'Preserves all application data',
+            browserHtml: 'Browser HTML',
+            browserHtmlDescription: 'Import into another browser',
+            clearAll: 'Clear all data',
+            irreversible: 'This action cannot be undone',
+            addBookmark: 'Add bookmark',
+            folderPathLabel: 'Folder path',
+            allDescription: 'Turn useful links scattered across the web into your own knowledge gateway.',
+            eyebrowAll: 'YOUR COLLECTION',
+            eyebrowFavorites: 'FAVORITES',
+            eyebrowTag: 'TAG COLLECTION',
+            eyebrowFolder: 'FOLDER',
+            itemsLabel: 'ITEMS',
+            foundLabel: 'FOUND',
+            sort: 'Sort',
+            newest: 'Newest first',
+            oldest: 'Oldest first',
+            sortByTitle: 'By title',
+            initialResults: 'Showing 0 bookmarks',
+            bookmarksLabel: 'Bookmarks',
+            emptyFirstTitle: 'Add your first bookmark',
+            emptyFirstDescription: 'All data stays in your browser.',
+            close: 'Close',
+            fieldTitle: 'Title',
+            titlePlaceholder: 'For example: Design inspiration',
+            fieldUrl: 'URL',
+            urlHint: 'You may omit https://; regular web and local file links are supported',
+            fieldDescription: 'Description',
+            descriptionPlaceholder: 'Add a note to make this easier to find later…',
+            parentFolder: 'Parent folder',
+            fieldTags: 'Tags',
+            tagsPlaceholder: 'design, tools, read later',
+            tagsHint: 'Separate multiple tags with commas',
+            addFavorite: 'Add to favorites',
+            favoriteHint: 'Quickly access it from the Favorites view',
+            cancel: 'Cancel',
+            dbConnected: 'IndexedDB connected',
+            dbUnavailable: 'This browser does not support IndexedDB.',
+            dbOpenFailed: 'Could not open the local database.',
+            dbBlocked: 'Another page is blocking the database upgrade. Close other bookmark manager tabs and try again.',
+            deleteCanceled: 'The delete operation was canceled.',
+            importTransactionFailed: 'The import transaction failed.',
+            importTransactionCanceled: 'The import transaction was canceled.',
+            storageStatus: ({ count }) => `IndexedDB · ${count} item${count === 1 ? '' : 's'}`,
+            untitled: 'Untitled',
+            noFolders: 'No folders yet',
+            noTags: 'Tags will appear here after you add them',
+            expandFolder: 'Expand folder',
+            collapseFolder: 'Collapse folder',
+            editItem: ({ title }) => `Edit ${title}`,
+            deleteItem: ({ title }) => `Delete ${title}`,
+            openItem: ({ title }) => `Open ${title}`,
+            breadcrumbAll: 'All',
+            favoritesDescription: 'Keep your most useful and meaningful links within easy reach.',
+            tagDescription: ({ tag }) => `Links filed under the “${tag}” tag.`,
+            folderFallback: 'Folder',
+            folderDescription: 'Browse and organize the contents of this folder.',
+            folderCount: ({ count }) => `${count} folder${count === 1 ? '' : 's'}`,
+            bookmarkCount: ({ count }) => `${count} bookmark${count === 1 ? '' : 's'}`,
+            searchResults: ({ query, summary }) => `Results for “${query}”: ${summary}`,
+            showResults: ({ summary }) => `Showing ${summary}`,
+            folderMeta: ({ folders, bookmarks }) => `${folders} folder${folders === 1 ? '' : 's'} · ${bookmarks} bookmark${bookmarks === 1 ? '' : 's'}`,
+            unfavorite: 'Remove from favorites',
+            favorite: 'Add to favorites',
+            unsupportedLink: 'This link uses an unsupported protocol. Edit it before opening.',
+            invalidLink: 'Invalid link',
+            emptyNoMatch: 'No matching items found',
+            emptyTryAgain: 'Try another search, or clear the current filters.',
+            clearFilters: 'Clear filters',
+            emptyLocalDescription: 'Your data stays in the browser—no server or account required.',
+            dialogEditFolder: 'Edit folder',
+            dialogEditBookmark: 'Edit bookmark',
+            dialogAddFolder: 'Add a new folder',
+            dialogAddBookmark: 'Add a new bookmark',
+            eyebrowEditFolder: 'EDIT FOLDER',
+            eyebrowEditBookmark: 'EDIT BOOKMARK',
+            eyebrowAddFolder: 'NEW FOLDER',
+            eyebrowAddBookmark: 'NEW BOOKMARK',
+            saveChanges: 'Save changes',
+            addFolder: 'Add folder',
+            rootFolder: '/ Root',
+            titleRequired: 'Enter a title.',
+            folderCycle: 'A folder cannot be moved into itself or one of its descendants.',
+            saved: 'Changes saved',
+            folderAdded: 'Folder added',
+            bookmarkAdded: 'Bookmark added',
+            saveFailed: 'Could not save. Check whether this browser allows local storage.',
+            favoriteAdded: 'Added to favorites',
+            favoriteRemoved: 'Removed from favorites',
+            confirmDelete: ({ title, count }) => `Delete “${title}”${count ? ` and its ${count} nested item${count === 1 ? '' : 's'}` : ''}? This cannot be undone.`,
+            deleted: 'Deleted',
+            cannotMove: 'This item cannot be moved into that folder',
+            movedRoot: 'Moved to the root folder',
+            movedFolder: 'Moved to folder',
+            reusedFolders: ({ count }) => `reused ${count} folder${count === 1 ? '' : 's'}`,
+            skippedItems: ({ count }) => `skipped ${count} item${count === 1 ? '' : 's'}`,
+            imported: ({ count, details }) => `Imported ${count} item${count === 1 ? '' : 's'}${details ? `, ${details}` : ''}`,
+            importFailed: ({ message }) => `Import failed: ${message}`,
+            jsonInvalid: 'The JSON file is not valid',
+            jsonArrayMissing: 'No recognizable bookmark array was found in this file',
+            noValidItems: 'No valid bookmarks or folders were found',
+            browserHtmlInvalid: 'This is not a valid browser bookmark HTML file',
+            unnamedFolder: 'Untitled folder',
+            unnamedBookmark: 'Untitled bookmark',
+            htmlNoItems: 'No importable items were found in the HTML file',
+            exportedJson: ({ count }) => `Exported ${count} item${count === 1 ? '' : 's'} as JSON`,
+            exportedHtml: ({ count }) => `Exported ${count} browser bookmark item${count === 1 ? '' : 's'}`,
+            nothingToClear: 'There is no data to clear',
+            confirmClear: 'Clear all bookmarks and folders? Export a JSON backup first if needed. This cannot be undone.',
+            cleared: 'All data cleared',
+            urlRequired: 'Enter a URL.',
+            urlInvalid: 'Enter a valid URL.',
+            urlProtocol: 'Only http, https, ftp, and local file links are supported.',
+            localFile: 'Local file',
+            historicalData: 'Legacy data',
+            dbConnectionFailed: 'Local database connection failed',
+            fatalTitle: 'Could not open the local database',
+            fatalHint: 'Open this page in the latest Edge, Chrome, Firefox, or Safari.',
+            listSeparator: ', ',
+        },
+    };
 
     const state = {
         db: null,
@@ -14,6 +312,7 @@
         view: { type: 'all', value: null },
         query: '',
         sort: safeStorageGet(SORT_KEY) || 'newest',
+        language: getInitialLanguage(),
         draggedId: null,
         toastTimer: null,
     };
@@ -25,11 +324,12 @@
     async function initialize() {
         cacheElements();
         applyInitialTheme();
+        applyLanguage(state.language);
         bindStaticEvents();
 
         try {
             state.db = await openDatabase();
-            ui.storageStatus.textContent = 'IndexedDB 已连接';
+            ui.storageStatus.textContent = t('dbConnected');
             await refreshData();
         } catch (error) {
             console.error('Unable to initialize bookmark manager:', error);
@@ -42,7 +342,7 @@
             'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
             'all-view-button', 'favorites-view-button', 'all-count', 'favorites-count',
             'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
-            'storage-status', 'theme-button', 'search-input', 'clear-search-button',
+            'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
             'search-shortcut', 'import-file-input', 'import-button', 'export-menu',
             'export-json-button', 'export-html-button', 'clear-all-button',
             'add-bookmark-button', 'breadcrumbs', 'page-eyebrow', 'page-title',
@@ -63,6 +363,54 @@
 
     function toCamelCase(value) {
         return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    }
+
+    function getInitialLanguage() {
+        const saved = safeStorageGet(LANGUAGE_KEY);
+        if (saved === 'zh' || saved === 'en') return saved;
+        const browserLanguage = navigator.languages?.[0] || navigator.language || 'en';
+        return /^zh(?:-|$)/i.test(browserLanguage) ? 'zh' : 'en';
+    }
+
+    function t(key, variables = {}) {
+        const value = TRANSLATIONS[state.language]?.[key] ?? TRANSLATIONS.en[key] ?? key;
+        return typeof value === 'function' ? value(variables) : value;
+    }
+
+    function currentLocale() {
+        return state.language === 'zh' ? 'zh-CN' : 'en-US';
+    }
+
+    function applyLanguage(language, persist = false) {
+        state.language = language === 'zh' ? 'zh' : 'en';
+        document.documentElement.lang = state.language === 'zh' ? 'zh-CN' : 'en';
+        document.title = t('documentTitle');
+        ui.languageSelect.value = state.language;
+
+        document.querySelectorAll('[data-i18n]').forEach((element) => {
+            element.textContent = t(element.dataset.i18n);
+        });
+        const translatedAttributes = [
+            ['data-i18n-placeholder', 'placeholder'],
+            ['data-i18n-title', 'title'],
+            ['data-i18n-aria-label', 'aria-label'],
+            ['data-i18n-content', 'content'],
+        ];
+        translatedAttributes.forEach(([dataAttribute, targetAttribute]) => {
+            document.querySelectorAll(`[${dataAttribute}]`).forEach((element) => {
+                element.setAttribute(targetAttribute, t(element.getAttribute(dataAttribute)));
+            });
+        });
+
+        const rootOption = ui.itemParentSelect.querySelector('option[value="root"]');
+        if (rootOption) rootOption.textContent = t('rootFolder');
+        ui.storageStatus.textContent = state.db
+            ? t('storageStatus', { count: state.items.length })
+            : t('connectingDatabase');
+        if (persist) safeStorageSet(LANGUAGE_KEY, state.language);
+        const dialogItem = ui.itemId.value ? findItem(Number(ui.itemId.value)) : null;
+        updateDialogLabels(ui.itemKind.value || 'bookmark', dialogItem);
+        if (state.db) renderAll();
     }
 
     function bindStaticEvents() {
@@ -94,6 +442,7 @@
         ui.exportHtmlButton.addEventListener('click', exportHtml);
         ui.clearAllButton.addEventListener('click', clearAllData);
 
+        ui.languageSelect.addEventListener('change', () => applyLanguage(ui.languageSelect.value, true));
         ui.themeButton.addEventListener('click', toggleTheme);
         ui.mobileMenuButton.addEventListener('click', openSidebar);
         ui.sidebarBackdrop.addEventListener('click', closeSidebar);
@@ -132,7 +481,7 @@
     function openDatabase() {
         return new Promise((resolve, reject) => {
             if (!('indexedDB' in window)) {
-                reject(new Error('当前浏览器不支持 IndexedDB。'));
+                reject(new Error(t('dbUnavailable')));
                 return;
             }
 
@@ -150,8 +499,8 @@
                 if (!store.indexNames.contains('isPinned')) store.createIndex('isPinned', 'isPinned', { unique: false });
             };
 
-            request.onerror = () => reject(request.error || new Error('无法打开本地数据库。'));
-            request.onblocked = () => reject(new Error('数据库升级被其他页面阻止，请关闭其他书签管理器页面后重试。'));
+            request.onerror = () => reject(request.error || new Error(t('dbOpenFailed')));
+            request.onblocked = () => reject(new Error(t('dbBlocked')));
             request.onsuccess = () => {
                 const database = request.result;
                 database.onversionchange = () => database.close();
@@ -185,7 +534,7 @@
             for (const id of ids) store.delete(id);
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
-            transaction.onabort = () => reject(transaction.error || new Error('删除操作已取消。'));
+            transaction.onabort = () => reject(transaction.error || new Error(t('deleteCanceled')));
         });
     }
 
@@ -212,8 +561,8 @@
             let insertedCount = 0;
 
             transaction.oncomplete = () => resolve(insertedCount);
-            transaction.onerror = () => reject(transaction.error || new Error('导入事务失败。'));
-            transaction.onabort = () => reject(transaction.error || new Error('导入事务已取消。'));
+            transaction.onerror = () => reject(transaction.error || new Error(t('importTransactionFailed')));
+            transaction.onabort = () => reject(transaction.error || new Error(t('importTransactionCanceled')));
 
             const addNext = () => {
                 while (index < records.length && records[index].existingId != null) {
@@ -250,14 +599,14 @@
         const records = await getAllItems();
         state.items = records.map(normalizeItem);
         renderAll();
-        ui.storageStatus.textContent = `IndexedDB · ${state.items.length} 项`;
+        ui.storageStatus.textContent = t('storageStatus', { count: state.items.length });
     }
 
     function normalizeItem(input) {
         const url = typeof input.url === 'string' ? input.url.trim() : '';
         return {
             id: input.id,
-            title: typeof input.title === 'string' && input.title.trim() ? input.title.trim() : '未命名',
+            title: typeof input.title === 'string' && input.title.trim() ? input.title.trim() : t('untitled'),
             url,
             description: typeof input.description === 'string' ? input.description.trim() : '',
             tags: parseTags(input.tags),
@@ -297,10 +646,10 @@
         for (const folder of sortByTitle(folders)) {
             if (!visited.has(folder.id)) ui.folderTree.append(createFolderTreeNode(folder, childrenMap, visited, new Set()));
         }
-        if (!folders.length) ui.folderTree.append(createSidebarHint('还没有文件夹'));
+        if (!folders.length) ui.folderTree.append(createSidebarHint(t('noFolders')));
 
         ui.tagNavigation.replaceChildren();
-        const tagCounts = [...getTagCounts().entries()].sort((left, right) => left[0].localeCompare(right[0], 'zh-CN'));
+        const tagCounts = [...getTagCounts().entries()].sort((left, right) => left[0].localeCompare(right[0], currentLocale()));
         for (const [tag, count] of tagCounts) {
             const button = createElement('button', `nav-item tag-nav-item${state.view.type === 'tag' && state.view.value === tag ? ' active' : ''}`);
             button.type = 'button';
@@ -308,7 +657,7 @@
             button.addEventListener('click', () => setView('tag', tag));
             ui.tagNavigation.append(button);
         }
-        if (!tagCounts.length) ui.tagNavigation.append(createSidebarHint('添加标签后会显示在这里'));
+        if (!tagCounts.length) ui.tagNavigation.append(createSidebarHint(t('noTags')));
     }
 
     function createFolderTreeNode(folder, childrenMap, visited, ancestors) {
@@ -322,7 +671,7 @@
 
         const toggle = createElement('button', `folder-toggle${children.length ? '' : ' is-placeholder'}`);
         toggle.type = 'button';
-        toggle.setAttribute('aria-label', folder.collapsed ? '展开文件夹' : '折叠文件夹');
+        toggle.setAttribute('aria-label', t(folder.collapsed ? 'expandFolder' : 'collapseFolder'));
         if (children.length) {
             toggle.append(createIcon('chevron-right', 14));
             toggle.classList.toggle('expanded', !folder.collapsed);
@@ -343,8 +692,8 @@
 
         const editButton = createElement('button', 'folder-tree-edit');
         editButton.type = 'button';
-        editButton.title = '编辑文件夹';
-        editButton.setAttribute('aria-label', `编辑 ${folder.title}`);
+        editButton.title = t('editItem', { title: folder.title });
+        editButton.setAttribute('aria-label', t('editItem', { title: folder.title }));
         editButton.append(createIcon('edit', 14));
         editButton.addEventListener('click', () => openItemDialog('folder', folder));
 
@@ -383,7 +732,7 @@
             return;
         }
 
-        const rootButton = createElement('button', '', '全部');
+        const rootButton = createElement('button', '', t('breadcrumbAll'));
         rootButton.type = 'button';
         rootButton.addEventListener('click', () => setView('all'));
         ui.breadcrumbs.append(rootButton, createIcon('chevron-right', 13));
@@ -435,15 +784,15 @@
             visibleBookmarks = bookmarks;
         }
 
-        const query = state.query.toLocaleLowerCase('zh-CN');
+        const query = state.query.toLocaleLowerCase(currentLocale());
         if (query) {
-            visibleFolders = visibleFolders.filter((folder) => folder.title.toLocaleLowerCase('zh-CN').includes(query));
+            visibleFolders = visibleFolders.filter((folder) => folder.title.toLocaleLowerCase(currentLocale()).includes(query));
             visibleBookmarks = visibleBookmarks.filter((bookmark) => [
                 bookmark.title,
                 bookmark.url,
                 bookmark.description,
                 ...bookmark.tags,
-            ].some((value) => value.toLocaleLowerCase('zh-CN').includes(query)));
+            ].some((value) => value.toLocaleLowerCase(currentLocale()).includes(query)));
         }
 
         visibleFolders = sortByTitle(visibleFolders);
@@ -452,23 +801,23 @@
     }
 
     function renderHeading(content) {
-        let title = '全部书签';
-        let eyebrow = 'YOUR COLLECTION';
-        let description = '把散落在各处的好内容，整理成自己的知识入口。';
+        let title = t('allBookmarks');
+        let eyebrow = t('eyebrowAll');
+        let description = t('allDescription');
 
         if (state.view.type === 'favorites') {
-            title = '我的收藏';
-            eyebrow = 'FAVORITES';
-            description = '留住你最常使用和最值得回看的链接。';
+            title = t('favorites');
+            eyebrow = t('eyebrowFavorites');
+            description = t('favoritesDescription');
         } else if (state.view.type === 'tag') {
             title = `# ${state.view.value}`;
-            eyebrow = 'TAG COLLECTION';
-            description = `收录在“${state.view.value}”标签下的链接。`;
+            eyebrow = t('eyebrowTag');
+            description = t('tagDescription', { tag: state.view.value });
         } else if (state.view.type === 'folder') {
             const folder = findItem(state.view.value);
-            title = folder ? folder.title : '文件夹';
-            eyebrow = 'FOLDER';
-            description = '浏览并整理这个文件夹中的内容。';
+            title = folder ? folder.title : t('folderFallback');
+            eyebrow = t('eyebrowFolder');
+            description = t('folderDescription');
         }
 
         ui.pageTitle.textContent = title;
@@ -478,11 +827,12 @@
         ui.resultCount.textContent = String(total).padStart(2, '0');
 
         const parts = [];
-        if (content.folders.length) parts.push(`${content.folders.length} 个文件夹`);
-        parts.push(`${content.bookmarks.length} 条书签`);
+        if (content.folders.length) parts.push(t('folderCount', { count: content.folders.length }));
+        parts.push(t('bookmarkCount', { count: content.bookmarks.length }));
+        const summary = parts.join(t('listSeparator'));
         ui.resultsLabel.textContent = state.query
-            ? `“${state.query}”的结果：${parts.join('，')}`
-            : `显示 ${parts.join('，')}`;
+            ? t('searchResults', { query: state.query, summary })
+            : t('showResults', { summary });
     }
 
     function createFolderCard(folder) {
@@ -498,14 +848,14 @@
         const directChildren = state.items.filter((item) => item.parentId === folder.id);
         const childFolders = directChildren.filter(isFolder).length;
         const childBookmarks = directChildren.filter(isBookmark).length;
-        copy.append(createElement('small', '', `${childFolders} 个文件夹 · ${childBookmarks} 条书签`));
+        copy.append(createElement('small', '', t('folderMeta', { folders: childFolders, bookmarks: childBookmarks })));
         openButton.append(iconBox, copy, createIcon('chevron-right', 17));
         openButton.addEventListener('click', () => setView('folder', folder.id));
 
         const actions = createElement('div', 'folder-card-actions');
         actions.append(
-            createActionButton('edit', `编辑 ${folder.title}`, () => openItemDialog('folder', folder)),
-            createActionButton('trash', `删除 ${folder.title}`, () => deleteItem(folder), true),
+            createActionButton('edit', t('editItem', { title: folder.title }), () => openItemDialog('folder', folder)),
+            createActionButton('trash', t('deleteItem', { title: folder.title }), () => deleteItem(folder), true),
         );
         card.append(openButton, actions);
         makeDraggable(card, folder.id);
@@ -526,17 +876,17 @@
             mark.href = href;
             mark.target = '_blank';
             mark.rel = 'noopener noreferrer';
-            mark.setAttribute('aria-label', `打开 ${bookmark.title}`);
+            mark.setAttribute('aria-label', t('openItem', { title: bookmark.title }));
         }
 
         const actions = createElement('div', 'card-actions');
-        const favorite = createActionButton('star', bookmark.isPinned ? '取消收藏' : '加入收藏', () => toggleFavorite(bookmark));
+        const favorite = createActionButton('star', t(bookmark.isPinned ? 'unfavorite' : 'favorite'), () => toggleFavorite(bookmark));
         favorite.classList.add('favorite-button');
         favorite.classList.toggle('is-favorite', bookmark.isPinned);
         actions.append(
             favorite,
-            createActionButton('edit', `编辑 ${bookmark.title}`, () => openItemDialog('bookmark', bookmark), false, true),
-            createActionButton('trash', `删除 ${bookmark.title}`, () => deleteItem(bookmark), true, true),
+            createActionButton('edit', t('editItem', { title: bookmark.title }), () => openItemDialog('bookmark', bookmark), false, true),
+            createActionButton('trash', t('deleteItem', { title: bookmark.title }), () => deleteItem(bookmark), true, true),
         );
         top.append(mark, actions);
 
@@ -550,9 +900,9 @@
             titleElement.append(createElement('span', '', bookmark.title), createIcon('external', 15));
         } else {
             titleElement = createElement('span', 'bookmark-title invalid-link', bookmark.title);
-            titleElement.title = '这个链接使用了不受支持的协议，请编辑后再打开';
+            titleElement.title = t('unsupportedLink');
         }
-        body.append(titleElement, createElement('p', 'bookmark-domain', hostname || '无效链接'));
+        body.append(titleElement, createElement('p', 'bookmark-domain', hostname || t('invalidLink')));
         if (bookmark.description) body.append(createElement('p', 'bookmark-description', bookmark.description));
 
         const footer = createElement('footer', 'card-footer');
@@ -594,17 +944,17 @@
         const hasFilter = Boolean(state.query || state.view.type !== 'all');
         if (hasAnyData && hasFilter) {
             ui.emptyIconUse.setAttribute('href', '#icon-search');
-            ui.emptyTitle.textContent = '没有找到匹配的内容';
-            ui.emptyDescription.textContent = '试试其他关键词，或清除当前筛选条件。';
+            ui.emptyTitle.textContent = t('emptyNoMatch');
+            ui.emptyDescription.textContent = t('emptyTryAgain');
             ui.emptyActionIcon.setAttribute('href', '#icon-x');
-            ui.emptyActionLabel.textContent = '清除筛选';
+            ui.emptyActionLabel.textContent = t('clearFilters');
             ui.emptyActionButton.dataset.action = 'clear';
         } else {
             ui.emptyIconUse.setAttribute('href', '#icon-bookmark');
-            ui.emptyTitle.textContent = '从第一条书签开始';
-            ui.emptyDescription.textContent = '数据保存在浏览器中，不需要服务器或账号。';
+            ui.emptyTitle.textContent = t('emptyFirstTitle');
+            ui.emptyDescription.textContent = t('emptyLocalDescription');
             ui.emptyActionIcon.setAttribute('href', '#icon-plus');
-            ui.emptyActionLabel.textContent = '添加书签';
+            ui.emptyActionLabel.textContent = t('addBookmark');
             ui.emptyActionButton.dataset.action = 'add';
         }
     }
@@ -634,17 +984,22 @@
         ui.itemUrlInput.required = !isFolderItem;
         populateParentSelect(item, kind);
 
-        const mode = item ? 'EDIT' : 'NEW';
-        ui.dialogEyebrow.textContent = `${mode} ${isFolderItem ? 'FOLDER' : 'BOOKMARK'}`;
-        ui.dialogTitle.textContent = item
-            ? `编辑${isFolderItem ? '文件夹' : '书签'}`
-            : `添加新${isFolderItem ? '文件夹' : '书签'}`;
-        ui.dialogSubmitButton.textContent = item
-            ? '保存修改'
-            : `添加${isFolderItem ? '文件夹' : '书签'}`;
-
+        updateDialogLabels(kind, item);
         ui.itemDialog.showModal();
         window.setTimeout(() => ui.itemTitleInput.focus(), 0);
+    }
+
+    function updateDialogLabels(kind, item) {
+        const isFolderItem = kind === 'folder';
+        ui.dialogEyebrow.textContent = t(item
+            ? isFolderItem ? 'eyebrowEditFolder' : 'eyebrowEditBookmark'
+            : isFolderItem ? 'eyebrowAddFolder' : 'eyebrowAddBookmark');
+        ui.dialogTitle.textContent = item
+            ? t(isFolderItem ? 'dialogEditFolder' : 'dialogEditBookmark')
+            : t(isFolderItem ? 'dialogAddFolder' : 'dialogAddBookmark');
+        ui.dialogSubmitButton.textContent = item
+            ? t('saveChanges')
+            : t(isFolderItem ? 'addFolder' : 'addBookmark');
     }
 
     function closeItemDialog() {
@@ -655,7 +1010,7 @@
 
     function populateParentSelect(item, kind) {
         ui.itemParentSelect.replaceChildren();
-        const root = createElement('option', '', '/ 根目录');
+        const root = createElement('option', '', t('rootFolder'));
         root.value = 'root';
         ui.itemParentSelect.append(root);
 
@@ -669,7 +1024,7 @@
             .filter(isFolder)
             .filter((folder) => !excluded.has(folder.id))
             .map((folder) => ({ folder, path: getFolderPathLabel(folder.id) }))
-            .sort((left, right) => left.path.localeCompare(right.path, 'zh-CN'));
+            .sort((left, right) => left.path.localeCompare(right.path, currentLocale()));
 
         for (const { folder, path } of folders) {
             const option = createElement('option', '', path);
@@ -693,12 +1048,12 @@
         const parentId = ui.itemParentSelect.value === 'root' ? null : Number(ui.itemParentSelect.value);
 
         if (!title) {
-            showFormError('请输入标题。');
+            showFormError(t('titleRequired'));
             ui.itemTitleInput.focus();
             return;
         }
         if (kind === 'folder' && id != null && (parentId === id || getAllDescendantIds(id).includes(parentId))) {
-            showFormError('文件夹不能移动到自身或其子文件夹中。');
+            showFormError(t('folderCycle'));
             return;
         }
 
@@ -732,10 +1087,10 @@
             await saveItem(record);
             closeItemDialog();
             await refreshData();
-            showToast(existing ? '修改已保存' : `${kind === 'folder' ? '文件夹' : '书签'}已添加`);
+            showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
         } catch (error) {
             console.error(error);
-            showFormError('保存失败，请检查浏览器是否允许本地存储。');
+            showFormError(t('saveFailed'));
         }
     }
 
@@ -750,20 +1105,19 @@
         updated.updatedAt = new Date().toISOString();
         await saveItem(updated);
         await refreshData();
-        showToast(updated.isPinned ? '已加入收藏' : '已取消收藏');
+        showToast(t(updated.isPinned ? 'favoriteAdded' : 'favoriteRemoved'));
     }
 
     async function deleteItem(item) {
         const descendantIds = isFolder(item) ? getAllDescendantIds(item.id) : [];
-        const suffix = descendantIds.length ? `及其中的 ${descendantIds.length} 个项目` : '';
-        if (!window.confirm(`确定删除“${item.title}”${suffix}吗？此操作无法撤销。`)) return;
+        if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
 
         await deleteItems([item.id, ...descendantIds]);
         if (state.view.type === 'folder' && (state.view.value === item.id || descendantIds.includes(state.view.value))) {
             state.view = { type: 'all', value: null };
         }
         await refreshData();
-        showToast('已删除');
+        showToast(t('deleted'));
     }
 
     function makeDraggable(element, id) {
@@ -828,7 +1182,7 @@
             return;
         }
         if (parentId != null && !canMoveItem(itemId, parentId)) {
-            showToast('不能移动到这个文件夹');
+            showToast(t('cannotMove'));
             clearDragState();
             return;
         }
@@ -839,7 +1193,7 @@
         await saveItem(updated);
         clearDragState();
         await refreshData();
-        showToast(parentId == null ? '已移动到根目录' : '已移动到文件夹');
+        showToast(t(parentId == null ? 'movedRoot' : 'movedFolder'));
     }
 
     function clearDragState() {
@@ -866,13 +1220,13 @@
             await refreshData();
             const skipped = parsed.skipped + prepared.duplicateCount;
             const details = [
-                prepared.mergedFolderCount ? `复用 ${prepared.mergedFolderCount} 个文件夹` : '',
-                skipped ? `跳过 ${skipped} 项` : '',
-            ].filter(Boolean).join('，');
-            showToast(`已导入 ${importedCount} 项${details ? `，${details}` : ''}`);
+                prepared.mergedFolderCount ? t('reusedFolders', { count: prepared.mergedFolderCount }) : '',
+                skipped ? t('skippedItems', { count: skipped }) : '',
+            ].filter(Boolean).join(t('listSeparator'));
+            showToast(t('imported', { count: importedCount, details }));
         } catch (error) {
             console.error('Import failed:', error);
-            showToast(`导入失败：${error.message}`);
+            showToast(t('importFailed', { message: error.message }));
         } finally {
             event.target.value = '';
             document.body.classList.remove('busy');
@@ -927,7 +1281,7 @@
 
     function folderMergeKey(parentId, title) {
         const parent = parentId == null ? 'root' : String(parentId);
-        return `${parent}\u0000${title.trim().toLocaleLowerCase('zh-CN')}`;
+        return `${parent}\u0000${title.trim().toLocaleLowerCase(currentLocale())}`;
     }
 
     function parseJsonImport(content) {
@@ -935,7 +1289,7 @@
         try {
             payload = JSON.parse(content);
         } catch {
-            throw new Error('JSON 文件格式不正确');
+            throw new Error(t('jsonInvalid'));
         }
 
         const source = Array.isArray(payload)
@@ -945,7 +1299,7 @@
                 : payload && typeof payload === 'object' && Array.isArray(payload.items)
                     ? payload.items
                     : null;
-        if (!source) throw new Error('文件中没有可识别的书签数组');
+        if (!source) throw new Error(t('jsonArrayMissing'));
 
         const idMap = new Map();
         source.forEach((item, index) => {
@@ -989,14 +1343,14 @@
             });
         });
 
-        if (!records.length && source.length) throw new Error('没有找到有效的书签或文件夹');
+        if (!records.length && source.length) throw new Error(t('noValidItems'));
         return { records: orderParentsFirst(records), skipped };
     }
 
     function parseHtmlImport(content) {
         const documentObject = new DOMParser().parseFromString(content, 'text/html');
         const root = documentObject.querySelector('dl');
-        if (!root) throw new Error('这不是有效的浏览器书签 HTML 文件');
+        if (!root) throw new Error(t('browserHtmlInvalid'));
 
         const records = [];
         const visitedContainers = new WeakSet();
@@ -1018,7 +1372,7 @@
 
                 const folderHeader = node.querySelector('h3');
                 if (folderHeader) {
-                    const title = folderHeader.textContent.trim() || '未命名文件夹';
+                    const title = folderHeader.textContent.trim() || t('unnamedFolder');
                     const sourceKey = `html-${++counter}`;
                     records.push({
                         sourceKey,
@@ -1038,7 +1392,7 @@
 
                 const link = node.querySelector('a');
                 if (!link) return;
-                const title = link.textContent.trim() || link.getAttribute('href') || '未命名书签';
+                const title = link.textContent.trim() || link.getAttribute('href') || t('unnamedBookmark');
                 try {
                     records.push({
                         sourceKey: `html-${++counter}`,
@@ -1058,7 +1412,7 @@
         };
 
         walk(root, null);
-        if (!records.length) throw new Error('HTML 文件中没有可导入的内容');
+        if (!records.length) throw new Error(t('htmlNoItems'));
         return { records: orderParentsFirst(records), skipped };
     }
 
@@ -1109,7 +1463,7 @@
             'application/json',
             `bookmarks-${today()}.json`,
         );
-        showToast(`已导出 ${state.items.length} 项 JSON 数据`);
+        showToast(t('exportedJson', { count: state.items.length }));
     }
 
     function exportHtml() {
@@ -1130,7 +1484,7 @@
         lines.push('</DL><p>');
 
         downloadFile(lines.join('\n'), 'text/html;charset=utf-8', `bookmarks-${today()}.html`);
-        showToast(`已导出 ${state.items.length} 项浏览器书签`);
+        showToast(t('exportedHtml', { count: state.items.length }));
     }
 
     function appendHtmlNodes(lines, items, depth, visited, ancestors) {
@@ -1156,15 +1510,15 @@
     async function clearAllData() {
         closeExportMenu();
         if (!state.items.length) {
-            showToast('当前没有可清空的数据');
+            showToast(t('nothingToClear'));
             return;
         }
-        if (!window.confirm('确定清空全部书签和文件夹吗？建议先导出 JSON 备份。此操作无法撤销。')) return;
+        if (!window.confirm(t('confirmClear'))) return;
         await clearDatabase();
         state.view = { type: 'all', value: null };
         clearSearch();
         await refreshData();
-        showToast('全部数据已清空');
+        showToast(t('cleared'));
     }
 
     function setView(type, value = null) {
@@ -1266,19 +1620,19 @@
     }
 
     function compareBookmarks(left, right) {
-        if (state.sort === 'title') return left.title.localeCompare(right.title, 'zh-CN');
+        if (state.sort === 'title') return left.title.localeCompare(right.title, currentLocale());
         const difference = itemTimestamp(left) - itemTimestamp(right);
         return state.sort === 'oldest' ? difference : -difference;
     }
 
     function sortByTitle(items) {
-        return items.slice().sort((left, right) => left.title.localeCompare(right.title, 'zh-CN'));
+        return items.slice().sort((left, right) => left.title.localeCompare(right.title, currentLocale()));
     }
 
     function sortTreeItems(items) {
         return items.slice().sort((left, right) => {
             if (isFolder(left) !== isFolder(right)) return isFolder(left) ? -1 : 1;
-            return left.title.localeCompare(right.title, 'zh-CN');
+            return left.title.localeCompare(right.title, currentLocale());
         });
     }
 
@@ -1318,15 +1672,15 @@
 
     function normalizeUrl(value) {
         const input = String(value || '').trim();
-        if (!input) throw new Error('请输入链接。');
+        if (!input) throw new Error(t('urlRequired'));
         const withProtocol = /^[a-z][a-z\d+.-]*:/i.test(input) ? input : `https://${input}`;
         let url;
         try {
             url = new URL(withProtocol);
         } catch {
-            throw new Error('请输入有效的链接。');
+            throw new Error(t('urlInvalid'));
         }
-        if (!ALLOWED_PROTOCOLS.has(url.protocol)) throw new Error('仅支持 http、https、ftp 或本地文件链接。');
+        if (!ALLOWED_PROTOCOLS.has(url.protocol)) throw new Error(t('urlProtocol'));
         return url.toString();
     }
 
@@ -1351,7 +1705,7 @@
     function getHostname(value) {
         try {
             const url = new URL(value);
-            if (url.protocol === 'file:') return '本地文件';
+            if (url.protocol === 'file:') return t('localFile');
             return url.hostname.replace(/^www\./, '') || url.protocol.replace(':', '');
         } catch {
             return value;
@@ -1379,8 +1733,8 @@
 
     function formatItemDate(item) {
         const value = item.createdAt || item.updatedAt;
-        if (!validDate(value)) return '历史数据';
-        return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
+        if (!validDate(value)) return t('historicalData');
+        return new Intl.DateTimeFormat(currentLocale(), { month: 'short', day: 'numeric' }).format(new Date(value));
     }
 
     function dateFromBookmarkAttribute(value) {
@@ -1447,14 +1801,14 @@
     }
 
     function showFatalError(error) {
-        ui.storageStatus.textContent = '本地数据库连接失败';
+        ui.storageStatus.textContent = t('dbConnectionFailed');
         ui.bookmarkGrid.replaceChildren();
         ui.folderGrid.replaceChildren();
         const panel = createElement('section', 'fatal-error');
         panel.append(
             createIcon('database', 30),
-            createElement('h2', '', '无法打开本地数据库'),
-            createElement('p', '', error?.message || '请使用最新版 Edge、Chrome、Firefox 或 Safari 打开本页面。'),
+            createElement('h2', '', t('fatalTitle')),
+            createElement('p', '', error?.message || t('fatalHint')),
         );
         ui.bookmarkGrid.append(panel);
     }

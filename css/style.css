@@ -440,10 +440,11 @@ svg {
 
 .sidebar-footer {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
     margin-top: auto;
-    padding: 14px 3px 0;
+    padding: 13px 3px 0;
     border-top: 1px solid var(--border);
 }
 
@@ -488,6 +489,60 @@ svg {
     border: 2px solid color-mix(in srgb, #4ca66c 22%, transparent);
     border-radius: 50%;
     box-sizing: content-box;
+}
+
+.sidebar-preferences {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.language-picker {
+    position: relative;
+    display: flex;
+    width: 108px;
+    height: 34px;
+    align-items: center;
+    gap: 7px;
+    padding: 0 8px;
+    color: var(--text-soft);
+    background: color-mix(in srgb, var(--panel) 58%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.language-picker:hover,
+.language-picker:focus-within {
+    color: var(--accent);
+    background: var(--panel);
+}
+
+.language-picker > svg:first-child {
+    width: 16px;
+    height: 16px;
+}
+
+.language-picker select {
+    min-width: 0;
+    height: 100%;
+    flex: 1;
+    padding: 0 14px 0 0;
+    color: inherit;
+    font-size: 10px;
+    font-weight: 650;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: 0;
+}
+
+.language-picker .language-chevron {
+    position: absolute;
+    right: 7px;
+    width: 13px;
+    height: 13px;
+    pointer-events: none;
 }
 
 .theme-button,
