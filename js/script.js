@@ -161,8 +161,8 @@
             syncPasswordRequired: '填写用户名时必须输入密码或应用密码。',
             syncPassphraseRequired: '请输入至少 8 个字符的加密口令。',
             syncAuthFailed: 'WebDAV 身份验证失败，请检查用户名和密码。',
-            syncNetworkError: '无法连接 WebDAV。请检查网络、证书及 CORS 设置。',
-            syncTimeout: 'WebDAV 请求超过 20 秒未响应，请检查地址、网络、反向代理或 CORS 配置。',
+            syncNetworkError: ({ method, target }) => `${method} ${target} 请求失败。请检查网络、证书、浏览器扩展或 CORS 设置。`,
+            syncTimeout: ({ method, target }) => `${method} ${target} 超过 20 秒未响应。请检查网络、反向代理或服务状态。`,
             syncCanceled: '同步已取消',
             cancelSync: '取消同步',
             syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
@@ -440,8 +440,8 @@
             syncPasswordRequired: 'A password or app password is required when a username is provided.',
             syncPassphraseRequired: 'Enter an encryption passphrase of at least 8 characters.',
             syncAuthFailed: 'WebDAV authentication failed. Check the username and password.',
-            syncNetworkError: 'Could not connect to WebDAV. Check the network, certificate, and CORS settings.',
-            syncTimeout: 'The WebDAV request did not respond within 20 seconds. Check the URL, network, reverse proxy, or CORS configuration.',
+            syncNetworkError: ({ method, target }) => `${method} ${target} failed. Check the network, certificate, browser extensions, or CORS settings.`,
+            syncTimeout: ({ method, target }) => `${method} ${target} did not respond within 20 seconds. Check the network, reverse proxy, or service status.`,
             syncCanceled: 'Synchronization canceled',
             cancelSync: 'Cancel sync',
             syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
@@ -1892,6 +1892,14 @@
 
     async function fetchWebDav(url, options) {
         const requestController = new AbortController();
+        const method = String(options?.method || 'GET').toUpperCase();
+        let target = 'remote';
+        try {
+            const parsedUrl = new URL(url);
+            target = `${parsedUrl.host}${parsedUrl.pathname}`;
+        } catch {
+            // Keep the generic target for malformed URLs.
+        }
         const sessionSignal = state.sync.abortController?.signal;
         if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
         let timedOut = false;
@@ -1906,8 +1914,8 @@
             return await fetch(url, { ...options, signal: requestController.signal });
         } catch {
             if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
-            if (timedOut) throw new Error(t('syncTimeout'));
-            throw new Error(t('syncNetworkError'));
+            if (timedOut) throw new Error(t('syncTimeout', { method, target }));
+            throw new Error(t('syncNetworkError', { method, target }));
         } finally {
             window.clearTimeout(timeout);
             sessionSignal?.removeEventListener('abort', cancelRequest);
