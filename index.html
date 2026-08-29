@@ -1,90 +1,229 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bookmarks</title>
+    <meta name="description" content="无需安装、数据留在本地的纯前端书签管理器。">
+    <meta name="theme-color" content="#eef0e9">
+    <title>书签库 · 本地书签管理器</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="js/script.js" defer></script>
 </head>
 <body>
-    <header>
-        <h1>My Bookmarks</h1>
-        <p>A durable, client-side bookmark manager.</p>
-    </header>
+    <svg class="icon-sprite" aria-hidden="true">
+        <symbol id="icon-bookmark" viewBox="0 0 24 24"><path d="M6.5 4.75A2.25 2.25 0 0 1 8.75 2.5h6.5a2.25 2.25 0 0 1 2.25 2.25v16.1l-5.5-3.48-5.5 3.48V4.75Z"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 6.9"/></symbol>
+        <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+        <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9.5 7 5 5-5 5"/></symbol>
+        <symbol id="icon-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></symbol>
+        <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-4.5-4.5L12 15l4.5-4.5M4 20h16"/></symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m14.5 5.5 4 4M4 20h4L18.7 9.3a2.83 2.83 0 0 0-4-4L4 16v4Z"/></symbol>
+        <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9m7 0v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></symbol>
+        <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-11Z"/></symbol>
+        <symbol id="icon-folder-plus" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm9 4v6m-3-3h6"/></symbol>
+        <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+        <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.5 15.1A8.5 8.5 0 0 1 8.9 3.5 8.5 8.5 0 1 0 20.5 15.1Z"/></symbol>
+        <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></symbol>
+        <symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 3.5 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 17.03 6.7 19.81l1.01-5.9-4.29-4.18 5.93-.86L12 3.5Z"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
+        <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 3h6l1 4H8l1-4Zm-2.5 4 .8 14h9.4l.8-14M10 11v6m4-6v6"/></symbol>
+        <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M4 20h16"/></symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </svg>
 
-    <main>
-        <div class="container">
-            <section class="main-content">
-                <section id="pinned-bookmarks-section" class="bookmarks-section">
-                    <h2>⭐ Pinned</h2>
-                    <div id="pinned-bookmarks" class="pinned-container">
-                        <!-- Pinned bookmarks will be rendered here -->
-                    </div>
-                </section>
+    <div class="app-shell" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="侧边栏">
+            <button class="brand" id="brand-button" type="button">
+                <span class="brand-mark"><svg><use href="#icon-bookmark"></use></svg></span>
+                <span class="brand-copy"><strong>书签库</strong><small>LOCAL BOOKMARKS</small></span>
+            </button>
 
-                <section class="bookmarks-section">
-                    <h2>Bookmarks Tree</h2>
-                    <div id="bookmarks-tree" class="tree-container">
-                        <div class="loader">Loading bookmarks...</div>
-                    </div>
-                </section>
+            <nav class="primary-nav" aria-label="主要视图">
+                <button class="nav-item active root-drop-target" id="all-view-button" type="button">
+                    <svg><use href="#icon-grid"></use></svg><span>全部书签</span><span class="nav-count" id="all-count">0</span>
+                </button>
+                <button class="nav-item" id="favorites-view-button" type="button">
+                    <svg><use href="#icon-star"></use></svg><span>我的收藏</span><span class="nav-count" id="favorites-count">0</span>
+                </button>
+            </nav>
+
+            <section class="sidebar-section folders-section" aria-labelledby="folders-title">
+                <div class="sidebar-section-title">
+                    <span id="folders-title">文件夹</span>
+                    <button class="mini-icon-button" id="sidebar-add-folder" type="button" title="新建文件夹" aria-label="新建文件夹">
+                        <svg><use href="#icon-plus"></use></svg>
+                    </button>
+                </div>
+                <div class="folder-tree" id="folder-tree"></div>
             </section>
 
-            <aside class="sidebar-section">
-                <div class="widget">
-                    <h3>Search</h3>
-                    <input type="search" id="search-input" placeholder="Search by title, url, or tag...">
-                </div>
+            <section class="sidebar-section tags-section" aria-labelledby="tags-title">
+                <div class="sidebar-section-title"><span id="tags-title">标签</span><span id="tags-count">0</span></div>
+                <div class="tag-navigation" id="tag-navigation"></div>
+            </section>
 
-                <div class="widget">
-                    <h3>Data Management</h3>
-                    <div class="data-actions">
-                        <button id="export-btn" class="data-btn">Export to JSON</button>
-                        <label for="import-file-input" class="btn-like data-btn">Import from HTML</label>
-                        <input type="file" id="import-file-input" accept=".html,.htm" style="display: none;">
-                        <button id="clear-all-btn" class="data-btn danger">Clear All Data</button>
+            <footer class="sidebar-footer">
+                <div class="storage-note" title="书签数据保存在当前浏览器的 IndexedDB 中">
+                    <span class="status-dot"></span>
+                    <span><strong>仅存储在此设备</strong><small id="storage-status">正在连接本地数据库…</small></span>
+                </div>
+                <button class="theme-button" id="theme-button" type="button" aria-label="切换显示主题" title="切换显示主题">
+                    <svg class="theme-moon"><use href="#icon-moon"></use></svg>
+                    <svg class="theme-sun"><use href="#icon-sun"></use></svg>
+                </button>
+            </footer>
+        </aside>
+
+        <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="关闭侧边栏"></button>
+
+        <main class="main-area">
+            <header class="topbar">
+                <button class="mobile-menu-button" id="mobile-menu-button" type="button" aria-label="打开侧边栏">
+                    <svg><use href="#icon-menu"></use></svg>
+                </button>
+
+                <label class="search-box">
+                    <svg><use href="#icon-search"></use></svg>
+                    <span class="sr-only">搜索书签</span>
+                    <input id="search-input" type="search" placeholder="搜索标题、网址、描述或标签……" autocomplete="off">
+                    <button class="clear-search hidden" id="clear-search-button" type="button" aria-label="清除搜索">
+                        <svg><use href="#icon-x"></use></svg>
+                    </button>
+                    <kbd id="search-shortcut">Ctrl K</kbd>
+                </label>
+
+                <div class="topbar-actions">
+                    <input id="import-file-input" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
+                    <button class="button button-quiet topbar-secondary" id="import-button" type="button" title="合并导入 JSON 或浏览器书签 HTML">
+                        <svg><use href="#icon-upload"></use></svg><span>导入</span>
+                    </button>
+
+                    <details class="export-menu" id="export-menu">
+                        <summary class="button button-quiet topbar-secondary" title="导出备份">
+                            <svg><use href="#icon-download"></use></svg><span>导出</span>
+                        </summary>
+                        <div class="export-popover">
+                            <button id="export-json-button" type="button"><strong>JSON 备份</strong><small>保留全部应用数据</small></button>
+                            <button id="export-html-button" type="button"><strong>浏览器 HTML</strong><small>可导入其他浏览器</small></button>
+                            <hr>
+                            <button class="danger-menu-item" id="clear-all-button" type="button"><strong>清空全部数据</strong><small>此操作无法撤销</small></button>
+                        </div>
+                    </details>
+
+                    <button class="button button-primary add-button" id="add-bookmark-button" type="button">
+                        <svg><use href="#icon-plus"></use></svg><span>添加书签</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="content">
+                <nav class="breadcrumbs hidden" id="breadcrumbs" aria-label="文件夹路径"></nav>
+
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow" id="page-eyebrow">YOUR COLLECTION</p>
+                        <h1 id="page-title">全部书签</h1>
+                        <p class="heading-description" id="page-description">把散落在各处的好内容，整理成自己的知识入口。</p>
+                    </div>
+                    <div class="heading-side">
+                        <div class="collection-stat"><strong id="result-count">00</strong><span>ITEMS<br>FOUND</span></div>
+                        <button class="button button-secondary" id="add-folder-button" type="button">
+                            <svg><use href="#icon-folder-plus"></use></svg><span>新建文件夹</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="widget">
-                    <h3 id="add-form-title">Add New</h3>
-                    <form id="add-form">
-                        <div class="form-group">
-                            <label for="title">Title</label>
-                            <input type="text" id="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="url">URL (leave empty for a folder)</label>
-                            <input type="url" id="url" placeholder="https://example.com">
-                        </div>
-                         <div class="form-group">
-                            <label for="parent">Parent Category</label>
-                            <select id="parent">
-                                <option value="root">/ (Root)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="tags">Tags (comma-separated)</label>
-                            <input type="text" id="tags" placeholder="Tags (comma separated)">
-                        </div>
-                        <button type="submit">Add Item</button>
-                    </form>
+                <div class="results-toolbar">
+                    <p id="results-label">显示 0 条书签</p>
+                    <label class="sort-control">
+                        <span>排序</span>
+                        <select id="sort-select">
+                            <option value="newest">最近添加</option>
+                            <option value="oldest">最早添加</option>
+                            <option value="title">按标题</option>
+                        </select>
+                        <svg><use href="#icon-chevron-down"></use></svg>
+                    </label>
                 </div>
 
-                <div class="widget">
-                    <h3>Tags</h3>
-                    <div id="tags-wall" class="tags-wall-container"></div>
-                </div>
-            </aside>
-        </div>
-    </main>
+                <section class="folder-grid hidden" id="folder-grid" aria-label="文件夹"></section>
+                <section class="bookmark-grid" id="bookmark-grid" aria-label="书签"></section>
 
-    <footer>
-        <p>Bookmark Manager Demo &copy; 2025</p>
-    </footer>
+                <section class="empty-state hidden" id="empty-state">
+                    <span class="empty-icon"><svg><use id="empty-icon-use" href="#icon-bookmark"></use></svg></span>
+                    <h2 id="empty-title">从第一条书签开始</h2>
+                    <p id="empty-description">所有数据只保存在你的浏览器中。</p>
+                    <button class="button button-primary" id="empty-action-button" type="button">
+                        <svg><use id="empty-action-icon" href="#icon-plus"></use></svg><span id="empty-action-label">添加书签</span>
+                    </button>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <dialog class="item-dialog" id="item-dialog">
+        <form class="dialog-panel" id="item-form" novalidate>
+            <input type="hidden" id="item-id">
+            <input type="hidden" id="item-kind">
+            <header class="dialog-header">
+                <div><p class="eyebrow" id="dialog-eyebrow">NEW BOOKMARK</p><h2 id="dialog-title">添加新书签</h2></div>
+                <button class="icon-button dialog-close" id="dialog-close-button" type="button" aria-label="关闭">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="dialog-fields">
+                <label class="field">
+                    <span>标题 <b aria-hidden="true">*</b></span>
+                    <input id="item-title-input" type="text" maxlength="100" placeholder="例如：设计灵感合集" autocomplete="off" required>
+                </label>
+
+                <label class="field bookmark-only-field" id="url-field">
+                    <span>链接 <b aria-hidden="true">*</b></span>
+                    <input id="item-url-input" type="text" inputmode="url" placeholder="example.com" autocomplete="off">
+                    <small>可以省略 https://；仅允许常规网页及本地文件链接</small>
+                </label>
+
+                <label class="field bookmark-only-field">
+                    <span>描述</span>
+                    <textarea id="item-description-input" maxlength="300" rows="3" placeholder="写下一句备注，方便以后找到它……"></textarea>
+                </label>
+
+                <label class="field">
+                    <span>上级文件夹</span>
+                    <select id="item-parent-select"><option value="root">/ 根目录</option></select>
+                </label>
+
+                <label class="field bookmark-only-field">
+                    <span>标签</span>
+                    <input id="item-tags-input" type="text" maxlength="240" placeholder="设计, 工具, 稍后阅读" autocomplete="off">
+                    <small>用逗号分隔多个标签</small>
+                </label>
+
+                <label class="favorite-toggle bookmark-only-field">
+                    <input id="item-favorite-input" type="checkbox">
+                    <span class="toggle-box"><svg><use href="#icon-check"></use></svg></span>
+                    <span><strong>加入收藏</strong><small>在收藏视图中快速访问</small></span>
+                </label>
+
+                <p class="form-error hidden" id="form-error" role="alert"></p>
+            </div>
+
+            <footer class="dialog-footer">
+                <button class="button button-secondary" id="dialog-cancel-button" type="button">取消</button>
+                <button class="button button-primary" id="dialog-submit-button" type="submit">添加书签</button>
+            </footer>
+        </form>
+    </dialog>
+
+    <div class="toast hidden" id="toast" role="status" aria-live="polite">
+        <span class="toast-icon"><svg><use href="#icon-check"></use></svg></span><span id="toast-message"></span>
+    </div>
+
+    <noscript><div class="noscript-message">这个应用需要浏览器启用 JavaScript，但不需要安装 Node.js。</div></noscript>
 </body>
 </html>
