@@ -205,6 +205,7 @@
             syncPhasePreparing: '正在准备同步并保存本机配置…',
             syncPhaseReading: '正在连接远端并读取同步文件…',
             syncPhaseResolvingKoofr: '检测到 Koofr，正在查找对应的存储空间…',
+            syncPhaseRetryingKoofr: 'Koofr 存储空间查询未响应，正在自动重试…',
             syncPhaseCreatingFolder: '远端目录不存在，正在创建最后一级目录…',
             syncPhaseMerging: '正在比较本机与远端版本并合并更改…',
             syncPhaseEncrypting: '正在使用 AES-GCM 加密合并后的数据…',
@@ -542,6 +543,7 @@
             syncPhasePreparing: 'Preparing synchronization and saving local settings…',
             syncPhaseReading: 'Connecting to remote storage and reading the sync file…',
             syncPhaseResolvingKoofr: 'Koofr detected; locating the corresponding storage mount…',
+            syncPhaseRetryingKoofr: 'The Koofr mount lookup did not respond; retrying automatically…',
             syncPhaseCreatingFolder: 'The remote folder is missing; creating the final folder…',
             syncPhaseMerging: 'Comparing local and remote versions and merging changes…',
             syncPhaseEncrypting: 'Encrypting the merged data with AES-GCM…',
@@ -711,6 +713,9 @@
             deviceId: '',
             endpoint: '',
             provider: '',
+            koofrMountId: '',
+            koofrMountName: '',
+            koofrMountUser: '',
             username: '',
             password: '',
             passphrase: '',
@@ -1806,6 +1811,9 @@
             if (preferences && typeof preferences === 'object') {
                 state.sync.endpoint = typeof preferences.endpoint === 'string' ? preferences.endpoint : '';
                 state.sync.username = typeof preferences.username === 'string' ? preferences.username : '';
+                state.sync.koofrMountId = typeof preferences.koofrMountId === 'string' ? preferences.koofrMountId : '';
+                state.sync.koofrMountName = typeof preferences.koofrMountName === 'string' ? preferences.koofrMountName : '';
+                state.sync.koofrMountUser = typeof preferences.koofrMountUser === 'string' ? preferences.koofrMountUser : '';
                 state.sync.createDirectory = preferences.createDirectory !== false;
                 state.sync.automatic = preferences.automatic === true;
                 state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
@@ -2292,6 +2300,9 @@
             await saveSetting(SYNC_PREFERENCES_KEY, {
                 endpoint: state.sync.endpoint,
                 username: state.sync.username,
+                koofrMountId: state.sync.koofrMountId,
+                koofrMountName: state.sync.koofrMountName,
+                koofrMountUser: state.sync.koofrMountUser,
                 createDirectory: state.sync.createDirectory,
                 automatic: state.sync.automatic,
                 lastSyncAt: state.sync.lastSyncAt,
@@ -2342,6 +2353,9 @@
         state.sync.passphrase = ui.syncPassphraseInput.value;
         const nextEndpointKey = syncEndpointKey();
         if (previousEndpointKey !== nextEndpointKey) {
+            state.sync.koofrMountId = '';
+            state.sync.koofrMountName = '';
+            state.sync.koofrMountUser = '';
             state.sync.hasBaseline = false;
             state.sync.conflicts = [];
             state.sync.conflictEndpointKey = nextEndpointKey;
@@ -2486,6 +2500,9 @@
         Object.assign(state.sync, {
             endpoint: '',
             provider: '',
+            koofrMountId: '',
+            koofrMountName: '',
+            koofrMountUser: '',
             username: '',
             password: '',
             passphrase: '',
@@ -2770,7 +2787,6 @@
         const isKoofr = /(^|\.)koofr\.net$/i.test(url.hostname) && /^\/dav\//i.test(url.pathname);
         if (!isKoofr) return { provider: 'webdav' };
 
-        setSyncPhase('syncPhaseResolvingKoofr');
         const segments = url.pathname.split('/').filter(Boolean).map((segment) => {
             try {
                 return decodeURIComponent(segment);
@@ -2783,16 +2799,44 @@
         }
 
         const mountName = segments[1];
+        const normalizedName = mountName.toLocaleLowerCase('en-US');
+        const normalizedUser = state.sync.username.toLocaleLowerCase('en-US');
+        const cachedMountMatches = Boolean(
+            state.sync.koofrMountId
+            && state.sync.koofrMountName.toLocaleLowerCase('en-US') === normalizedName
+            && state.sync.koofrMountUser.toLocaleLowerCase('en-US') === normalizedUser
+        );
+        if (cachedMountMatches) {
+            return buildKoofrContext(url, state.sync.koofrMountId, mountName, segments, true);
+        }
+
+        setSyncPhase('syncPhaseResolvingKoofr');
         const mountsUrl = new URL('/api/v2/mounts', url.origin);
-        const response = await fetchWebDav(mountsUrl.toString(), {
-            method: 'GET',
-            headers: createWebDavHeaders(),
-            cache: 'no-store',
-            credentials: 'omit',
-            redirect: 'follow',
-        });
+        let response;
+        let lastError;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            if (attempt) {
+                setSyncPhase('syncPhaseRetryingKoofr');
+                await new Promise((resolve) => window.setTimeout(resolve, 700));
+            }
+            try {
+                response = await fetchWebDav(mountsUrl.toString(), {
+                    method: 'GET',
+                    headers: createWebDavHeaders(),
+                    cache: 'no-store',
+                    credentials: 'omit',
+                    redirect: 'follow',
+                });
+                if (response.status !== 429 || attempt === 1) break;
+                lastError = new Error(t('syncReadFailed', { status: response.status }));
+            } catch (error) {
+                lastError = error;
+                if (state.sync.cancelRequested || attempt === 1) throw error;
+            }
+        }
+        if (!response) throw lastError || new Error(t('syncNetworkError', { method: 'GET', target: 'app.koofr.net/api/v2/mounts' }));
         if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
-        if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
+        if (!response.ok) throw lastError || new Error(t('syncReadFailed', { status: response.status }));
 
         let payload;
         try {
@@ -2801,11 +2845,18 @@
             throw new Error(t('koofrApiInvalid'));
         }
         const mounts = Array.isArray(payload?.mounts) ? payload.mounts : [];
-        const normalizedName = mountName.toLocaleLowerCase('en-US');
         const mount = mounts.find((candidate) => String(candidate?.name || '').toLocaleLowerCase('en-US') === normalizedName)
             || (normalizedName === 'koofr' ? mounts.find((candidate) => candidate?.isPrimary === true) : null);
         if (!mount?.id) throw new Error(t('koofrMountNotFound', { name: mountName }));
 
+        state.sync.koofrMountId = String(mount.id);
+        state.sync.koofrMountName = mountName;
+        state.sync.koofrMountUser = state.sync.username;
+        await saveSyncPreferences();
+        return buildKoofrContext(url, state.sync.koofrMountId, mountName, segments, false);
+    }
+
+    function buildKoofrContext(url, mountId, mountName, segments, mountCached) {
         const pathSegments = segments.slice(2);
         const fileName = pathSegments.pop();
         const directoryPath = pathSegments.length ? `/${pathSegments.join('/')}` : '/';
@@ -2813,8 +2864,9 @@
         return {
             provider: 'koofr',
             origin: url.origin,
-            mountId: String(mount.id),
+            mountId,
             mountName,
+            mountCached,
             directoryPath,
             fileName,
             filePath,

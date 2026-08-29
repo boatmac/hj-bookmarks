@@ -107,7 +107,7 @@ https://dav.example.com/bookmarks/
 https://app.koofr.net/dav/Koofr/Example-Bookmarks/
 ```
 
-用户名使用 Koofr 登录邮箱，密码使用 Koofr 生成的应用密码。应用会通过 Koofr API 查找 URL 中的 `Koofr` 存储空间、创建最后一级目录并上传加密同步文件。普通 WebDAV 服务仍使用标准 `GET`、`PUT` 和 `MKCOL`。
+用户名使用 Koofr 登录邮箱，密码使用 Koofr 生成的应用密码。应用会通过 Koofr API 查找 URL 中的 `Koofr` 存储空间、创建最后一级目录并上传加密同步文件。首次成功查询后会在本机保存对应的非敏感 Mount ID，后续刷新和同步直接访问目标文件，不再重复查询 `/api/v2/mounts`；首次查询遇到超时或限流时会自动重试一次。普通 WebDAV 服务仍使用标准 `GET`、`PUT` 和 `MKCOL`。
 
 同步特性：
 
