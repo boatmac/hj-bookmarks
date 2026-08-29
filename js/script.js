@@ -224,6 +224,7 @@
             syncTimeout: ({ method, target }) => `${method} ${target} 超过 20 秒未响应。请检查网络、反向代理或服务状态。`,
             syncCanceled: '同步已取消',
             cancelSync: '取消同步',
+            syncMutationBlocked: '同步正在进行，请等待完成或取消同步后再修改数据',
             syncReadFailed: ({ status }) => `读取远端文件失败（HTTP ${status}）。`,
             syncWriteFailed: ({ status }) => `写入远端文件失败（HTTP ${status}）。`,
             syncCreateDirectoryFailed: ({ status }) => `创建 WebDAV 同步目录失败（HTTP ${status}）。`,
@@ -562,6 +563,7 @@
             syncTimeout: ({ method, target }) => `${method} ${target} did not respond within 20 seconds. Check the network, reverse proxy, or service status.`,
             syncCanceled: 'Synchronization canceled',
             cancelSync: 'Cancel sync',
+            syncMutationBlocked: 'Synchronization is in progress. Wait for it to finish or cancel it before changing data.',
             syncReadFailed: ({ status }) => `Could not read the remote file (HTTP ${status}).`,
             syncWriteFailed: ({ status }) => `Could not write the remote file (HTTP ${status}).`,
             syncCreateDirectoryFailed: ({ status }) => `Could not create the WebDAV sync folder (HTTP ${status}).`,
@@ -786,7 +788,7 @@
 
     function cacheElements() {
         const ids = [
-            'app', 'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
+            'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
             'all-view-button', 'favorites-view-button', 'all-count', 'favorites-count',
             'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
             'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
@@ -2545,6 +2547,12 @@
         scheduleWebDavSync();
     }
 
+    function preventMutationDuringSync() {
+        if (!state.sync.running) return false;
+        showToast(t('syncMutationBlocked'));
+        return true;
+    }
+
     function handleSyncNow() {
         if (state.sync.conflicts.length) {
             openConflictCenter();
@@ -2596,7 +2604,6 @@
         sync.cancelRequested = false;
         sync.abortController = new AbortController();
         window.clearTimeout(sync.timer);
-        ui.app.inert = true;
         document.body.classList.add('syncing');
         renderSyncSettings();
         await saveSyncPreferences();
@@ -2708,7 +2715,6 @@
             sync.abortController = null;
             sync.cancelRequested = false;
             sync.phase = '';
-            ui.app.inert = false;
             document.body.classList.remove('syncing');
             renderSyncSettings();
             if (sync.pending && !wasCanceled) {
@@ -3689,6 +3695,7 @@
             toggle.classList.toggle('expanded', !folder.collapsed);
             toggle.addEventListener('click', async (event) => {
                 event.stopPropagation();
+                if (preventMutationDuringSync()) return;
                 folder.collapsed = !folder.collapsed;
                 await saveItem(toStorageRecord(folder));
                 scheduleAutoBackup();
@@ -3984,6 +3991,7 @@
     }
 
     function openItemDialog(kind, item = null) {
+        if (preventMutationDuringSync()) return;
         if (item && openConflictForItem(item)) return;
         const isFolderItem = kind === 'folder';
         ui.itemId.value = item ? String(item.id) : '';
@@ -4057,6 +4065,7 @@
 
     async function handleItemSubmit(event) {
         event.preventDefault();
+        if (preventMutationDuringSync()) return;
         const title = ui.itemTitleInput.value.trim();
         const kind = ui.itemKind.value;
         const id = ui.itemId.value ? Number(ui.itemId.value) : null;
@@ -4119,6 +4128,7 @@
     }
 
     async function toggleFavorite(bookmark) {
+        if (preventMutationDuringSync()) return;
         if (openConflictForItem(bookmark)) return;
         const updated = toStorageRecord(bookmark);
         updated.isPinned = !bookmark.isPinned;
@@ -4131,6 +4141,7 @@
     }
 
     async function deleteItem(item) {
+        if (preventMutationDuringSync()) return;
         if (openConflictForItem(item)) return;
         const descendantIds = isFolder(item) ? getAllDescendantIds(item.id) : [];
         if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
@@ -4202,6 +4213,10 @@
     }
 
     async function moveItem(itemId, parentId) {
+        if (preventMutationDuringSync()) {
+            clearDragState();
+            return;
+        }
         const item = findItem(itemId);
         if (openConflictForItem(item)) {
             clearDragState();
@@ -4236,6 +4251,10 @@
     }
 
     async function handleImport(event) {
+        if (preventMutationDuringSync()) {
+            event.target.value = '';
+            return;
+        }
         const file = event.target.files?.[0];
         if (!file) return;
         document.body.classList.add('busy');
@@ -4539,6 +4558,7 @@
 
     async function clearAllData() {
         closeExportMenu();
+        if (preventMutationDuringSync()) return;
         if (!state.items.length) {
             showToast(t('nothingToClear'));
             return;

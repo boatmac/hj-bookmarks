@@ -2078,8 +2078,12 @@ svg {
     align-items: center;
 }
 
-body.syncing {
-    cursor: progress;
+body.syncing .add-button,
+body.syncing .folder-card-actions,
+body.syncing .bookmark-card .card-actions,
+body.syncing .folder-tree-edit,
+body.syncing .mini-icon-button {
+    opacity: 0.5;
 }
 
 .conflict-dialog {
