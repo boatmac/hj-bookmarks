@@ -117,6 +117,9 @@
             webDavUrl: 'WebDAV 地址',
             webDavUrlHint: '可填写目录或完整 JSON 文件地址',
             webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
+            koofrMountId: 'Koofr Mount ID（可选）',
+            koofrMountIdHint: '填写后跳过偶发超时的存储空间查询',
+            koofrMountIdPlaceholder: '例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             webDavUsername: '用户名',
             webDavUsernameHint: '地址和用户名会保存在本机',
             webDavPassword: '密码或应用密码',
@@ -456,6 +459,9 @@
             webDavUrl: 'WebDAV URL',
             webDavUrlHint: 'Enter a folder URL or the complete JSON file URL',
             webDavUrlPlaceholder: 'https://dav.example.com/bookmarks/',
+            koofrMountId: 'Koofr Mount ID (optional)',
+            koofrMountIdHint: 'Bypass the mount lookup if it times out intermittently',
+            koofrMountIdPlaceholder: 'For example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             webDavUsername: 'Username',
             webDavUsernameHint: 'The URL and username are stored on this device',
             webDavPassword: 'Password or app password',
@@ -818,7 +824,8 @@
             'backup-now-button', 'sync-dialog', 'sync-dialog-title',
             'sync-dialog-close-button', 'sync-dialog-cancel-button',
             'sync-status-card', 'sync-status-title', 'sync-status-detail',
-            'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
+            'sync-endpoint-input', 'koofr-mount-id-field', 'koofr-mount-id-input',
+            'sync-username-input', 'sync-password-input',
             'sync-passphrase-input', 'auto-create-directory-toggle',
             'auto-sync-toggle', 'remember-session-credentials-toggle',
             'last-sync-value', 'conflict-protection-value',
@@ -972,6 +979,8 @@
         ui.syncEndpointInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncUsernameInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncEndpointInput.addEventListener('change', saveSyncPreferences);
+        ui.koofrMountIdInput.addEventListener('input', handleKoofrMountIdInput);
+        ui.koofrMountIdInput.addEventListener('change', saveSyncPreferences);
         ui.syncUsernameInput.addEventListener('change', saveSyncPreferences);
         ui.syncPasswordInput.addEventListener('input', updateSyncSecretsFromForm);
         ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
@@ -1821,6 +1830,7 @@
                 state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
             }
             ui.syncEndpointInput.value = state.sync.endpoint;
+            ui.koofrMountIdInput.value = state.sync.koofrMountId;
             ui.syncUsernameInput.value = state.sync.username;
             restoreSessionSyncCredentials();
             state.sync.hasBaseline = state.sync.endpoint
@@ -2319,6 +2329,7 @@
     function openSyncDialog() {
         closeExportMenu();
         ui.syncEndpointInput.value = state.sync.endpoint;
+        ui.koofrMountIdInput.value = state.sync.koofrMountId;
         ui.syncUsernameInput.value = state.sync.username;
         ui.syncPasswordInput.value = state.sync.password;
         ui.syncPassphraseInput.value = state.sync.passphrase;
@@ -2348,16 +2359,20 @@
 
     function updateSyncSecretsFromForm() {
         const previousFingerprint = syncSessionFingerprint();
+        const previousEndpoint = state.sync.endpoint;
         const previousEndpointKey = syncEndpointKey();
         state.sync.endpoint = ui.syncEndpointInput.value.trim();
         state.sync.username = ui.syncUsernameInput.value.trim();
         state.sync.password = ui.syncPasswordInput.value;
         state.sync.passphrase = ui.syncPassphraseInput.value;
         const nextEndpointKey = syncEndpointKey();
-        if (previousEndpointKey !== nextEndpointKey) {
+        if (previousEndpoint !== state.sync.endpoint) {
             state.sync.koofrMountId = '';
             state.sync.koofrMountName = '';
             state.sync.koofrMountUser = '';
+            ui.koofrMountIdInput.value = '';
+        }
+        if (previousEndpointKey !== nextEndpointKey) {
             state.sync.hasBaseline = false;
             state.sync.conflicts = [];
             state.sync.conflictEndpointKey = nextEndpointKey;
@@ -2438,12 +2453,27 @@
         ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
         ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
         ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
+        const koofrEndpoint = isKoofrSyncEndpoint(sync.endpoint);
+        ui.koofrMountIdField.classList.toggle('hidden', !koofrEndpoint);
+        if (document.activeElement !== ui.koofrMountIdInput) {
+            ui.koofrMountIdInput.value = sync.koofrMountId;
+        }
         ui.syncEndpointInput.disabled = sync.running;
+        ui.koofrMountIdInput.disabled = sync.running;
         ui.syncUsernameInput.disabled = sync.running;
         ui.syncPasswordInput.disabled = sync.running;
         ui.syncPassphraseInput.disabled = sync.running;
         ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
         ui.disconnectSyncButton.disabled = sync.running;
+    }
+
+    function handleKoofrMountIdInput() {
+        state.sync.koofrMountId = ui.koofrMountIdInput.value.trim();
+        state.sync.koofrMountName = koofrMountNameFromEndpoint(state.sync.endpoint);
+        state.sync.koofrMountUser = state.sync.username;
+        state.sync.error = '';
+        saveSyncPreferences();
+        renderSyncSettings();
     }
 
     async function handleRememberSessionCredentials() {
@@ -2726,6 +2756,27 @@
         }
     }
 
+    function isKoofrSyncEndpoint(value) {
+        try {
+            const url = new URL(value);
+            return /(^|\.)koofr\.net$/i.test(url.hostname) && /^\/dav\//i.test(url.pathname);
+        } catch {
+            return false;
+        }
+    }
+
+    function koofrMountNameFromEndpoint(value) {
+        try {
+            const url = new URL(value);
+            const segments = url.pathname.split('/').filter(Boolean);
+            return segments.length > 1 && segments[0].toLowerCase() === 'dav'
+                ? decodeURIComponent(segments[1])
+                : '';
+        } catch {
+            return '';
+        }
+    }
+
     function normalizeWebDavEndpoint(value) {
         const input = String(value || '').trim();
         if (!input) throw new Error(t('syncUrlRequired'));
@@ -2790,8 +2841,7 @@
 
     async function createSyncRemoteContext(endpoint) {
         const url = new URL(endpoint);
-        const isKoofr = /(^|\.)koofr\.net$/i.test(url.hostname) && /^\/dav\//i.test(url.pathname);
-        if (!isKoofr) return { provider: 'webdav' };
+        if (!isKoofrSyncEndpoint(endpoint)) return { provider: 'webdav' };
 
         const segments = url.pathname.split('/').filter(Boolean).map((segment) => {
             try {
@@ -2810,9 +2860,16 @@
         const cachedMountMatches = Boolean(
             state.sync.koofrMountId
             && state.sync.koofrMountName.toLocaleLowerCase('en-US') === normalizedName
-            && state.sync.koofrMountUser.toLocaleLowerCase('en-US') === normalizedUser
+            && (
+                !state.sync.koofrMountUser
+                || state.sync.koofrMountUser.toLocaleLowerCase('en-US') === normalizedUser
+            )
         );
         if (cachedMountMatches) {
+            if (state.sync.koofrMountUser !== state.sync.username) {
+                state.sync.koofrMountUser = state.sync.username;
+                await saveSyncPreferences();
+            }
             return buildKoofrContext(url, state.sync.koofrMountId, mountName, segments, true);
         }
 
