@@ -285,9 +285,15 @@ function closeExportMenu() {
     ui.exportMenu.open = false;
 }
 
-function showToast(message) {
+function showToast(message, tone = 'success') {
     window.clearTimeout(state.toastTimer);
     restoreToastPopoverMode();
+    const normalizedTone = ['warning', 'error'].includes(tone) ? tone : 'success';
+    const iconName = normalizedTone === 'warning'
+        ? 'alert'
+        : (normalizedTone === 'error' ? 'x' : 'check');
+    ui.toast.dataset.tone = normalizedTone;
+    ui.toastIconUse?.setAttribute('href', `#icon-${iconName}`);
     ui.toastMessage.textContent = message;
     ui.toast.classList.remove('hidden');
 

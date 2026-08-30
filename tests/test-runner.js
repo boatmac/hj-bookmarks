@@ -106,23 +106,28 @@ test('标签解析会去重并清理空白', () => {
     assertDeepEqual(parseTags(' docs, tools，docs, , later '), ['docs', 'tools', 'later']);
 });
 
-test('模态窗口中的提示会进入浏览器顶层', () => {
+test('模态窗口中的警告提示会进入浏览器顶层', () => {
     const previousToast = ui.toast;
+    const previousToastIconUse = ui.toastIconUse;
     const previousToastMessage = ui.toastMessage;
     const dialog = document.createElement('dialog');
     const toast = document.createElement('div');
+    const iconUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     const message = document.createElement('span');
     toast.className = 'toast hidden';
     toast.setAttribute('popover', 'manual');
-    toast.append(message);
+    toast.append(iconUse, message);
     document.body.append(dialog, toast);
     dialog.showModal();
     ui.toast = toast;
+    ui.toastIconUse = iconUse;
     ui.toastMessage = message;
 
     try {
-        showToast('权限请求结果');
+        showToast('权限请求结果', 'warning');
         assertEqual(message.textContent, '权限请求结果');
+        assertEqual(toast.dataset.tone, 'warning');
+        assertEqual(iconUse.getAttribute('href'), '#icon-alert');
         if (typeof toast.showPopover === 'function') {
             assert(toast.matches(':popover-open'), 'Toast did not enter the browser top layer');
         } else {
@@ -134,6 +139,7 @@ test('模态窗口中的提示会进入浏览器顶层', () => {
         toast.remove();
         dialog.remove();
         ui.toast = previousToast;
+        ui.toastIconUse = previousToastIconUse;
         ui.toastMessage = previousToastMessage;
     }
 });

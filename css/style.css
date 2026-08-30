@@ -2319,6 +2319,17 @@ svg {
     opacity: 0.5;
 }
 
+.backup-persistence-note {
+    margin: 0;
+    padding: 10px 12px;
+    color: var(--text-soft);
+    font-size: 9px;
+    line-height: 1.6;
+    background: var(--panel-muted);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+}
+
 .backup-compatibility {
     margin: 0;
     color: var(--text-faint);
@@ -3089,6 +3100,24 @@ body.syncing .mini-icon-button {
 .toast::backdrop {
     background: transparent;
     backdrop-filter: none;
+}
+
+.toast[data-tone="warning"] {
+    border-color: color-mix(in srgb, #d69724 45%, var(--border));
+}
+
+.toast[data-tone="warning"] .toast-icon {
+    color: #211706;
+    background: #d9a33e;
+}
+
+.toast[data-tone="error"] {
+    border-color: color-mix(in srgb, var(--danger) 48%, var(--border));
+}
+
+.toast[data-tone="error"] .toast-icon {
+    color: #ffffff;
+    background: var(--danger);
 }
 
 .toast-icon {

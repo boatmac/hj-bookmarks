@@ -34,7 +34,10 @@ async function requestPersistentStorage(notify = false) {
         state.persistence = 'not-granted';
     }
     renderBackupSettings();
-    if (notify) showToast(t(state.persistence === 'granted' ? 'persistenceGrantedToast' : 'persistenceDeniedToast'));
+    if (notify) {
+        const granted = state.persistence === 'granted';
+        showToast(t(granted ? 'persistenceGrantedToast' : 'persistenceDeniedToast'), granted ? 'success' : 'warning');
+    }
     return state.persistence === 'granted';
 }
 

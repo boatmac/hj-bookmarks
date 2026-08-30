@@ -94,7 +94,7 @@ function cacheElements() {
         'conflict-local-summary', 'conflict-remote-summary', 'field-merge-section',
         'conflict-fields', 'conflict-previous-button', 'conflict-next-button',
         'keep-both-button', 'keep-local-button', 'keep-remote-button',
-        'apply-field-merge-button', 'toast', 'toast-message',
+        'apply-field-merge-button', 'toast', 'toast-icon-use', 'toast-message',
     ];
 
     for (const id of ids) ui[toCamelCase(id)] = document.getElementById(id);
