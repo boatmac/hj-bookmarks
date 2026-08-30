@@ -12,22 +12,23 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-17" defer></script>
-    <script src="js/core/config.js?v=20260829-17" defer></script>
-    <script src="js/core/coordination.js?v=20260829-17" defer></script>
-    <script src="js/core/storage.js?v=20260829-17" defer></script>
-    <script src="js/sync/backup.js?v=20260829-17" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-17" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-17" defer></script>
-    <script src="js/sync/providers.js?v=20260829-17" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-17" defer></script>
-    <script src="js/sync/merge.js?v=20260829-17" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-17" defer></script>
-    <script src="js/ui/render.js?v=20260829-17" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-17" defer></script>
-    <script src="js/data/transfer.js?v=20260829-17" defer></script>
-    <script src="js/core/utils.js?v=20260829-17" defer></script>
-    <script src="js/app.js?v=20260829-17" defer></script>
+    <script src="js/core/translations.js?v=20260829-18" defer></script>
+    <script src="js/core/config.js?v=20260829-18" defer></script>
+    <script src="js/core/coordination.js?v=20260829-18" defer></script>
+    <script src="js/core/storage.js?v=20260829-18" defer></script>
+    <script src="js/sync/backup.js?v=20260829-18" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-18" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-18" defer></script>
+    <script src="js/sync/providers.js?v=20260829-18" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-18" defer></script>
+    <script src="js/sync/merge.js?v=20260829-18" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-18" defer></script>
+    <script src="js/ui/help.js?v=20260829-18" defer></script>
+    <script src="js/ui/render.js?v=20260829-18" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-18" defer></script>
+    <script src="js/data/transfer.js?v=20260829-18" defer></script>
+    <script src="js/core/utils.js?v=20260829-18" defer></script>
+    <script src="js/app.js?v=20260829-18" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -43,6 +44,7 @@
         <symbol id="icon-folder-plus" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm9 4v6m-3-3h6"/></symbol>
         <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
         <symbol id="icon-language" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14.7 14.7 0 0 1 0 18M12 3a14.7 14.7 0 0 0 0 18"/></symbol>
+        <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.5 2.05c-.8.47-1.3.95-1.3 1.95v.25M12 17.5h.01"/></symbol>
         <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
         <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.5 15.1A8.5 8.5 0 0 1 8.9 3.5 8.5 8.5 0 1 0 20.5 15.1Z"/></symbol>
         <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
@@ -103,6 +105,9 @@
                         </select>
                         <svg class="language-chevron"><use href="#icon-chevron-down"></use></svg>
                     </label>
+                    <button class="theme-button help-button" id="help-button" type="button" aria-label="帮助与使用说明" title="帮助与使用说明" data-i18n-aria-label="helpTitle" data-i18n-title="helpTitle">
+                        <svg><use href="#icon-help"></use></svg>
+                    </button>
                     <button class="theme-button" id="theme-button" type="button" aria-label="切换显示主题" title="切换显示主题" data-i18n-aria-label="themeToggle" data-i18n-title="themeToggle">
                         <svg class="theme-moon"><use href="#icon-moon"></use></svg>
                         <svg class="theme-sun"><use href="#icon-sun"></use></svg>
@@ -213,6 +218,92 @@
             </section>
         </main>
     </div>
+
+    <dialog class="item-dialog help-dialog" id="help-dialog">
+        <div class="dialog-panel">
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="helpEyebrow">使用指南</p><h2 id="help-dialog-title" data-i18n="helpTitle">帮助与使用说明</h2></div>
+                <button class="icon-button dialog-close" id="help-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="help-content">
+                <details class="help-topic" open>
+                    <summary><span data-i18n="helpQuickStart">快速开始</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ol>
+                            <li data-i18n="helpQuickStart1">点击“添加书签”保存第一条链接。</li>
+                            <li data-i18n="helpQuickStart2">用文件夹和标签整理内容，使用顶部搜索快速查找。</li>
+                            <li data-i18n="helpQuickStart3">数据默认保存在当前浏览器，请尽早配置自动备份。</li>
+                        </ol>
+                        <p data-i18n="helpSearchShortcut">按 Ctrl/⌘ + K 可以随时聚焦搜索框。</p>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpOrganize">整理书签</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpOrganize1">新建文件夹后，可拖拽书签或文件夹调整位置。</li>
+                            <li data-i18n="helpOrganize2">点击星标加入收藏；点击标签可快速筛选。</li>
+                            <li data-i18n="helpOrganize3">删除项目会进入回收站，文件夹的后代会一起保留。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpBackupRecovery">备份与恢复</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpBackup1">在“备份/同步”中选择自动本地备份，并授权一个目录。</li>
+                            <li data-i18n="helpBackup2">最新备份和历史快照会自动写入所选目录。</li>
+                            <li data-i18n="helpBackup3">回收站保留删除项目 30 天，支持单项和批量恢复。</li>
+                            <li data-i18n="helpBackup4">JSON 用于完整备份；浏览器 HTML 用于与浏览器迁移。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpSynchronization">多设备同步</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpSync1">云端服务模式支持标准 WebDAV 和 Koofr。</li>
+                            <li data-i18n="helpSync2">本地同步目录模式适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端。</li>
+                            <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
+                            <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpConflicts">处理冲突</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <p data-i18n="helpConflictsText">应用会自动合并不同字段的修改。双方同时修改同一字段，或一端删除而另一端编辑时，会显示冲突中心；可保留本机、保留远端、逐字段选择或保留两个副本。</p>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpPrivacy">隐私与安全</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpPrivacy1">未配置同步时，书签不会离开当前浏览器。</li>
+                            <li data-i18n="helpPrivacy2">远端同步文件会在本机加密后上传。</li>
+                            <li data-i18n="helpPrivacy3">加密口令无法找回；遗失后无法解密同步文件。</li>
+                            <li data-i18n="helpPrivacy4">共享设备上不要开启“刷新时保留凭据”。</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+
+            <footer class="dialog-footer help-dialog-footer">
+                <a class="button button-secondary" href="README.md" target="_blank" rel="noreferrer" data-i18n="openReadme">查看项目 README</a>
+                <a class="button button-secondary" href="tests/index.html" target="_blank" rel="noreferrer" data-i18n="openBrowserTests">运行浏览器测试</a>
+                <span class="dialog-footer-spacer"></span>
+                <button class="button button-primary" id="help-dialog-done-button" type="button" data-i18n="gotIt">知道了</button>
+            </footer>
+        </div>
+    </dialog>
 
     <dialog class="item-dialog" id="item-dialog">
         <form class="dialog-panel" id="item-form" novalidate>

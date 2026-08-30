@@ -37,7 +37,8 @@ js/
 ├── ui/
 │   ├── render.js        导航、文件夹和书签卡片渲染
 │   ├── bookmarks.js     表单、拖拽和书签交互
-│   └── recovery.js      回收站渲染、恢复与永久清除
+│   ├── recovery.js      回收站渲染、恢复与永久清除
+│   └── help.js          页面内最终用户帮助
 ├── app.js               DOM 缓存、国际化应用和事件绑定
 └── script.js            旧版单脚本入口的兼容加载器
 ```

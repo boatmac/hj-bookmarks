@@ -36,7 +36,8 @@ function cacheElements() {
         'all-view-button', 'favorites-view-button', 'recycle-bin-view-button',
         'all-count', 'favorites-count', 'recycle-bin-count',
         'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
-        'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
+        'storage-status', 'language-select', 'help-button', 'theme-button',
+        'search-input', 'clear-search-button',
         'tab-status', 'tab-status-text',
         'search-shortcut', 'import-file-input', 'export-menu',
         'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
@@ -54,7 +55,8 @@ function cacheElements() {
         'dialog-close-button', 'dialog-cancel-button', 'dialog-submit-button',
         'item-title-input', 'item-url-input', 'item-description-input',
         'item-parent-select', 'item-tags-input', 'item-favorite-input',
-        'form-error', 'backup-dialog', 'backup-dialog-title',
+        'form-error', 'help-dialog', 'help-dialog-close-button',
+        'help-dialog-done-button', 'backup-dialog', 'backup-dialog-title',
         'backup-dialog-close-button', 'backup-dialog-cancel-button',
         'backup-status-card', 'backup-status-title', 'backup-status-detail',
         'auto-backup-toggle', 'backup-directory-name',
@@ -164,6 +166,16 @@ function bindStaticEvents() {
     ui.clearAllButton.addEventListener('click', clearAllData);
 
     ui.languageSelect.addEventListener('change', () => applyLanguage(ui.languageSelect.value, true));
+    ui.helpButton.addEventListener('click', openHelpDialog);
+    ui.helpDialogCloseButton.addEventListener('click', closeHelpDialog);
+    ui.helpDialogDoneButton.addEventListener('click', closeHelpDialog);
+    ui.helpDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeHelpDialog();
+    });
+    ui.helpDialog.addEventListener('mousedown', (event) => {
+        if (event.target === ui.helpDialog) closeHelpDialog();
+    });
     ui.themeButton.addEventListener('click', toggleTheme);
     ui.mobileMenuButton.addEventListener('click', openSidebar);
     ui.sidebarBackdrop.addEventListener('click', closeSidebar);
