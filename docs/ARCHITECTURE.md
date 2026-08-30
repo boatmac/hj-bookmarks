@@ -24,7 +24,7 @@ js/
 │   ├── config.js        常量、全局状态和基础翻译函数
 │   ├── coordination.js  Web Locks、BroadcastChannel 与标签页状态
 │   ├── storage.js       IndexedDB schema 与事务操作
-│   └── utils.js         URL、层级、日期和 DOM 通用工具
+│   └── utils.js         URL、层级、日期、DOM 与顶层提示工具
 ├── data/
 │   └── transfer.js      JSON/HTML 导入导出和清空流程
 ├── sync/

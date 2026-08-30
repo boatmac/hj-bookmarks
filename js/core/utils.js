@@ -287,9 +287,62 @@ function closeExportMenu() {
 
 function showToast(message) {
     window.clearTimeout(state.toastTimer);
+    restoreToastPopoverMode();
     ui.toastMessage.textContent = message;
     ui.toast.classList.remove('hidden');
-    state.toastTimer = window.setTimeout(() => ui.toast.classList.add('hidden'), 3200);
+
+    let shownInTopLayer = false;
+    if (typeof ui.toast.showPopover === 'function') {
+        try {
+            if (isToastPopoverOpen()) ui.toast.hidePopover();
+            ui.toast.showPopover();
+            shownInTopLayer = true;
+        } catch {
+            // A dialog-hosted fallback keeps the message above modal backdrops.
+        }
+    }
+    if (!shownInTopLayer) showToastInDialogFallback();
+    state.toastTimer = window.setTimeout(hideToast, 3200);
+}
+
+function hideToast() {
+    window.clearTimeout(state.toastTimer);
+    state.toastTimer = null;
+    if (isToastPopoverOpen()) {
+        try {
+            ui.toast.hidePopover();
+        } catch {
+            // The class below still hides the fallback notification.
+        }
+    }
+    ui.toast.classList.add('hidden');
+    restoreToastPopoverMode();
+}
+
+function isToastPopoverOpen() {
+    if (typeof ui.toast?.matches !== 'function') return false;
+    try {
+        return ui.toast.matches(':popover-open');
+    } catch {
+        return false;
+    }
+}
+
+function showToastInDialogFallback() {
+    if (ui.toast.hasAttribute('popover')) {
+        ui.toast.removeAttribute('popover');
+        ui.toast.dataset.popoverFallback = 'true';
+    }
+    const openDialogs = [...document.querySelectorAll('dialog[open]')];
+    const host = openDialogs[openDialogs.length - 1] || document.body;
+    host.append(ui.toast);
+}
+
+function restoreToastPopoverMode() {
+    if (ui.toast?.dataset.popoverFallback !== 'true') return;
+    document.body.append(ui.toast);
+    ui.toast.setAttribute('popover', 'manual');
+    delete ui.toast.dataset.popoverFallback;
 }
 
 function showFatalError(error) {

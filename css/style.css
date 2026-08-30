@@ -3061,23 +3061,34 @@ body.syncing .mini-icon-button {
 
 .toast {
     position: fixed;
-    right: 22px;
-    bottom: 22px;
+    inset: auto 22px 22px auto;
     z-index: 100;
     display: flex;
+    width: max-content;
     min-height: 46px;
     max-width: min(410px, calc(100vw - 30px));
+    height: auto;
+    max-height: calc(100vh - 30px);
     align-items: center;
     gap: 10px;
     padding: 10px 15px 10px 10px;
+    margin: 0;
+    overflow: visible;
     color: var(--text);
     font-size: 11px;
     font-weight: 620;
+    overflow-wrap: anywhere;
+    pointer-events: none;
     background: var(--panel);
     border: 1px solid var(--border-strong);
     border-radius: 12px;
     box-shadow: var(--shadow);
     animation: toast-in 220ms ease both;
+}
+
+.toast::backdrop {
+    background: transparent;
+    backdrop-filter: none;
 }
 
 .toast-icon {

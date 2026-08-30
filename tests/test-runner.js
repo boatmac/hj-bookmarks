@@ -106,6 +106,38 @@ test('标签解析会去重并清理空白', () => {
     assertDeepEqual(parseTags(' docs, tools，docs, , later '), ['docs', 'tools', 'later']);
 });
 
+test('模态窗口中的提示会进入浏览器顶层', () => {
+    const previousToast = ui.toast;
+    const previousToastMessage = ui.toastMessage;
+    const dialog = document.createElement('dialog');
+    const toast = document.createElement('div');
+    const message = document.createElement('span');
+    toast.className = 'toast hidden';
+    toast.setAttribute('popover', 'manual');
+    toast.append(message);
+    document.body.append(dialog, toast);
+    dialog.showModal();
+    ui.toast = toast;
+    ui.toastMessage = message;
+
+    try {
+        showToast('权限请求结果');
+        assertEqual(message.textContent, '权限请求结果');
+        if (typeof toast.showPopover === 'function') {
+            assert(toast.matches(':popover-open'), 'Toast did not enter the browser top layer');
+        } else {
+            assertEqual(toast.parentElement, dialog, 'Toast fallback was not mounted inside the dialog');
+        }
+    } finally {
+        hideToast();
+        if (dialog.open) dialog.close();
+        toast.remove();
+        dialog.remove();
+        ui.toast = previousToast;
+        ui.toastMessage = previousToastMessage;
+    }
+});
+
 test('URL 会自动补全 HTTPS 并拒绝危险协议', () => {
     assertEqual(normalizeUrl('example.com/path'), 'https://example.com/path');
     let rejected = false;
