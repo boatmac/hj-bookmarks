@@ -63,7 +63,19 @@ function cacheElements() {
         'choose-backup-directory-button', 'backup-retention-select',
         'last-backup-value', 'persistence-status-value',
         'request-persistence-button', 'disconnect-backup-button',
-        'backup-now-button', 'sync-dialog', 'sync-dialog-title',
+        'backup-now-button', 'sync-wizard-dialog', 'sync-wizard-title',
+        'sync-wizard-close-button', 'sync-wizard-progress',
+        'wizard-connection-hint', 'wizard-remote-fields',
+        'wizard-local-folder-fields', 'wizard-local-folder-name',
+        'wizard-choose-folder-button', 'wizard-connection-error',
+        'wizard-endpoint-input', 'wizard-username-input', 'wizard-password-input',
+        'wizard-passphrase-input', 'wizard-passphrase-confirm-input',
+        'wizard-show-passwords', 'wizard-passphrase-error', 'wizard-auto-sync',
+        'wizard-remember-session', 'wizard-create-directory-row',
+        'wizard-create-directory', 'wizard-review', 'wizard-test-status',
+        'wizard-test-title', 'wizard-test-detail', 'sync-wizard-cancel-button',
+        'sync-wizard-back-button', 'sync-wizard-next-button',
+        'sync-wizard-finish-button', 'sync-dialog', 'sync-dialog-title',
         'sync-dialog-close-button', 'sync-dialog-cancel-button',
         'sync-status-card', 'sync-status-title', 'sync-status-detail',
         'sync-mode-select', 'remote-sync-fields', 'local-folder-sync-fields',
@@ -73,7 +85,7 @@ function cacheElements() {
         'sync-passphrase-input', 'auto-create-directory-toggle',
         'auto-sync-toggle', 'remember-session-credentials-toggle',
         'last-sync-value', 'conflict-protection-value',
-        'disconnect-sync-button',
+        'disconnect-sync-button', 'sync-wizard-button',
         'sync-now-button', 'conflict-dialog', 'conflict-dialog-title',
         'conflict-dialog-close-button', 'conflict-progress-label',
         'conflict-detected-time', 'conflict-kind-label', 'conflict-item-title',
@@ -126,6 +138,7 @@ function applyLanguage(language, persist = false) {
     if (ui.syncMenuStatus) renderSyncSettings();
     if (ui.conflictBanner) renderConflictBanner();
     if (ui.conflictDialog?.open) renderConflictCenter();
+    if (ui.syncWizardDialog?.open) renderSyncWizard();
     renderTabCoordinationStatus();
 }
 
@@ -206,6 +219,28 @@ function bindStaticEvents() {
     ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
     ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);
     ui.backupNowButton.addEventListener('click', handleBackupNow);
+
+    ui.syncWizardButton.addEventListener('click', openSyncWizard);
+    ui.syncWizardCloseButton.addEventListener('click', closeSyncWizard);
+    ui.syncWizardCancelButton.addEventListener('click', closeSyncWizard);
+    ui.syncWizardBackButton.addEventListener('click', goToPreviousSyncWizardStep);
+    ui.syncWizardNextButton.addEventListener('click', goToNextSyncWizardStep);
+    ui.syncWizardFinishButton.addEventListener('click', finishSyncWizard);
+    ui.wizardChooseFolderButton.addEventListener('click', chooseSyncWizardLocalFolder);
+    ui.wizardShowPasswords.addEventListener('change', toggleSyncWizardPasswordVisibility);
+    document.querySelectorAll('input[name="wizard-sync-mode"]').forEach((input) => {
+        input.addEventListener('change', () => {
+            collectSyncWizardInputs();
+            renderSyncWizard();
+        });
+    });
+    ui.syncWizardDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeSyncWizard();
+    });
+    ui.syncWizardDialog.addEventListener('mousedown', (event) => {
+        if (event.target === ui.syncWizardDialog) closeSyncWizard();
+    });
 
     ui.syncDialogCloseButton.addEventListener('click', closeSyncDialog);
     ui.syncDialogCancelButton.addEventListener('click', closeSyncDialog);

@@ -107,7 +107,7 @@ async function createSyncRemoteContext(endpoint) {
         return buildKoofrContext(url, state.sync.koofrMountId, mountName, segments, true);
     }
 
-    setSyncPhase('syncPhaseResolvingKoofr');
+    setSyncPhase('syncPhaseResolvingRemote');
     const mountsUrl = new URL('/api/v2/mounts', url.origin);
     const response = await fetchWebDav(mountsUrl.toString(), {
         method: 'GET',

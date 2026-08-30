@@ -75,6 +75,7 @@ const state = {
         sessionCredentialsRestored: false,
         createDirectory: true,
         automatic: false,
+        setupComplete: false,
         unlocked: false,
         lastSyncAt: '',
         error: '',

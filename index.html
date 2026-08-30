@@ -12,23 +12,24 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-18" defer></script>
-    <script src="js/core/config.js?v=20260829-18" defer></script>
-    <script src="js/core/coordination.js?v=20260829-18" defer></script>
-    <script src="js/core/storage.js?v=20260829-18" defer></script>
-    <script src="js/sync/backup.js?v=20260829-18" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-18" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-18" defer></script>
-    <script src="js/sync/providers.js?v=20260829-18" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-18" defer></script>
-    <script src="js/sync/merge.js?v=20260829-18" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-18" defer></script>
-    <script src="js/ui/help.js?v=20260829-18" defer></script>
-    <script src="js/ui/render.js?v=20260829-18" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-18" defer></script>
-    <script src="js/data/transfer.js?v=20260829-18" defer></script>
-    <script src="js/core/utils.js?v=20260829-18" defer></script>
-    <script src="js/app.js?v=20260829-18" defer></script>
+    <script src="js/core/translations.js?v=20260829-19" defer></script>
+    <script src="js/core/config.js?v=20260829-19" defer></script>
+    <script src="js/core/coordination.js?v=20260829-19" defer></script>
+    <script src="js/core/storage.js?v=20260829-19" defer></script>
+    <script src="js/sync/backup.js?v=20260829-19" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-19" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-19" defer></script>
+    <script src="js/sync/providers.js?v=20260829-19" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-19" defer></script>
+    <script src="js/sync/merge.js?v=20260829-19" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-19" defer></script>
+    <script src="js/ui/help.js?v=20260829-19" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-19" defer></script>
+    <script src="js/ui/render.js?v=20260829-19" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-19" defer></script>
+    <script src="js/data/transfer.js?v=20260829-19" defer></script>
+    <script src="js/core/utils.js?v=20260829-19" defer></script>
+    <script src="js/app.js?v=20260829-19" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -268,7 +269,7 @@
                     <summary><span data-i18n="helpSynchronization">多设备同步</span><svg><use href="#icon-chevron-down"></use></svg></summary>
                     <div>
                         <ul>
-                            <li data-i18n="helpSync1">云端服务模式支持标准 WebDAV 和 Koofr。</li>
+                            <li data-i18n="helpSync1">填写远端同步地址时，应用会自动选择兼容的连接方式。</li>
                             <li data-i18n="helpSync2">本地同步目录模式适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端。</li>
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
@@ -420,6 +421,121 @@
         </div>
     </dialog>
 
+    <dialog class="item-dialog sync-wizard-dialog" id="sync-wizard-dialog" aria-labelledby="sync-wizard-title">
+        <div class="dialog-panel">
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="syncWizardEyebrow">同步设置</p><h2 id="sync-wizard-title" data-i18n="syncWizardTitle">设置加密同步</h2></div>
+                <button class="icon-button dialog-close" id="sync-wizard-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="sync-wizard-progress" id="sync-wizard-progress" aria-label="设置进度" data-i18n-aria-label="setupProgress">
+                <span class="active"><b>1</b><small data-i18n="wizardLocation">位置</small></span>
+                <i></i><span><b>2</b><small data-i18n="wizardConnection">连接</small></span>
+                <i></i><span><b>3</b><small data-i18n="wizardEncryption">加密</small></span>
+                <i></i><span><b>4</b><small data-i18n="wizardPreferences">偏好</small></span>
+                <i></i><span><b>5</b><small data-i18n="wizardVerify">验证</small></span>
+            </div>
+
+            <div class="sync-wizard-content">
+                <section class="sync-wizard-step" data-wizard-step="1">
+                    <div class="wizard-step-heading"><h3 data-i18n="chooseSyncLocation">选择同步位置</h3><p data-i18n="chooseSyncLocationHint">只需要决定数据放在哪里，具体连接方式由应用自动处理。</p></div>
+                    <div class="sync-location-options">
+                        <label class="sync-location-card">
+                            <input type="radio" name="wizard-sync-mode" value="remote" checked>
+                            <span class="sync-location-icon"><svg><use href="#icon-database"></use></svg></span>
+                            <span><strong data-i18n="remoteSyncLocation">远端同步地址</strong><small data-i18n="remoteSyncLocationHint">适用于 WebDAV、NAS 和支持的网盘地址</small></span>
+                            <span class="selection-check"><svg><use href="#icon-check"></use></svg></span>
+                        </label>
+                        <label class="sync-location-card">
+                            <input type="radio" name="wizard-sync-mode" value="local-folder">
+                            <span class="sync-location-icon"><svg><use href="#icon-folder"></use></svg></span>
+                            <span><strong data-i18n="localSyncLocation">本地同步目录</strong><small data-i18n="localSyncLocationHint">适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端</small></span>
+                            <span class="selection-check"><svg><use href="#icon-check"></use></svg></span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="sync-wizard-step hidden" data-wizard-step="2">
+                    <div class="wizard-step-heading"><h3 data-i18n="configureConnection">配置连接</h3><p id="wizard-connection-hint"></p></div>
+                    <div class="sync-fields" id="wizard-remote-fields">
+                        <label class="settings-field">
+                            <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="wizardAddressHint">填写服务提供的 WebDAV 或同步地址</small></span>
+                            <input id="wizard-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" autocomplete="url">
+                        </label>
+                        <label class="settings-field">
+                            <span><strong data-i18n="webDavUsername">用户名</strong></span>
+                            <input id="wizard-username-input" type="text" autocomplete="username">
+                        </label>
+                        <label class="settings-field">
+                            <span><strong data-i18n="webDavPassword">密码或应用密码</strong></span>
+                            <input id="wizard-password-input" type="password" autocomplete="off">
+                        </label>
+                    </div>
+                    <div class="wizard-local-folder hidden" id="wizard-local-folder-fields">
+                        <span class="local-folder-sync-icon"><svg><use href="#icon-folder"></use></svg></span>
+                        <span class="setting-copy"><strong data-i18n="localSyncFolder">本地同步目录</strong><small id="wizard-local-folder-name">尚未选择目录</small></span>
+                        <button class="button button-secondary" id="wizard-choose-folder-button" type="button" data-i18n="chooseFolder">选择目录</button>
+                    </div>
+                    <p class="wizard-error hidden" id="wizard-connection-error" role="alert"></p>
+                </section>
+
+                <section class="sync-wizard-step hidden" data-wizard-step="3">
+                    <div class="wizard-step-heading"><h3 data-i18n="protectSyncData">保护同步数据</h3><p data-i18n="protectSyncDataHint">书签会先在本机加密；此口令不会上传，也无法找回。</p></div>
+                    <div class="wizard-passphrase-fields">
+                        <label class="settings-field">
+                            <span><strong data-i18n="encryptionPassphrase">加密口令</strong></span>
+                            <input id="wizard-passphrase-input" type="password" minlength="8" autocomplete="off">
+                        </label>
+                        <label class="settings-field">
+                            <span><strong data-i18n="confirmPassphrase">再次输入加密口令</strong></span>
+                            <input id="wizard-passphrase-confirm-input" type="password" minlength="8" autocomplete="off">
+                        </label>
+                    </div>
+                    <label class="wizard-show-passwords"><input id="wizard-show-passwords" type="checkbox"><span data-i18n="showSensitiveFields">显示密码和加密口令</span></label>
+                    <p class="wizard-warning" data-i18n="passphraseRecoveryWarning">请将口令保存在可信的密码管理器中；遗失后无法解密已有同步文件。</p>
+                    <p class="wizard-error hidden" id="wizard-passphrase-error" role="alert"></p>
+                </section>
+
+                <section class="sync-wizard-step hidden" data-wizard-step="4">
+                    <div class="wizard-step-heading"><h3 data-i18n="chooseSyncPreferences">选择同步偏好</h3><p data-i18n="chooseSyncPreferencesHint">这些设置之后可以随时修改。</p></div>
+                    <div class="settings-list wizard-preferences-list">
+                        <label class="setting-row settings-switch-row">
+                            <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动运行当前同步方式</small></span>
+                            <span class="switch-control"><input id="wizard-auto-sync" type="checkbox"><span></span></span>
+                        </label>
+                        <label class="setting-row settings-switch-row">
+                            <span class="setting-copy"><strong data-i18n="rememberSessionCredentials">刷新本标签页时保留凭据</strong><small data-i18n="rememberSessionCredentialsHint">仅刷新时恢复；关闭、重新打开或离开页面后清除</small></span>
+                            <span class="switch-control"><input id="wizard-remember-session" type="checkbox"><span></span></span>
+                        </label>
+                        <label class="setting-row settings-switch-row" id="wizard-create-directory-row">
+                            <span class="setting-copy"><strong data-i18n="autoCreateWebDavFolder">自动创建同步目录</strong><small data-i18n="autoCreateWebDavFolderHint">目录不存在时仅创建同步文件所在的最后一级目录</small></span>
+                            <span class="switch-control"><input id="wizard-create-directory" type="checkbox" checked><span></span></span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="sync-wizard-step hidden" data-wizard-step="5">
+                    <div class="wizard-step-heading"><h3 data-i18n="verifyAndEnableSync">验证并启用同步</h3><p data-i18n="verifyAndEnableSyncHint">应用将验证访问权限、读取已有数据并写入本设备的加密状态。</p></div>
+                    <div class="wizard-review" id="wizard-review"></div>
+                    <div class="wizard-test-status" id="wizard-test-status">
+                        <span class="wizard-test-icon"><svg><use href="#icon-database"></use></svg></span>
+                        <span><strong id="wizard-test-title" data-i18n="readyToVerify">准备验证</strong><small id="wizard-test-detail" data-i18n="readyToVerifyHint">点击“测试并完成”开始。</small></span>
+                    </div>
+                </section>
+            </div>
+
+            <footer class="dialog-footer sync-wizard-footer">
+                <button class="button button-secondary" id="sync-wizard-cancel-button" type="button" data-i18n="cancel">取消</button>
+                <span class="dialog-footer-spacer"></span>
+                <button class="button button-secondary hidden" id="sync-wizard-back-button" type="button" data-i18n="back">上一步</button>
+                <button class="button button-primary" id="sync-wizard-next-button" type="button" data-i18n="next">下一步</button>
+                <button class="button button-primary hidden" id="sync-wizard-finish-button" type="button" data-i18n="testAndFinish">测试并完成</button>
+            </footer>
+        </div>
+    </dialog>
+
     <dialog class="item-dialog sync-dialog" id="sync-dialog">
         <div class="dialog-panel">
             <header class="dialog-header">
@@ -438,14 +554,14 @@
                 <label class="settings-field sync-mode-field">
                     <span><strong data-i18n="syncMethod">同步方式</strong><small data-i18n="syncMethodHint">选择远端服务或桌面云盘管理的本地目录</small></span>
                     <select id="sync-mode-select">
-                        <option value="remote" data-i18n="remoteServiceMode">云端服务（WebDAV / Koofr）</option>
-                        <option value="local-folder" data-i18n="localFolderMode">本地同步目录（OneDrive / Google Drive / Syncthing）</option>
+                        <option value="remote" data-i18n="remoteServiceMode">远端同步地址</option>
+                        <option value="local-folder" data-i18n="localFolderMode">本地同步目录</option>
                     </select>
                 </label>
 
                 <div class="sync-fields" id="remote-sync-fields">
                     <label class="settings-field">
-                        <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="webDavUrlHint">支持标准 WebDAV 和 Koofr 地址</small></span>
+                        <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="webDavUrlHint">填写同步服务提供的远端地址</small></span>
                         <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="url">
                     </label>
                     <label class="settings-field">
@@ -507,6 +623,7 @@
             </div>
 
             <footer class="dialog-footer sync-dialog-footer">
+                <button class="button button-quiet" id="sync-wizard-button" type="button" data-i18n="openSetupWizard">设置向导</button>
                 <button class="button button-danger-quiet hidden" id="disconnect-sync-button" type="button" data-i18n="disconnectSync">移除同步配置</button>
                 <span class="dialog-footer-spacer"></span>
                 <button class="button button-secondary" id="sync-dialog-cancel-button" type="button" data-i18n="close">关闭</button>

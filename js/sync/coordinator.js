@@ -5,6 +5,7 @@
 async function initializeWebDavSync() {
     renderSyncSettings();
     if (!state.sync.supported) return;
+    let storedSetupComplete = null;
     try {
         const preferences = await getSetting(SYNC_PREFERENCES_KEY);
         if (preferences && typeof preferences === 'object') {
@@ -21,9 +22,13 @@ async function initializeWebDavSync() {
                 : '';
             state.sync.createDirectory = preferences.createDirectory !== false;
             state.sync.automatic = preferences.automatic === true;
+            storedSetupComplete = typeof preferences.setupComplete === 'boolean'
+                ? preferences.setupComplete
+                : null;
             state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
         }
         await initializeLocalFolderSync();
+        state.sync.setupComplete = storedSetupComplete ?? isSyncModeConfigured();
         ui.syncModeSelect.value = state.sync.mode;
         ui.syncEndpointInput.value = state.sync.endpoint;
         ui.syncUsernameInput.value = state.sync.username;
@@ -552,6 +557,7 @@ async function saveSyncPreferences() {
             localFolderLastSyncAt: state.sync.localFolder.lastSyncAt,
             createDirectory: state.sync.createDirectory,
             automatic: state.sync.automatic,
+            setupComplete: state.sync.setupComplete,
             lastSyncAt: state.sync.lastSyncAt,
         });
         return true;
@@ -563,6 +569,10 @@ async function saveSyncPreferences() {
 
 function openSyncDialog() {
     closeExportMenu();
+    if (!state.sync.setupComplete || !isSyncModeConfigured()) {
+        openSyncWizard();
+        return;
+    }
     ui.syncModeSelect.value = state.sync.mode;
     ui.syncEndpointInput.value = state.sync.endpoint;
     ui.syncUsernameInput.value = state.sync.username;
@@ -715,7 +725,7 @@ function renderSyncSettings() {
             t('syncReadyTitle'),
             localMode
                 ? t('localFolderReadyDetail', { name: localFolder.name || t('localSyncFolderNotSelected') })
-                : t(sync.provider === 'koofr' ? 'syncReadyKoofrDetail' : 'syncReadyDetail'),
+                : t('syncReadyDetail'),
             t('syncMenuReady', { time: formatBackupTime(activeSyncTime(), true) }),
         ],
     }[status];
@@ -825,6 +835,7 @@ async function disconnectWebDavSync() {
         state.sync.rememberSession = false;
         state.sync.sessionCredentialsRestored = false;
         state.sync.automatic = false;
+        state.sync.setupComplete = false;
         state.sync.localFolder.lastSyncAt = '';
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = '';
@@ -854,6 +865,7 @@ async function disconnectWebDavSync() {
         sessionCredentialsRestored: false,
         createDirectory: true,
         automatic: false,
+        setupComplete: false,
         unlocked: false,
         lastSyncAt: '',
         error: '',
@@ -927,6 +939,7 @@ async function handleSyncNow() {
 function setSyncPhase(phase) {
     state.sync.phase = phase;
     renderSyncSettings();
+    renderSyncWizardProgress();
 }
 
 async function runWebDavSync(options = {}) {
