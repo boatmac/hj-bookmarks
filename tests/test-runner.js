@@ -426,6 +426,23 @@ test('加密备份隐藏明文并可与旧版明文快照混合恢复', async ()
     assertEqual(unlocked.records[0].title, 'Private bookmark title');
     assertEqual(unlocked.inspection.bookmarks, 1);
 
+    const previousBackupHandle = state.backup.handle;
+    state.backup.handle = root;
+    try {
+        assert(await verifyExistingBackupPassphrase(passphrase));
+        let wrongUnlockRejected = false;
+        try {
+            await verifyExistingBackupPassphrase('wrong existing passphrase');
+        } catch {
+            wrongUnlockRejected = true;
+        }
+        assert(wrongUnlockRejected, 'Wrong existing passphrase should not be accepted');
+        const unchangedLatest = await root.getFileHandle('bookmarks-latest.enc.json');
+        assertEqual(await (await unchangedLatest.getFile()).text(), encrypted);
+    } finally {
+        state.backup.handle = previousBackupHandle;
+    }
+
     await writeLatestBackupFile(root, encrypted, true);
     let plaintextLatestRemoved = false;
     try {
@@ -490,6 +507,173 @@ test('备份写入后会重新读取并拒绝不一致内容', async () => {
         { encrypted: true, passphrase: 'verification passphrase' },
     );
     assertEqual(verifiedEncrypted.bookmarks[0].title, 'Verified item');
+});
+
+test('更换备份口令会先验证新副本并保留无法解锁的旧快照', async () => {
+    await deleteTestDatabase();
+    state.db = await openDatabase();
+    await initializeSyncIdentity();
+    const previousItems = state.items;
+    const previousBackup = {
+        ...state.backup,
+        health: { ...state.backup.health },
+    };
+    const originalRenderBackupSettings = renderBackupSettings;
+    renderBackupSettings = () => {};
+    const oldPassphrase = 'current backup passphrase';
+    const newPassphrase = 'new backup passphrase';
+    const otherPassphrase = 'older unrelated passphrase';
+    const now = '2026-01-07T00:00:00.000Z';
+    state.items = [{
+        id: 1,
+        syncId: 'passphrase-change-item',
+        title: 'Passphrase change item',
+        url: 'https://passphrase-change.example/',
+        description: '',
+        tags: [],
+        parentId: null,
+        isPinned: false,
+        collapsed: false,
+        createdAt: now,
+        updatedAt: now,
+        modifiedBy: state.sync.deviceId,
+    }];
+    const root = createMemoryDirectory('Passphrase change');
+    const payload = createBackupPayload();
+    const oldEncrypted = await createBackupFileContent(payload, {
+        encrypted: true,
+        passphrase: oldPassphrase,
+    });
+    const otherEncrypted = await createBackupFileContent(payload, {
+        encrypted: true,
+        passphrase: otherPassphrase,
+    });
+    const plaintext = await createBackupFileContent(payload, { encrypted: false, passphrase: '' });
+    const history = await root.getDirectoryHandle('history', { create: true });
+    const emergency = await root.getDirectoryHandle('emergency', { create: true });
+    const oldHistoryName = 'bookmarks-2026-01-06T00-00-00-000Z.enc.json';
+    const otherHistoryName = 'bookmarks-2026-01-05T00-00-00-000Z.enc.json';
+    const plainEmergencyName = 'bookmarks-before-restore-2026-01-04T00-00-00-000Z.json';
+    await writeBackupFile(root, 'bookmarks-latest.enc.json', oldEncrypted);
+    await writeBackupFile(history, oldHistoryName, oldEncrypted);
+    await writeBackupFile(history, otherHistoryName, otherEncrypted);
+    await writeBackupFile(emergency, plainEmergencyName, plaintext);
+
+    Object.assign(state.backup, {
+        supported: true,
+        encryptionSupported: true,
+        handle: root,
+        enabled: false,
+        retention: 30,
+        encryptionEnabled: true,
+        encryptionProfileId: 'old-profile',
+        passphrase: oldPassphrase,
+        passphraseConfirmed: true,
+        rememberSession: false,
+        permission: 'granted',
+        error: '',
+        lastHash: '',
+        running: false,
+        pending: false,
+        currentPromise: null,
+        timer: null,
+    });
+    Object.assign(state.backup.health, {
+        status: 'unknown',
+        lastVerifiedAt: '',
+        lastVerifiedHash: '',
+        format: '',
+        snapshotCount: 0,
+        error: '',
+        running: false,
+        currentPromise: null,
+        timer: null,
+    });
+
+    try {
+        const result = await changeBackupPassphraseSafely({
+            oldPassphrase,
+            newPassphrase,
+            migrateExisting: true,
+        });
+        assertEqual(result.migrated, 3);
+        assertEqual(result.skipped, 1);
+        assertEqual(result.cleanupFailed, 0);
+        assertEqual(state.backup.passphrase, newPassphrase);
+        assertEqual(state.backup.health.status, 'verified');
+
+        const latest = await root.getFileHandle('bookmarks-latest.enc.json');
+        const latestPayload = await decryptBackupData(
+            await (await latest.getFile()).text(),
+            newPassphrase,
+        );
+        assertEqual(latestPayload.bookmarks[0].title, 'Passphrase change item');
+
+        let oldHistoryRemoved = false;
+        try {
+            await history.getFileHandle(oldHistoryName);
+        } catch (error) {
+            oldHistoryRemoved = error?.name === 'NotFoundError';
+        }
+        assert(oldHistoryRemoved, 'Converted history source should be removed after verification');
+        const untouchedOldHistory = await history.getFileHandle(otherHistoryName);
+        assertEqual(
+            (await decryptBackupData(await (await untouchedOldHistory.getFile()).text(), otherPassphrase))
+                .bookmarks[0].title,
+            'Passphrase change item',
+        );
+
+        let plaintextEmergencyRemoved = false;
+        try {
+            await emergency.getFileHandle(plainEmergencyName);
+        } catch (error) {
+            plaintextEmergencyRemoved = error?.name === 'NotFoundError';
+        }
+        assert(plaintextEmergencyRemoved, 'Converted plaintext emergency source should be removed');
+        const emergencyNames = [];
+        for await (const [name] of emergency.entries()) emergencyNames.push(name);
+        assert(emergencyNames.some((name) => name.endsWith('.enc.json')));
+
+        const futurePassphrase = 'future only passphrase';
+        const futureResult = await changeBackupPassphraseSafely({
+            oldPassphrase: newPassphrase,
+            newPassphrase: futurePassphrase,
+            migrateExisting: false,
+        });
+        assertEqual(futureResult.migrated, 0);
+        assertEqual(futureResult.archived, 1);
+        assertEqual(futureResult.skipped, 0);
+        const futureLatest = await root.getFileHandle('bookmarks-latest.enc.json');
+        assertEqual(
+            (await decryptBackupData(await (await futureLatest.getFile()).text(), futurePassphrase))
+                .bookmarks[0].title,
+            'Passphrase change item',
+        );
+        const retainedHistoryNames = [];
+        for await (const [name] of history.entries()) retainedHistoryNames.push(name);
+        assert(retainedHistoryNames.some((name) => name.includes('before-passphrase-change')));
+
+        const currentPreferences = await getSetting(BACKUP_PREFERENCES_KEY);
+        state.backup.encryptionProfileId = 'stale-other-tab-profile';
+        state.backup.passphrase = 'stale other tab passphrase';
+        state.backup.passphraseConfirmed = true;
+        assertEqual(await ensureBackupProtectionProfileCurrent(), false);
+        assertEqual(state.backup.encryptionProfileId, currentPreferences.encryptionProfileId);
+        assertEqual(state.backup.passphrase, '');
+        assert(state.backup.passphraseNeedsVerification);
+    } finally {
+        window.clearTimeout(state.backup.timer);
+        window.clearTimeout(state.backup.health.timer);
+        renderBackupSettings = originalRenderBackupSettings;
+        state.items = previousItems;
+        const previousHealth = previousBackup.health;
+        delete previousBackup.health;
+        Object.assign(state.backup, previousBackup);
+        Object.assign(state.backup.health, previousHealth);
+        state.db.close();
+        state.db = null;
+        await deleteTestDatabase();
+    }
 });
 
 test('恢复前紧急备份会保存当前状态', async () => {
@@ -798,6 +982,29 @@ test('删除与编辑并发会保留双方等待确认', () => {
     assertEqual(result.conflicts[0].type, 'delete-edit');
     assertEqual(result.conflicts[0].local.kind, 'deleted');
     assertEqual(result.conflicts[0].remote.kind, 'item');
+});
+
+test('备份文件锁会串行执行并发目录操作', async () => {
+    if (!navigator.locks?.request) return;
+    const order = [];
+    await Promise.all([
+        withBackupFileLock(async () => {
+            order.push('backup-first-start');
+            await new Promise((resolve) => setTimeout(resolve, 25));
+            order.push('backup-first-end');
+        }),
+        withBackupFileLock(async () => {
+            order.push('backup-second-start');
+            order.push('backup-second-end');
+        }),
+    ]);
+    assertDeepEqual(order, [
+        'backup-first-start',
+        'backup-first-end',
+        'backup-second-start',
+        'backup-second-end',
+    ]);
+    assertEqual(state.backup.fileLockDepth, 0);
 });
 
 test('Web Locks 会串行执行同一标签页的并发写入', async () => {

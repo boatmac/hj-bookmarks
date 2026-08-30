@@ -65,11 +65,18 @@ function cacheElements() {
         'auto-backup-toggle', 'backup-encryption-toggle', 'backup-encryption-fields',
         'backup-passphrase-input', 'backup-passphrase-confirm-input',
         'backup-remember-session-toggle', 'backup-encryption-status',
+        'backup-passphrase-change-row', 'change-backup-passphrase-button',
         'backup-directory-name', 'choose-backup-directory-button', 'backup-retention-select',
         'last-backup-value', 'backup-health-row', 'backup-health-value',
         'verify-backup-button', 'persistence-status-value',
         'request-persistence-button', 'restore-backup-button',
         'disconnect-backup-button', 'backup-now-button',
+        'backup-passphrase-dialog', 'backup-passphrase-form',
+        'backup-passphrase-close-button', 'current-backup-passphrase-input',
+        'new-backup-passphrase-input', 'confirm-new-backup-passphrase-input',
+        'backup-passphrase-progress', 'backup-passphrase-progress-text',
+        'backup-passphrase-progress-bar', 'backup-passphrase-error',
+        'backup-passphrase-cancel-button', 'backup-passphrase-apply-button',
         'backup-restore-dialog', 'backup-restore-title',
         'backup-restore-close-button', 'backup-restore-source-name',
         'backup-restore-source-detail', 'choose-restore-directory-button',
@@ -169,6 +176,7 @@ function applyLanguage(language, persist = false) {
     if (ui.conflictBanner) renderConflictBanner();
     if (ui.conflictDialog?.open) renderConflictCenter();
     if (ui.syncWizardDialog?.open) renderSyncWizard();
+    if (ui.backupPassphraseDialog?.open) renderBackupPassphraseDialog();
     if (ui.backupRestoreDialog?.open) renderBackupRestoreDialog();
     renderTabCoordinationStatus();
 }
@@ -258,6 +266,7 @@ function bindStaticEvents() {
     ui.backupPassphraseInput.addEventListener('input', handleBackupEncryptionInput);
     ui.backupPassphraseConfirmInput.addEventListener('input', handleBackupEncryptionInput);
     ui.backupRememberSessionToggle.addEventListener('change', handleBackupRememberSession);
+    ui.changeBackupPassphraseButton.addEventListener('click', openBackupPassphraseDialog);
     ui.chooseBackupDirectoryButton.addEventListener('click', chooseBackupDirectory);
     ui.backupRetentionSelect.addEventListener('change', handleBackupRetentionChange);
     ui.verifyBackupButton.addEventListener('click', handleVerifyBackup);
@@ -265,6 +274,17 @@ function bindStaticEvents() {
     ui.restoreBackupButton.addEventListener('click', () => openBackupRestoreDialog({ returnToBackupDialog: true }));
     ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);
     ui.backupNowButton.addEventListener('click', handleBackupNow);
+
+    ui.backupPassphraseForm.addEventListener('submit', handleBackupPassphraseChange);
+    ui.backupPassphraseCloseButton.addEventListener('click', closeBackupPassphraseDialog);
+    ui.backupPassphraseCancelButton.addEventListener('click', closeBackupPassphraseDialog);
+    ui.backupPassphraseDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeBackupPassphraseDialog();
+    });
+    ui.backupPassphraseDialog.addEventListener('mousedown', (event) => {
+        if (event.target === ui.backupPassphraseDialog) closeBackupPassphraseDialog();
+    });
 
     ui.backupRestoreCloseButton.addEventListener('click', () => closeBackupRestoreDialog());
     ui.backupRestoreCancelButton.addEventListener('click', () => closeBackupRestoreDialog());

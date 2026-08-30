@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars -- Shared by ordered classic scripts. */
 'use strict';
 
-const MAX_RESTORE_BACKUP_BYTES = 50 * 1024 * 1024;
+const MAX_RESTORE_BACKUP_BYTES = 80 * 1024 * 1024;
 const EMERGENCY_BACKUP_RETENTION = 10;
 let backupRestoreSession = null;
 let backupRestoreMemoryPassphrase = '';
@@ -1441,7 +1441,18 @@ function getRestoreEmergencyEncryptionContext(session, snapshot) {
 async function writeRestoreEmergencyBackup(
     directory,
     encryption = getCurrentBackupEncryptionContext(),
+    fileLockHeld = false,
 ) {
+    if (!fileLockHeld) {
+        return withBackupFileLock(() => writeRestoreEmergencyBackup(
+            directory,
+            encryption,
+            true,
+        ));
+    }
+    if (!await ensureBackupProtectionProfileCurrent()) {
+        throw new Error(t('backupSettingsChangedOtherTab'));
+    }
     const permission = await getBackupPermission(directory, true);
     if (permission !== 'granted') throw new Error(t('backupRestoreEmergencyPermission'));
     const emergency = await directory.getDirectoryHandle('emergency', { create: true });
@@ -1481,6 +1492,10 @@ async function adoptBackupRestoreDirectory(handle, lastBackupAt, options = {}) {
         state.backup.encryptionEnabled = true;
         state.backup.passphrase = options.passphrase;
         state.backup.passphraseConfirmed = true;
+        state.backup.passphraseNeedsVerification = false;
+        state.backup.passphraseChecking = false;
+        state.backup.passphraseCheckToken = '';
+        state.backup.passphraseError = '';
         state.backup.rememberSession = options.rememberSession === true;
         if (passphraseChanged || !state.backup.encryptionProfileId) {
             state.backup.encryptionProfileId = createUuid();

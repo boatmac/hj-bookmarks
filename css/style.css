@@ -852,6 +852,7 @@ svg {
 .export-menu[data-backup-state="ready"] summary::after,
 .export-menu[data-backup-state="running"] summary::after,
 .export-menu[data-backup-state="verifying"] summary::after,
+.export-menu[data-backup-state="passphrase-checking"] summary::after,
 .export-menu[data-backup-state="health-warning"] summary::after,
 .export-menu[data-backup-state="error"] summary::after,
 .export-menu[data-backup-state="permission"] summary::after,
@@ -872,6 +873,7 @@ svg {
 
 .export-menu[data-backup-state="running"] summary::after,
 .export-menu[data-backup-state="verifying"] summary::after,
+.export-menu[data-backup-state="passphrase-checking"] summary::after,
 .export-menu[data-sync-state="running"] summary::after {
     background: var(--accent);
     animation: backup-pulse 1.1s ease-in-out infinite;
@@ -2199,7 +2201,8 @@ svg {
 }
 
 .backup-status-card[data-state="running"] .backup-status-icon svg,
-.backup-status-card[data-state="verifying"] .backup-status-icon svg {
+.backup-status-card[data-state="verifying"] .backup-status-icon svg,
+.backup-status-card[data-state="passphrase-checking"] .backup-status-icon svg {
     animation: backup-pulse 1.1s ease-in-out infinite;
 }
 
@@ -2352,13 +2355,15 @@ svg {
     border-radius: 8px;
 }
 
-.backup-encryption-status[data-state="ready"] {
+.backup-encryption-status[data-state="ready"],
+.backup-encryption-status[data-state="checking"] {
     color: var(--accent);
     background: var(--accent-soft);
     border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
 }
 
-.backup-encryption-status[data-state="unsupported"] {
+.backup-encryption-status[data-state="unsupported"],
+.backup-encryption-status[data-state="incorrect"] {
     color: var(--danger);
     background: var(--danger-soft);
     border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
@@ -2366,6 +2371,20 @@ svg {
 
 .backup-encryption-history-note {
     color: var(--text-faint);
+}
+
+.backup-passphrase-change-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 11px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+
+.backup-passphrase-grid input:read-only {
+    color: var(--text-soft);
+    cursor: default;
+    opacity: 0.82;
 }
 
 .setting-copy {
@@ -2542,6 +2561,160 @@ svg {
 
 .button-danger-quiet:hover {
     background: var(--danger-soft);
+}
+
+.backup-passphrase-dialog {
+    width: min(700px, calc(100vw - 30px));
+}
+
+.backup-passphrase-change-content {
+    display: grid;
+    gap: 16px;
+    padding: 21px 25px 24px;
+}
+
+.backup-passphrase-change-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px;
+    color: var(--text-soft);
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+    border-radius: 11px;
+}
+
+.backup-passphrase-change-intro > span:first-child {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    color: var(--accent);
+    background: var(--panel);
+    border-radius: 10px;
+    place-items: center;
+}
+
+.backup-passphrase-change-intro > span:last-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.backup-passphrase-change-intro strong {
+    color: var(--text);
+    font-size: 11px;
+}
+
+.backup-passphrase-change-intro small {
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.backup-passphrase-change-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.backup-passphrase-change-fields .field:first-child {
+    grid-column: 1 / -1;
+}
+
+.backup-passphrase-change-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+}
+
+.backup-passphrase-change-modes legend {
+    grid-column: 1 / -1;
+    margin-bottom: 1px;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.backup-passphrase-change-modes > label {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.backup-passphrase-change-modes > label:has(input:checked) {
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.backup-passphrase-change-modes input {
+    margin-top: 2px;
+    accent-color: var(--accent);
+}
+
+.backup-passphrase-change-modes label > span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.backup-passphrase-change-modes strong {
+    font-size: 10px;
+}
+
+.backup-passphrase-change-modes small {
+    color: var(--text-soft);
+    font-size: 8px;
+    line-height: 1.5;
+}
+
+.backup-passphrase-change-note {
+    margin: 0;
+    padding: 10px 11px;
+    color: #a56b12;
+    font-size: 9px;
+    line-height: 1.55;
+    background: color-mix(in srgb, #d69724 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, #d69724 28%, var(--border));
+    border-radius: 8px;
+}
+
+.backup-passphrase-progress {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 12px;
+    background: var(--panel-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.backup-passphrase-progress > span:last-child {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: 7px;
+}
+
+.backup-passphrase-progress strong {
+    color: var(--text-soft);
+    font-size: 9px;
+}
+
+.backup-passphrase-progress progress {
+    width: 100%;
+    height: 7px;
+    accent-color: var(--accent);
 }
 
 .backup-restore-dialog {
@@ -4453,8 +4626,20 @@ body.syncing .mini-icon-button {
         width: 100%;
     }
 
-    .backup-passphrase-grid {
+    .backup-passphrase-grid,
+    .backup-passphrase-change-fields,
+    .backup-passphrase-change-modes {
         grid-template-columns: 1fr;
+    }
+
+    .backup-passphrase-change-fields .field:first-child,
+    .backup-passphrase-change-modes legend {
+        grid-column: auto;
+    }
+
+    .backup-passphrase-change-content {
+        padding-right: 20px;
+        padding-left: 20px;
     }
 
     .backup-restore-unlock {

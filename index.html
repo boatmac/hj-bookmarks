@@ -11,26 +11,27 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-31">
-    <script src="js/core/translations.js?v=20260829-31" defer></script>
-    <script src="js/core/config.js?v=20260829-31" defer></script>
-    <script src="js/core/coordination.js?v=20260829-31" defer></script>
-    <script src="js/core/storage.js?v=20260829-31" defer></script>
-    <script src="js/sync/backup.js?v=20260829-31" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-31" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-31" defer></script>
-    <script src="js/sync/providers.js?v=20260829-31" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-31" defer></script>
-    <script src="js/sync/merge.js?v=20260829-31" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-31" defer></script>
-    <script src="js/ui/help.js?v=20260829-31" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-31" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-31" defer></script>
-    <script src="js/ui/render.js?v=20260829-31" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-31" defer></script>
-    <script src="js/data/transfer.js?v=20260829-31" defer></script>
-    <script src="js/core/utils.js?v=20260829-31" defer></script>
-    <script src="js/app.js?v=20260829-31" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-32">
+    <script src="js/core/translations.js?v=20260829-32" defer></script>
+    <script src="js/core/config.js?v=20260829-32" defer></script>
+    <script src="js/core/coordination.js?v=20260829-32" defer></script>
+    <script src="js/core/storage.js?v=20260829-32" defer></script>
+    <script src="js/sync/backup.js?v=20260829-32" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-32" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-32" defer></script>
+    <script src="js/sync/providers.js?v=20260829-32" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-32" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-32" defer></script>
+    <script src="js/sync/merge.js?v=20260829-32" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-32" defer></script>
+    <script src="js/ui/help.js?v=20260829-32" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-32" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-32" defer></script>
+    <script src="js/ui/render.js?v=20260829-32" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-32" defer></script>
+    <script src="js/data/transfer.js?v=20260829-32" defer></script>
+    <script src="js/core/utils.js?v=20260829-32" defer></script>
+    <script src="js/app.js?v=20260829-32" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -287,6 +288,7 @@
                             <li data-i18n="helpBackup4">回收站保留删除项目 30 天，支持单项和批量恢复。</li>
                             <li data-i18n="helpBackup5">手动导出的 JSON 是明文完整备份；浏览器 HTML 用于与浏览器迁移。</li>
                             <li data-i18n="helpBackup6">每次目录备份写入后都会重新读取验证，也可在设置中随时检查备份健康状态。</li>
+                            <li data-i18n="helpBackup7">更换备份口令时可只影响新备份，或安全地重新加密当前口令可读取的历史。</li>
                         </ul>
                     </div>
                 </details>
@@ -441,6 +443,10 @@
                             <span><strong data-i18n="rememberBackupPassphrase">刷新本标签页时保留口令</strong><small data-i18n="rememberBackupPassphraseHint">默认只保留在当前页面内存中；共享设备上请勿开启</small></span>
                         </label>
                         <p class="backup-encryption-status" id="backup-encryption-status" role="status">请输入并确认至少 8 个字符的口令</p>
+                        <div class="backup-passphrase-change-row hidden" id="backup-passphrase-change-row">
+                            <span class="setting-copy"><strong data-i18n="changeBackupPassphrase">更换备份口令</strong><small data-i18n="changeBackupPassphraseHint">可只更改今后的备份，或同时重新保护现有历史</small></span>
+                            <button class="button button-secondary compact-button" id="change-backup-passphrase-button" type="button" data-i18n="changePassphrase">更换口令</button>
+                        </div>
                         <p class="backup-encryption-history-note" data-i18n="backupEncryptionHistoryNote">启用后新备份会加密；已有明文或使用旧口令的历史不会立即转换，之后仍按保留数量清理。</p>
                     </div>
 
@@ -486,6 +492,64 @@
                 <button class="button button-primary" id="backup-now-button" type="button" data-i18n="backupNow">立即备份</button>
             </footer>
         </div>
+    </dialog>
+
+    <dialog class="item-dialog backup-passphrase-dialog" id="backup-passphrase-dialog" aria-labelledby="backup-passphrase-dialog-title">
+        <form class="dialog-panel" id="backup-passphrase-form" novalidate>
+            <header class="dialog-header">
+                <div><p class="eyebrow" data-i18n="backupPassphraseChangeEyebrow">备份安全</p><h2 id="backup-passphrase-dialog-title" data-i18n="changeBackupPassphrase">更换备份口令</h2></div>
+                <button class="icon-button dialog-close" id="backup-passphrase-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
+                    <svg><use href="#icon-x"></use></svg>
+                </button>
+            </header>
+
+            <div class="backup-passphrase-change-content">
+                <section class="backup-passphrase-change-intro">
+                    <span><svg><use href="#icon-lock"></use></svg></span>
+                    <span><strong data-i18n="backupPassphraseChangeTitle">安全地使用新口令</strong><small data-i18n="backupPassphraseChangeDetail">更换期间会先创建并验证新文件，原历史在验证完成前不会删除。</small></span>
+                </section>
+
+                <div class="backup-passphrase-change-fields">
+                    <label class="field">
+                        <span data-i18n="currentBackupPassphrase">当前备份口令</span>
+                        <input id="current-backup-passphrase-input" type="password" minlength="8" autocomplete="current-password">
+                    </label>
+                    <label class="field">
+                        <span data-i18n="newBackupPassphrase">新备份口令</span>
+                        <input id="new-backup-passphrase-input" type="password" minlength="8" autocomplete="new-password">
+                    </label>
+                    <label class="field">
+                        <span data-i18n="confirmNewBackupPassphrase">确认新备份口令</span>
+                        <input id="confirm-new-backup-passphrase-input" type="password" minlength="8" autocomplete="new-password">
+                    </label>
+                </div>
+
+                <fieldset class="backup-passphrase-change-modes">
+                    <legend data-i18n="backupPassphraseChangeScope">应用范围</legend>
+                    <label>
+                        <input type="radio" name="backup-passphrase-change-mode" value="future" checked>
+                        <span><strong data-i18n="backupPassphraseFutureOnly">只用于今后的备份</strong><small data-i18n="backupPassphraseFutureOnlyHint">现有历史继续使用原来的口令，恢复时仍需保留旧口令。</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="backup-passphrase-change-mode" value="existing">
+                        <span><strong data-i18n="reencryptExistingBackups">同时重新加密现有快照</strong><small data-i18n="reencryptExistingBackupsHint">转换可用当前口令解开的最新、历史和紧急备份；其他旧口令文件保持不变。</small></span>
+                    </label>
+                </fieldset>
+
+                <p class="backup-passphrase-change-note" data-i18n="backupPassphraseChangeNote">新文件完成读取和解密验证后才会清理对应旧文件。中断时可能暂时出现重复快照，但不会为了整洁而牺牲可恢复数据。</p>
+
+                <section class="backup-passphrase-progress hidden" id="backup-passphrase-progress" aria-live="polite">
+                    <span class="backup-restore-spinner"><svg><use href="#icon-sync"></use></svg></span>
+                    <span><strong id="backup-passphrase-progress-text">正在准备…</strong><progress id="backup-passphrase-progress-bar" value="0" max="1"></progress></span>
+                </section>
+                <p class="wizard-error hidden" id="backup-passphrase-error" role="alert"></p>
+            </div>
+
+            <footer class="dialog-footer">
+                <button class="button button-secondary" id="backup-passphrase-cancel-button" type="button" data-i18n="cancel">取消</button>
+                <button class="button button-primary" id="backup-passphrase-apply-button" type="submit" data-i18n="changePassphrase">更换口令</button>
+            </footer>
+        </form>
     </dialog>
 
     <dialog class="item-dialog backup-restore-dialog" id="backup-restore-dialog" aria-labelledby="backup-restore-title">

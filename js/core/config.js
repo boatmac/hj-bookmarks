@@ -25,6 +25,7 @@ const SYNC_INITIAL_AUTO_DELAY_MS = 1800;
 const SYNC_RETRY_DELAYS_MS = [5000, 15000, 45000, 120000, 300000];
 const RECYCLE_RETENTION_DAYS = 30;
 const DATA_WRITE_LOCK_NAME = 'bookmark-manager-data-write-v1';
+const BACKUP_FILE_LOCK_NAME = 'bookmark-manager-backup-file-write-v1';
 const COORDINATION_CHANNEL_NAME = 'bookmark-manager-coordination-v1';
 const COORDINATION_STORAGE_KEY = 'bookmark-manager.coordination-event';
 const LOCAL_SYNC_POLL_INTERVAL_MS = 15000;
@@ -112,6 +113,10 @@ const state = {
         encryptionProfileId: '',
         passphrase: '',
         passphraseConfirmed: false,
+        passphraseNeedsVerification: false,
+        passphraseChecking: false,
+        passphraseCheckToken: '',
+        passphraseError: '',
         rememberSession: false,
         sessionCredentialsRestored: false,
         lastBackupAt: '',
@@ -133,6 +138,7 @@ const state = {
         running: false,
         pending: false,
         currentPromise: null,
+        fileLockDepth: 0,
         permissionNoticeShown: false,
         lastNotifiedError: '',
         timer: null,

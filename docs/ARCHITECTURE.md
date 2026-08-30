@@ -28,7 +28,8 @@ js/
 ├── data/
 │   └── transfer.js      JSON/HTML 导入导出和清空流程
 ├── sync/
-│   ├── backup.js        File System Access 自动备份、加密设置与口令生命周期
+│   ├── backup.js        File System Access 自动备份、加密设置与健康验证
+│   ├── backup-passphrase.js 备份口令更换与历史快照安全重加密
 │   ├── local-folder.js  桌面云盘本地目录双向同步
 │   ├── coordinator.js   同步生命周期、凭据和冲突中心
 │   ├── providers.js     标准 WebDAV 与 Koofr Adapter
@@ -81,6 +82,12 @@ js/
 
 `state.backup.health` 保存运行时状态；IndexedDB 设置只持久化最近验证时间、内容 hash、明文/加密格式、历史文件数量和非敏感状态，不保存口令。手动“检查备份”会比较最新文件中的书签数组与当前 IndexedDB 快照。验证成功后安排 24 小时后的只读复检；数据或加密配置变化会将状态标为待更新。历史文件只计数，不使用当前口令批量解密，因为同一目录可能包含旧口令快照。
 
+## 备份口令更换边界
+
+口令已解锁时，设置页把原口令输入框设为只读，并通过独立对话框更换，避免普通输入事件意外覆盖 latest。`backup-passphrase.js` 支持“仅今后使用”和“同时重新加密现有快照”。两种模式都会先把当前 latest 归档到 history，再切换内存口令并强制创建经过写后验证的新 latest 与 history。
+
+重新加密历史时，程序先枚举 latest、history 和 emergency。每个可用当前口令解密的文件都会写入不同名称的新加密文件，并完成读取、解密和 payload 验证；这一阶段不删除任何原文件。只有新口令的当前备份也成功后，才逐个删除已转换的 history/emergency 原件。无法用当前口令读取的旧快照保持不变并在结果中计数。中断可能留下新旧两个有效副本，但不得留下只有未验证新副本而原件已删除的状态。
+
 ## 备份恢复边界
 
 恢复向导接受受支持的明文 `format: bookmark-manager` JSON，或 `format: bookmark-manager-encrypted-backup` 加密信封。扫描阶段只验证加密信封结构并显示锁定状态；用户选中后才执行 PBKDF2 和内容校验。解密后的 payload 继续验证 URL、重复记录 ID、父项类型和层级循环。目录扫描逐文件让出主线程，快照内容只在选中时转换为恢复记录，避免同时保留所有历史文件的完整对象。
@@ -98,6 +105,8 @@ js/
 标签页通过 `BroadcastChannel` 广播 `data-changed`、`sync-start`、`sync-heartbeat` 和 `sync-end`。localStorage storage event 作为回退通道。同步心跳携带 6.5 秒租约，异常关闭后其他标签页会自动移除过期状态。
 
 外部变更通知会在 120 ms 内合并刷新；当前标签页正在同步或持有写锁时延后到操作结束。
+
+备份文件另使用 `bookmark-manager-backup-file-write-v1` Web Lock，串行化多个标签页中的自动备份、健康检查和口令更换。每次取得文件锁后还会重新读取 IndexedDB 中的加密配置 ID；发现另一标签页已经更换口令时立即清空本标签页旧口令并停止，避免旧页面重新覆盖新文件。口令更换还会同时持有数据写锁，避免长时间转换期间其他标签页改变 IndexedDB 快照；内部强制备份通过明确的已持锁参数复用文件锁，不使用容易把独立并发误判为嵌套调用的全局重入捷径。
 
 ## 兼容加载器
 
