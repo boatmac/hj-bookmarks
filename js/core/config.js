@@ -17,6 +17,7 @@ const DEVICE_ID_KEY = 'sync-device-id';
 const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
 const PBKDF2_ITERATIONS = 250000;
 const SYNC_REQUEST_TIMEOUT_MS = 20000;
+const RECYCLE_RETENTION_DAYS = 30;
 const THEME_KEY = 'bookmark-manager.theme';
 const SORT_KEY = 'bookmark-manager.sort';
 const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -25,6 +26,8 @@ const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'file:', 'ftp:']);
 const state = {
     db: null,
     items: [],
+    recycleBin: [],
+    recoverySelection: new Set(),
     view: { type: 'all', value: null },
     query: '',
     sort: safeStorageGet(SORT_KEY) || 'newest',

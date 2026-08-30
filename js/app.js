@@ -18,6 +18,7 @@ async function initialize() {
         ui.storageStatus.textContent = t('dbConnected');
         await initializeSyncIdentity();
         await ensureSyncMetadata();
+        await pruneExpiredRecycleBin();
         await refreshData();
         await Promise.all([initializePersistentStorage(), initializeBackup(), initializeWebDavSync()]);
     } catch (error) {
@@ -29,7 +30,8 @@ async function initialize() {
 function cacheElements() {
     const ids = [
         'sidebar', 'sidebar-backdrop', 'mobile-menu-button', 'brand-button',
-        'all-view-button', 'favorites-view-button', 'all-count', 'favorites-count',
+        'all-view-button', 'favorites-view-button', 'recycle-bin-view-button',
+        'all-count', 'favorites-count', 'recycle-bin-count',
         'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
         'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
         'search-shortcut', 'import-file-input', 'export-menu',
@@ -41,7 +43,7 @@ function cacheElements() {
         'conflict-banner-detail', 'open-conflict-center-button', 'breadcrumbs',
         'page-eyebrow', 'page-title',
         'page-description', 'result-count', 'add-folder-button', 'results-label',
-        'sort-select', 'folder-grid', 'bookmark-grid', 'empty-state',
+        'sort-select', 'folder-grid', 'bookmark-grid', 'recovery-list', 'empty-state',
         'empty-icon-use', 'empty-title', 'empty-description', 'empty-action-button',
         'empty-action-icon', 'empty-action-label', 'item-dialog', 'item-form',
         'item-id', 'item-kind', 'dialog-eyebrow', 'dialog-title',
@@ -121,6 +123,7 @@ function bindStaticEvents() {
     ui.brandButton.addEventListener('click', () => setView('all'));
     ui.allViewButton.addEventListener('click', () => setView('all'));
     ui.favoritesViewButton.addEventListener('click', () => setView('favorites'));
+    ui.recycleBinViewButton.addEventListener('click', () => setView('trash'));
     ui.sidebarAddFolder.addEventListener('click', () => openItemDialog('folder'));
     ui.addFolderButton.addEventListener('click', () => openItemDialog('folder'));
     ui.addBookmarkButton.addEventListener('click', () => openItemDialog('bookmark'));

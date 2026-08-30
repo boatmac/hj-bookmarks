@@ -34,10 +34,12 @@ function renderSidebar() {
     const folders = state.items.filter(isFolder);
     ui.allCount.textContent = String(bookmarks.length);
     ui.favoritesCount.textContent = String(bookmarks.filter((item) => item.isPinned).length);
+    ui.recycleBinCount.textContent = String(state.recycleBin.length);
     ui.tagsCount.textContent = String(getTagCounts().size);
 
     ui.allViewButton.classList.toggle('active', state.view.type === 'all');
     ui.favoritesViewButton.classList.toggle('active', state.view.type === 'favorites');
+    ui.recycleBinViewButton.classList.toggle('active', state.view.type === 'trash');
 
     ui.folderTree.replaceChildren();
     const childrenMap = makeFolderChildrenMap(folders);
@@ -159,10 +161,21 @@ function renderBreadcrumbs() {
 }
 
 function renderContent() {
-    const content = getVisibleContent();
-    renderHeading(content);
     ui.folderGrid.replaceChildren();
     ui.bookmarkGrid.replaceChildren();
+    if (state.view.type === 'trash') {
+        ui.folderGrid.classList.add('hidden');
+        ui.bookmarkGrid.classList.add('hidden');
+        ui.recoveryList.classList.remove('hidden');
+        ui.addFolderButton.classList.add('hidden');
+        renderRecoveryView();
+        return;
+    }
+
+    ui.recoveryList.classList.add('hidden');
+    ui.addFolderButton.classList.remove('hidden');
+    const content = getVisibleContent();
+    renderHeading(content);
 
     for (const folder of content.folders) ui.folderGrid.append(createFolderCard(folder));
     for (const bookmark of content.bookmarks) ui.bookmarkGrid.append(createBookmarkCard(bookmark));

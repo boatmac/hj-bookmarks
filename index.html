@@ -12,19 +12,20 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-14" defer></script>
-    <script src="js/core/config.js?v=20260829-14" defer></script>
-    <script src="js/core/storage.js?v=20260829-14" defer></script>
-    <script src="js/sync/backup.js?v=20260829-14" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-14" defer></script>
-    <script src="js/sync/providers.js?v=20260829-14" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-14" defer></script>
-    <script src="js/sync/merge.js?v=20260829-14" defer></script>
-    <script src="js/ui/render.js?v=20260829-14" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-14" defer></script>
-    <script src="js/data/transfer.js?v=20260829-14" defer></script>
-    <script src="js/core/utils.js?v=20260829-14" defer></script>
-    <script src="js/app.js?v=20260829-14" defer></script>
+    <script src="js/core/translations.js?v=20260829-15" defer></script>
+    <script src="js/core/config.js?v=20260829-15" defer></script>
+    <script src="js/core/storage.js?v=20260829-15" defer></script>
+    <script src="js/sync/backup.js?v=20260829-15" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-15" defer></script>
+    <script src="js/sync/providers.js?v=20260829-15" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-15" defer></script>
+    <script src="js/sync/merge.js?v=20260829-15" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-15" defer></script>
+    <script src="js/ui/render.js?v=20260829-15" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-15" defer></script>
+    <script src="js/data/transfer.js?v=20260829-15" defer></script>
+    <script src="js/core/utils.js?v=20260829-15" defer></script>
+    <script src="js/app.js?v=20260829-15" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -65,6 +66,9 @@
                 </button>
                 <button class="nav-item" id="favorites-view-button" type="button">
                     <svg><use href="#icon-star"></use></svg><span data-i18n="favorites">我的收藏</span><span class="nav-count" id="favorites-count">0</span>
+                </button>
+                <button class="nav-item" id="recycle-bin-view-button" type="button">
+                    <svg><use href="#icon-trash"></use></svg><span data-i18n="recycleBin">回收站</span><span class="nav-count" id="recycle-bin-count">0</span>
                 </button>
             </nav>
 
@@ -142,7 +146,7 @@
                             <button id="export-html-button" type="button"><strong data-i18n="browserHtml">导出浏览器 HTML</strong><small data-i18n="browserHtmlDescription">可导入其他浏览器</small></button>
                             <hr>
                             <p class="export-section-label" data-i18n="dataManagementSection">数据管理</p>
-                            <button class="danger-menu-item" id="clear-all-button" type="button"><strong data-i18n="clearAll">清空全部数据</strong><small data-i18n="irreversible">此操作无法撤销</small></button>
+                            <button class="recycle-menu-item" id="clear-all-button" type="button"><strong data-i18n="clearAll">全部移至回收站</strong><small data-i18n="irreversible">可在 30 天内恢复</small></button>
                         </div>
                     </details>
 
@@ -190,6 +194,7 @@
 
                 <section class="folder-grid hidden" id="folder-grid" aria-label="文件夹" data-i18n-aria-label="folders"></section>
                 <section class="bookmark-grid" id="bookmark-grid" aria-label="书签" data-i18n-aria-label="bookmarksLabel"></section>
+                <section class="recovery-list hidden" id="recovery-list" aria-label="回收站" data-i18n-aria-label="recycleBin"></section>
 
                 <section class="empty-state hidden" id="empty-state">
                     <span class="empty-icon"><svg><use id="empty-icon-use" href="#icon-bookmark"></use></svg></span>

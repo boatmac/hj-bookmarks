@@ -414,11 +414,18 @@ async function applyResolvedConflictEntity(syncId, entity, relatedItems) {
 function putResolvedTombstone(syncId) {
     return new Promise((resolve, reject) => {
         const transaction = state.db.transaction(TOMBSTONE_STORE_NAME, 'readwrite');
-        transaction.objectStore(TOMBSTONE_STORE_NAME).put({
-            syncId,
-            deletedAt: new Date().toISOString(),
-            modifiedBy: state.sync.deviceId,
-        });
+        const store = transaction.objectStore(TOMBSTONE_STORE_NAME);
+        const request = store.get(syncId);
+        request.onsuccess = () => {
+            const now = new Date().toISOString();
+            store.put({
+                ...request.result,
+                syncId,
+                deletedAt: request.result?.deletedAt || now,
+                updatedAt: now,
+                modifiedBy: state.sync.deviceId,
+            });
+        };
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
@@ -821,7 +828,8 @@ async function runWebDavSync({ notify = false } = {}) {
     const operation = (async () => {
         const remoteContext = await createSyncRemoteContext(endpoint);
         sync.provider = remoteContext.provider;
-        const baseline = await getSyncBaseline(endpointKey);
+        const storedBaseline = await getSyncBaseline(endpointKey);
+        const baseline = storedBaseline ? normalizeStoredSyncDataset(storedBaseline) : null;
         sync.hasBaseline = Boolean(baseline);
         let merged = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {

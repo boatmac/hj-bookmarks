@@ -70,13 +70,16 @@ function deleteItems(items) {
         const bookmarkStore = transaction.objectStore(STORE_NAME);
         const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
         const deletedAt = new Date().toISOString();
+        const parentSyncIds = new Map(state.items.map((item) => [item.id, item.syncId]));
         items.forEach((item) => {
             bookmarkStore.delete(item.id);
             if (item.syncId) {
                 tombstoneStore.put({
                     syncId: item.syncId,
                     deletedAt,
+                    updatedAt: deletedAt,
                     modifiedBy: state.sync.deviceId,
+                    item: createDeletedItemSnapshot(item, parentSyncIds),
                 });
             }
         });
@@ -91,13 +94,16 @@ function clearDatabase(items = state.items) {
         const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
         const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
         const deletedAt = new Date().toISOString();
+        const parentSyncIds = new Map(items.map((item) => [item.id, item.syncId]));
         transaction.objectStore(STORE_NAME).clear();
         items.forEach((item) => {
             if (item.syncId) {
                 tombstoneStore.put({
                     syncId: item.syncId,
                     deletedAt,
+                    updatedAt: deletedAt,
                     modifiedBy: state.sync.deviceId,
+                    item: createDeletedItemSnapshot(item, parentSyncIds),
                 });
             }
         });
@@ -105,6 +111,21 @@ function clearDatabase(items = state.items) {
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error || new Error(t('deleteCanceled')));
     });
+}
+
+function createDeletedItemSnapshot(item, parentSyncIds) {
+    return {
+        syncId: item.syncId,
+        parentSyncId: item.parentId == null ? null : (parentSyncIds.get(item.parentId) || null),
+        title: item.title,
+        url: item.url,
+        description: item.description || '',
+        tags: parseTags(item.tags),
+        isPinned: item.isPinned === true,
+        createdAt: item.createdAt || item.updatedAt,
+        updatedAt: item.updatedAt,
+        modifiedBy: item.modifiedBy || state.sync.deviceId,
+    };
 }
 
 function getSetting(key) {
@@ -149,6 +170,43 @@ function getAllTombstones() {
             .getAll();
         request.onsuccess = () => resolve(request.result || []);
         request.onerror = () => reject(request.error);
+    });
+}
+
+async function pruneExpiredRecycleBin() {
+    const tombstones = await getAllTombstones();
+    const cutoff = Date.now() - RECYCLE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const expired = tombstones.filter((tombstone) => (
+        tombstone.item
+        && validDate(tombstone.deletedAt)
+        && Date.parse(tombstone.deletedAt) < cutoff
+    ));
+    if (!expired.length) return 0;
+    await purgeTombstonePayloads(expired.map((tombstone) => tombstone.syncId));
+    return expired.length;
+}
+
+function purgeTombstonePayloads(syncIds) {
+    const ids = new Set(syncIds);
+    if (!ids.size) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const transaction = state.db.transaction(TOMBSTONE_STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(TOMBSTONE_STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+            const updatedAt = new Date().toISOString();
+            request.result.filter((tombstone) => ids.has(tombstone.syncId)).forEach((tombstone) => {
+                const minimal = { ...tombstone };
+                delete minimal.item;
+                minimal.updatedAt = updatedAt;
+                minimal.payloadPurgedAt = updatedAt;
+                minimal.modifiedBy = state.sync.deviceId;
+                store.put(minimal);
+            });
+        };
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error(t('dbOpenFailed')));
     });
 }
 
@@ -353,8 +411,15 @@ function addImportedRecords(records) {
 }
 
 async function refreshData() {
-    const records = await getAllItems();
+    const [records, tombstones] = await Promise.all([getAllItems(), getAllTombstones()]);
     state.items = records.map(normalizeItem);
+    state.recycleBin = tombstones
+        .filter((tombstone) => tombstone.item && validDate(tombstone.deletedAt))
+        .sort((left, right) => Date.parse(right.deletedAt) - Date.parse(left.deletedAt));
+    const recoverableIds = new Set(state.recycleBin.map((tombstone) => tombstone.syncId));
+    state.recoverySelection = new Set(
+        [...state.recoverySelection].filter((syncId) => recoverableIds.has(syncId)),
+    );
     renderAll();
     ui.storageStatus.textContent = t('storageStatus', { count: state.items.length });
 }

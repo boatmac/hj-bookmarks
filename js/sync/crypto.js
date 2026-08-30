@@ -8,7 +8,7 @@ async function encryptSyncData(dataset, passphrase) {
     const key = await deriveSyncKey(passphrase, salt, PBKDF2_ITERATIONS, ['encrypt']);
     const plaintext = new TextEncoder().encode(JSON.stringify({
         format: 'bookmark-manager-sync',
-        version: 1,
+        version: 2,
         updatedAt: new Date().toISOString(),
         items: dataset.items,
         tombstones: dataset.tombstones,

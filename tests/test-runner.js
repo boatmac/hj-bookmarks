@@ -101,13 +101,38 @@ test('浏览器书签 HTML 导入保留文件夹', () => {
     assertDeepEqual(parsed.records[1].tags, ['docs', 'test']);
 });
 
-test('同步数据加密后不包含书签明文', async () => {
-    const dataset = makeDataset(makeSyncItem({ title: 'Secret bookmark' }));
+test('同步数据和回收站快照加密后不包含书签明文', async () => {
+    const deletedAt = '2026-01-02T00:00:00.000Z';
+    const dataset = makeDataset(makeSyncItem({ title: 'Secret bookmark' }), [{
+        syncId: 'deleted-item',
+        deletedAt,
+        updatedAt: deletedAt,
+        modifiedBy: 'device-base',
+        item: makeSyncItem({ syncId: 'deleted-item', title: 'Deleted secret' }),
+    }]);
     const encrypted = await encryptSyncData(dataset, 'browser test passphrase');
     assert(!encrypted.includes('Secret bookmark'), 'Encrypted payload leaked plaintext');
+    assert(!encrypted.includes('Deleted secret'), 'Encrypted recycle payload leaked plaintext');
     const decrypted = await decryptSyncData(encrypted, 'browser test passphrase');
+    assertEqual(decrypted.version, 2);
     const normalized = parseRemoteSyncDataset(decrypted);
     assertEqual(normalized.items[0].title, 'Secret bookmark');
+    assertEqual(normalized.tombstones[0].item.title, 'Deleted secret');
+});
+
+test('旧版同步 payload v1 会安全升级墓碑字段', () => {
+    const legacy = parseRemoteSyncDataset({
+        format: 'bookmark-manager-sync',
+        version: 1,
+        items: [],
+        tombstones: [{
+            syncId: 'legacy-deletion',
+            deletedAt: '2026-01-01T00:00:00.000Z',
+            modifiedBy: 'legacy-device',
+        }],
+    });
+    assertEqual(legacy.tombstones.length, 1);
+    assertEqual(legacy.tombstones[0].updatedAt, legacy.tombstones[0].deletedAt);
 });
 
 test('错误加密口令无法解密远端数据', async () => {
@@ -184,7 +209,7 @@ test('删除与编辑并发会保留双方等待确认', () => {
     assertEqual(result.conflicts[0].remote.kind, 'item');
 });
 
-test('IndexedDB schema、墓碑、基线和冲突记录可用', async () => {
+test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
     await deleteTestDatabase();
     state.db = await openDatabase();
     assert(state.db.objectStoreNames.contains(STORE_NAME));
@@ -209,9 +234,40 @@ test('IndexedDB schema、墓碑、基线和冲突记录可用', async () => {
     record.id = await saveItem(record);
     assertEqual((await getAllItems()).length, 1);
 
+    state.items = [record];
     await deleteItems([record]);
     assertEqual((await getAllItems()).length, 0);
-    assertEqual((await getAllTombstones()).length, 1);
+    let tombstones = await getAllTombstones();
+    assertEqual(tombstones.length, 1);
+    assertEqual(tombstones[0].item.title, 'Database test');
+    assert(validDate(tombstones[0].updatedAt));
+
+    await restoreResolvedSyncItems([tombstones[0].item]);
+    let restored = await getAllItems();
+    assertEqual(restored.length, 1);
+    assertEqual((await getAllTombstones()).length, 0);
+
+    state.items = restored;
+    await deleteItems(restored);
+    tombstones = await getAllTombstones();
+    await purgeTombstonePayloads(tombstones.map((item) => item.syncId));
+    tombstones = await getAllTombstones();
+    assertEqual(tombstones.length, 1);
+    assert(!tombstones[0].item, 'Permanent deletion should remove recoverable payload');
+
+    await new Promise((resolve, reject) => {
+        const transaction = state.db.transaction(TOMBSTONE_STORE_NAME, 'readwrite');
+        transaction.objectStore(TOMBSTONE_STORE_NAME).put({
+            ...tombstones[0],
+            deletedAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+            item: makeSyncItem({ syncId: tombstones[0].syncId }),
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+    });
+    assertEqual(await pruneExpiredRecycleBin(), 1);
+    assert(!(await getAllTombstones())[0].item, 'Expired recovery payload should be purged');
 
     const baseline = { items: [makeSyncItem()], tombstones: [] };
     await saveSyncBaseline('test-endpoint', baseline);

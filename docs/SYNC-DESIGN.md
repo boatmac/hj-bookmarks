@@ -33,11 +33,15 @@ UI
 |---|---|
 | `bookmarks` | 本地书签和文件夹 |
 | `settings` | 非敏感设置、设备 ID、提供商缓存 |
-| `tombstones` | 删除墓碑 |
+| `tombstones` | 删除墓碑及 30 天可恢复快照 |
 | `syncBaselines` | 每个同步端点的最近成功基线及待确认远端状态 |
 | `syncConflicts` | 持久化的冲突记录 |
 
 书签使用本地数字 ID 作为 IndexedDB 主键，同时使用稳定 `syncId` UUID 进行跨设备识别。
+
+墓碑包含 `deletedAt`、`updatedAt`、`modifiedBy`，并可携带删除时的同步实体快照 `item`。快照用于回收站，30 天后或用户永久删除时移除；最小墓碑继续存在以阻止离线设备复活旧数据。墓碑快照包含在加密远端数据中，因此其他设备也可以恢复。
+
+同步 payload v2 引入可恢复墓碑；读取端兼容 v1 和 v2，写入端统一升级到 v2。旧版客户端只接受 v1，因此会拒绝而不是静默移除 v2 的恢复数据。启用回收站后应升级所有参与同步的设备。
 
 ## 远端格式
 
@@ -66,7 +70,7 @@ UI
 ```json
 {
   "format": "bookmark-manager-sync",
-  "version": 1,
+  "version": 2,
   "updatedAt": "ISO-8601",
   "items": [],
   "tombstones": []

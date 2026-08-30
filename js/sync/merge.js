@@ -27,7 +27,7 @@ function parseRemoteSyncDataset(input) {
     if (
         !input
         || input.format !== 'bookmark-manager-sync'
-        || input.version !== 1
+        || ![1, 2].includes(input.version)
         || !Array.isArray(input.items)
         || !Array.isArray(input.tombstones)
     ) {
@@ -45,6 +45,15 @@ function parseRemoteSyncDataset(input) {
 
 function emptySyncDataset() {
     return { items: [], tombstones: [] };
+}
+
+function normalizeStoredSyncDataset(input) {
+    return {
+        items: Array.isArray(input?.items) ? input.items.map(normalizeSyncItem) : [],
+        tombstones: Array.isArray(input?.tombstones)
+            ? input.tombstones.map(normalizeSyncTombstone).filter(Boolean)
+            : [],
+    };
 }
 
 function normalizeSyncItem(input) {
@@ -70,10 +79,21 @@ function normalizeSyncItem(input) {
 
 function normalizeSyncTombstone(input) {
     if (!input || typeof input.syncId !== 'string' || !input.syncId || !validDate(input.deletedAt)) return null;
+    let recoverableItem;
+    if (input.item && typeof input.item === 'object') {
+        try {
+            recoverableItem = normalizeSyncItem({ ...input.item, syncId: input.syncId });
+        } catch {
+            recoverableItem = undefined;
+        }
+    }
     return {
         syncId: input.syncId,
         deletedAt: input.deletedAt,
+        updatedAt: validDate(input.updatedAt) ? input.updatedAt : input.deletedAt,
         modifiedBy: typeof input.modifiedBy === 'string' ? input.modifiedBy : '',
+        ...(recoverableItem ? { item: recoverableItem } : {}),
+        ...(validDate(input.payloadPurgedAt) ? { payloadPurgedAt: input.payloadPurgedAt } : {}),
     };
 }
 
@@ -86,7 +106,7 @@ function mergeSyncDatasets(local, remote) {
     const tombstones = new Map();
     [...local.tombstones, ...remote.tombstones].forEach((tombstone) => {
         const current = tombstones.get(tombstone.syncId);
-        if (!current || compareSyncRecords(tombstone, current, 'deletedAt') > 0) {
+        if (!current || compareSyncRecords(tombstone, current, 'updatedAt') > 0) {
             tombstones.set(tombstone.syncId, { ...tombstone });
         }
     });
@@ -251,7 +271,7 @@ function newerSyncEntity(left, right) {
     if (left.kind === 'absent') return right;
     if (right.kind === 'absent') return left;
     if (left.kind !== right.kind) return left;
-    const dateField = left.kind === 'deleted' ? 'deletedAt' : 'updatedAt';
+    const dateField = 'updatedAt';
     return compareSyncRecords(left.value, right.value, dateField) >= 0 ? left : right;
 }
 

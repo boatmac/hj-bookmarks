@@ -27,8 +27,11 @@ function renderEmptyState(content) {
 }
 
 function handleEmptyAction() {
-    if (ui.emptyActionButton.dataset.action === 'clear') {
+    const action = ui.emptyActionButton.dataset.action;
+    if (action === 'clear') {
         clearSearch();
+        setView('all');
+    } else if (action === 'all') {
         setView('all');
     } else {
         openItemDialog('bookmark');
