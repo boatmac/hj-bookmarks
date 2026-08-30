@@ -185,11 +185,13 @@ async function restoreDeletedItems(syncIds) {
     if (!items.length) return;
 
     await flushBackupBeforeDestructiveChange();
-    await restoreResolvedSyncItems(items);
-    expandedIds.forEach((syncId) => state.recoverySelection.delete(syncId));
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t('restoredItems', { count: items.length }));
+    await runUserDataMutation(async () => {
+        await restoreResolvedSyncItems(items);
+        expandedIds.forEach((syncId) => state.recoverySelection.delete(syncId));
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t('restoredItems', { count: items.length }));
+    });
 }
 
 async function permanentlyDeleteRecoveryItems(syncIds) {
@@ -198,9 +200,11 @@ async function permanentlyDeleteRecoveryItems(syncIds) {
     if (!expandedIds.length) return;
     if (!window.confirm(t('confirmPermanentDelete', { count: expandedIds.length }))) return;
 
-    await purgeTombstonePayloads(expandedIds);
-    expandedIds.forEach((syncId) => state.recoverySelection.delete(syncId));
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t('permanentlyDeletedItems', { count: expandedIds.length }));
+    await runUserDataMutation(async () => {
+        await purgeTombstonePayloads(expandedIds);
+        expandedIds.forEach((syncId) => state.recoverySelection.delete(syncId));
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t('permanentlyDeletedItems', { count: expandedIds.length }));
+    });
 }

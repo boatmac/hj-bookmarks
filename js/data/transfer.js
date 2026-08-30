@@ -19,15 +19,20 @@ async function handleImport(event) {
             : parseHtmlImport(content);
 
         const prepared = prepareImportMerge(parsed.records);
-        const importedCount = await addImportedRecords(prepared.records);
-        await refreshData();
-        scheduleDataProtection();
-        const skipped = parsed.skipped + prepared.duplicateCount;
-        const details = [
-            prepared.mergedFolderCount ? t('reusedFolders', { count: prepared.mergedFolderCount }) : '',
-            skipped ? t('skippedItems', { count: skipped }) : '',
-        ].filter(Boolean).join(t('listSeparator'));
-        showToast(t('imported', { count: importedCount, details }));
+        let importedCount = 0;
+        const mutation = await runUserDataMutation(async () => {
+            importedCount = await addImportedRecords(prepared.records);
+            await refreshData();
+            scheduleDataProtection();
+        });
+        if (mutation.applied) {
+            const skipped = parsed.skipped + prepared.duplicateCount;
+            const details = [
+                prepared.mergedFolderCount ? t('reusedFolders', { count: prepared.mergedFolderCount }) : '',
+                skipped ? t('skippedItems', { count: skipped }) : '',
+            ].filter(Boolean).join(t('listSeparator'));
+            showToast(t('imported', { count: importedCount, details }));
+        }
     } catch (error) {
         console.error('Import failed:', error);
         showToast(t('importFailed', { message: error.message }));
@@ -317,10 +322,12 @@ async function clearAllData() {
     }
     if (!window.confirm(t('confirmClear'))) return;
     await flushBackupBeforeDestructiveChange();
-    await clearDatabase();
-    state.view = { type: 'all', value: null };
-    clearSearch();
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t('cleared'));
+    await runUserDataMutation(async () => {
+        await clearDatabase();
+        state.view = { type: 'all', value: null };
+        clearSearch();
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t('cleared'));
+    });
 }

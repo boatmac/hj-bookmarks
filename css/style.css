@@ -685,6 +685,34 @@ svg {
     height: 15px;
 }
 
+.tab-status {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 9px;
+    color: var(--text-soft);
+    font-size: 9px;
+    font-weight: 620;
+    white-space: nowrap;
+    background: var(--panel-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.tab-status-dot {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    background: #4ca66c;
+    border-radius: 50%;
+}
+
+.tab-status.is-syncing .tab-status-dot {
+    background: #d69724;
+    animation: backup-pulse 1.1s ease-in-out infinite;
+}
+
 .topbar-actions {
     display: flex;
     align-items: center;
@@ -788,7 +816,8 @@ svg {
 .export-menu[data-sync-state="ready"] summary::after,
 .export-menu[data-sync-state="running"] summary::after,
 .export-menu[data-sync-state="error"] summary::after,
-.export-menu[data-sync-state="conflict"] summary::after {
+.export-menu[data-sync-state="conflict"] summary::after,
+.export-menu[data-sync-state="other-tab"] summary::after {
     display: block;
 }
 
@@ -804,7 +833,8 @@ svg {
 }
 
 .export-menu[data-backup-state="permission"] summary::after,
-.export-menu[data-sync-state="conflict"] summary::after {
+.export-menu[data-sync-state="conflict"] summary::after,
+.export-menu[data-sync-state="other-tab"] summary::after {
     background: #d69724;
 }
 
@@ -925,12 +955,14 @@ svg {
 }
 
 .export-popover .backup-menu-item[data-state="permission"],
-.export-popover .sync-menu-item[data-state="conflict"] {
+.export-popover .sync-menu-item[data-state="conflict"],
+.export-popover .sync-menu-item[data-state="other-tab"] {
     background: color-mix(in srgb, #d69724 12%, var(--panel));
 }
 
 .export-popover .backup-menu-item[data-state="permission"] strong,
-.export-popover .sync-menu-item[data-state="conflict"] strong {
+.export-popover .sync-menu-item[data-state="conflict"] strong,
+.export-popover .sync-menu-item[data-state="other-tab"] strong {
     color: #b97a12;
 }
 
@@ -1987,6 +2019,7 @@ svg {
 .backup-status-card[data-state="unsupported"],
 .backup-status-card[data-state="paused"],
 .backup-status-card[data-state="permission"],
+.backup-status-card[data-state="other-tab"],
 .backup-status-card[data-state="locked"],
 .backup-status-card[data-state="credentials-ready"],
 .backup-status-card[data-state="not-configured"] {
@@ -1997,6 +2030,7 @@ svg {
 .backup-status-card[data-state="unsupported"] .backup-status-icon,
 .backup-status-card[data-state="paused"] .backup-status-icon,
 .backup-status-card[data-state="permission"] .backup-status-icon,
+.backup-status-card[data-state="other-tab"] .backup-status-icon,
 .backup-status-card[data-state="locked"] .backup-status-icon,
 .backup-status-card[data-state="credentials-ready"] .backup-status-icon,
 .backup-status-card[data-state="not-configured"] .backup-status-icon {
@@ -2658,8 +2692,14 @@ body.syncing .mini-icon-button {
     }
 
     .search-box kbd,
-    .topbar-secondary span {
+    .topbar-secondary span,
+    #tab-status-text {
         display: none;
+    }
+
+    .tab-status {
+        width: 30px;
+        padding-inline: 11px;
     }
 
     .topbar-secondary {

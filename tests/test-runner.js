@@ -209,6 +209,23 @@ test('删除与编辑并发会保留双方等待确认', () => {
     assertEqual(result.conflicts[0].remote.kind, 'item');
 });
 
+test('Web Locks 会串行执行同一标签页的并发写入', async () => {
+    if (!navigator.locks?.request) return;
+    const order = [];
+    await Promise.all([
+        withDataWriteLock(async () => {
+            order.push('first-start');
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            order.push('first-end');
+        }),
+        withDataWriteLock(async () => {
+            order.push('second-start');
+            order.push('second-end');
+        }),
+    ]);
+    assertDeepEqual(order, ['first-start', 'first-end', 'second-start', 'second-end']);
+});
+
 test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
     await deleteTestDatabase();
     state.db = await openDatabase();

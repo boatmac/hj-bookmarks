@@ -156,8 +156,11 @@ Koofr 上传使用 multipart/form-data，并在覆盖时传递 `overwriteIfHash`
 - 界面显示准备、读取、建目录、合并、加密、写入、应用等阶段。
 - 用户可主动取消，AbortController 会终止当前请求。
 - 后台同步不会将整个应用设为 inert。
-- 同步期间浏览、搜索、导航和打开链接保持可用。
+- 同步完整生命周期持有跨标签页 Web Lock。
+- `sync-start` 和心跳通过 BroadcastChannel/localStorage 回退通道通知其他标签页。
+- 同步期间所有标签页的浏览、搜索、导航和打开链接保持可用。
 - 新增、编辑、删除、拖拽、导入等变更操作暂时阻止，避免本地状态在合并期间改变。
+- 同步应用结果后广播 `data-changed`，其他标签页自动刷新 IndexedDB 快照。
 
 ## 三方合并
 

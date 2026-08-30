@@ -321,6 +321,11 @@ function formatConflictTime(value) {
 }
 
 async function resolveCurrentConflict(strategy) {
+    const mutation = await runUserDataMutation(() => resolveCurrentConflictUnlocked(strategy));
+    return mutation.value;
+}
+
+async function resolveCurrentConflictUnlocked(strategy) {
     const conflict = state.sync.conflicts[state.sync.conflictIndex];
     if (!conflict) return;
     const endpointKey = conflict.endpointKey;
@@ -371,6 +376,7 @@ async function resolveCurrentConflict(strategy) {
     );
     await refreshData();
     scheduleAutoBackup();
+    broadcastDataChanged('conflict-resolution');
     renderConflictBanner();
     renderSyncSettings();
 
@@ -602,10 +608,12 @@ function syncSessionFingerprint() {
 function renderSyncSettings() {
     if (!ui.syncMenuStatus) return;
     const sync = state.sync;
+    const otherTabSync = hasOtherTabSyncing();
     let status = 'ready';
     if (!sync.supported) status = 'unsupported';
     else if (sync.running) status = 'running';
     else if (sync.conflicts.length) status = 'conflict';
+    else if (otherTabSync) status = 'other-tab';
     else if (sync.error) status = 'error';
     else if (!sync.endpoint) status = 'not-configured';
     else if (!sync.unlocked && sync.passphrase.length >= 8 && (!sync.username || sync.password)) status = 'credentials-ready';
@@ -620,6 +628,7 @@ function renderSyncSettings() {
             t('syncConflictStatusDetail', { count: sync.conflicts.length }),
             t('syncMenuConflicts', { count: sync.conflicts.length }),
         ],
+        'other-tab': [t('syncOtherTabTitle'), t('syncOtherTabDetail'), t('syncMenuOtherTab')],
         'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
         locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
         'credentials-ready': [
@@ -645,22 +654,22 @@ function renderSyncSettings() {
         sync.hasBaseline ? 'conflictBaselineReady' : 'conflictBaselinePending',
     );
     ui.autoCreateDirectoryToggle.checked = sync.createDirectory;
-    ui.autoCreateDirectoryToggle.disabled = !sync.supported || sync.running;
+    ui.autoCreateDirectoryToggle.disabled = !sync.supported || sync.running || otherTabSync;
     ui.autoSyncToggle.checked = sync.automatic;
-    ui.autoSyncToggle.disabled = !sync.supported || sync.running;
+    ui.autoSyncToggle.disabled = !sync.supported || sync.running || otherTabSync;
     ui.rememberSessionCredentialsToggle.checked = sync.rememberSession;
-    ui.rememberSessionCredentialsToggle.disabled = !sync.supported || sync.running;
-    ui.syncNowButton.disabled = !sync.supported || sync.running;
+    ui.rememberSessionCredentialsToggle.disabled = !sync.supported || sync.running || otherTabSync;
+    ui.syncNowButton.disabled = !sync.supported || sync.running || otherTabSync;
     ui.syncNowButton.textContent = t(sync.conflicts.length ? 'reviewConflicts' : 'syncNow');
     ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
     ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
     ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
-    ui.syncEndpointInput.disabled = sync.running;
-    ui.syncUsernameInput.disabled = sync.running;
-    ui.syncPasswordInput.disabled = sync.running;
-    ui.syncPassphraseInput.disabled = sync.running;
+    ui.syncEndpointInput.disabled = sync.running || otherTabSync;
+    ui.syncUsernameInput.disabled = sync.running || otherTabSync;
+    ui.syncPasswordInput.disabled = sync.running || otherTabSync;
+    ui.syncPassphraseInput.disabled = sync.running || otherTabSync;
     ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
-    ui.disconnectSyncButton.disabled = sync.running;
+    ui.disconnectSyncButton.disabled = sync.running || otherTabSync;
 }
 
 async function handleRememberSessionCredentials() {
@@ -762,11 +771,13 @@ function scheduleWebDavSync(delay = 1800) {
 function scheduleDataProtection() {
     scheduleAutoBackup();
     scheduleWebDavSync();
+    broadcastDataChanged('mutation');
 }
 
 function preventMutationDuringSync() {
-    if (!state.sync.running) return false;
-    showToast(t('syncMutationBlocked'));
+    const otherTab = hasOtherTabSyncing();
+    if (!state.sync.running && !otherTab) return false;
+    showToast(t(otherTab ? 'dataBusyOtherTab' : 'syncMutationBlocked'));
     return true;
 }
 
@@ -783,7 +794,25 @@ function setSyncPhase(phase) {
     renderSyncSettings();
 }
 
-async function runWebDavSync({ notify = false } = {}) {
+async function runWebDavSync(options = {}) {
+    if (state.sync.running) return runWebDavSyncUnlocked(options);
+    const locked = await tryDataWriteLock(async () => {
+        announceSyncStarted();
+        try {
+            return await runWebDavSyncUnlocked(options);
+        } finally {
+            announceSyncEnded();
+        }
+    });
+    if (!locked.acquired) {
+        showTabCoordinationMessage(hasOtherTabSyncing() ? 'otherTabSyncing' : 'otherTabWriting');
+        if (options.notify) showToast(t('dataBusyOtherTab'));
+        return false;
+    }
+    return locked.value;
+}
+
+async function runWebDavSyncUnlocked({ notify = false } = {}) {
     updateSyncSecretsFromForm();
     const sync = state.sync;
     if (!sync.supported) {
@@ -854,6 +883,7 @@ async function runWebDavSync({ notify = false } = {}) {
                 await replaceLocalSyncDataset(mergeResult.dataset);
                 await refreshData();
                 scheduleAutoBackup();
+                broadcastDataChanged('sync-conflict');
                 sync.conflicts = await getSyncConflicts(endpointKey);
                 sync.conflictEndpointKey = endpointKey;
                 sync.conflictIndex = 0;
@@ -903,6 +933,7 @@ async function runWebDavSync({ notify = false } = {}) {
         await replaceSyncConflicts(endpointKey, []);
         await saveSyncPreferences();
         scheduleAutoBackup();
+        broadcastDataChanged('sync');
         if (notify) showToast(t('syncComplete', {
             items: merged.items.length,
             deleted: merged.tombstones.length,

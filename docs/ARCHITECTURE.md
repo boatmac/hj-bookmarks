@@ -22,6 +22,7 @@ js/
 ├── core/
 │   ├── translations.js  中英文词典
 │   ├── config.js        常量、全局状态和基础翻译函数
+│   ├── coordination.js  Web Locks、BroadcastChannel 与标签页状态
 │   ├── storage.js       IndexedDB schema 与事务操作
 │   └── utils.js         URL、层级、日期和 DOM 通用工具
 ├── data/
@@ -59,9 +60,18 @@ js/
 - `state.view`：当前筛选和目录；
 - `state.backup`：本地备份状态；
 - `state.sync`：远端同步、凭据、基线和冲突状态；
-- `state.persistence`：浏览器持久存储状态。
+- `state.persistence`：浏览器持久存储状态；
+- `state.coordination`：当前标签页 ID、跨标签页消息、写锁和同步心跳。
 
 长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。
+
+## 多标签页协调
+
+所有书签变更通过同一个 `bookmark-manager-data-write-v1` Web Lock 执行；远端同步在读取、合并、上传和应用本地结果的完整生命周期内持有该锁。用户修改使用 `ifAvailable` 模式，锁被占用时不排队执行陈旧操作，而是提示重试。
+
+标签页通过 `BroadcastChannel` 广播 `data-changed`、`sync-start`、`sync-heartbeat` 和 `sync-end`。localStorage storage event 作为回退通道。同步心跳携带 6.5 秒租约，异常关闭后其他标签页会自动移除过期状态。
+
+外部变更通知会在 120 ms 内合并刷新；当前标签页正在同步或持有写锁时延后到操作结束。
 
 ## 兼容加载器
 

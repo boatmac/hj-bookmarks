@@ -18,6 +18,9 @@ const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
 const PBKDF2_ITERATIONS = 250000;
 const SYNC_REQUEST_TIMEOUT_MS = 20000;
 const RECYCLE_RETENTION_DAYS = 30;
+const DATA_WRITE_LOCK_NAME = 'bookmark-manager-data-write-v1';
+const COORDINATION_CHANNEL_NAME = 'bookmark-manager-coordination-v1';
+const COORDINATION_STORAGE_KEY = 'bookmark-manager.coordination-event';
 const THEME_KEY = 'bookmark-manager.theme';
 const SORT_KEY = 'bookmark-manager.sort';
 const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -33,6 +36,16 @@ const state = {
     sort: safeStorageGet(SORT_KEY) || 'newest',
     language: getInitialLanguage(),
     persistence: 'checking',
+    coordination: {
+        tabId: '',
+        channel: null,
+        activeSyncTabs: new Map(),
+        lockDepth: 0,
+        initialized: false,
+        refreshTimer: null,
+        statusTimer: null,
+        pendingExternalRefresh: false,
+    },
     sync: {
         supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
         deviceId: '',

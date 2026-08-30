@@ -159,11 +159,13 @@ async function handleItemSubmit(event) {
     if (id != null) record.id = id;
 
     try {
-        await saveItem(record);
-        closeItemDialog();
-        await refreshData();
-        scheduleDataProtection();
-        showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
+        await runUserDataMutation(async () => {
+            await saveItem(record);
+            closeItemDialog();
+            await refreshData();
+            scheduleDataProtection();
+            showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
+        });
     } catch (error) {
         console.error(error);
         showFormError(t('saveFailed'));
@@ -178,14 +180,16 @@ function showFormError(message) {
 async function toggleFavorite(bookmark) {
     if (preventMutationDuringSync()) return;
     if (openConflictForItem(bookmark)) return;
-    const updated = toStorageRecord(bookmark);
-    updated.isPinned = !bookmark.isPinned;
-    updated.updatedAt = new Date().toISOString();
-    updated.modifiedBy = state.sync.deviceId;
-    await saveItem(updated);
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t(updated.isPinned ? 'favoriteAdded' : 'favoriteRemoved'));
+    await runUserDataMutation(async () => {
+        const updated = toStorageRecord(bookmark);
+        updated.isPinned = !bookmark.isPinned;
+        updated.updatedAt = new Date().toISOString();
+        updated.modifiedBy = state.sync.deviceId;
+        await saveItem(updated);
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t(updated.isPinned ? 'favoriteAdded' : 'favoriteRemoved'));
+    });
 }
 
 async function deleteItem(item) {
@@ -195,14 +199,16 @@ async function deleteItem(item) {
     if (!window.confirm(t('confirmDelete', { title: item.title, count: descendantIds.length }))) return;
 
     await flushBackupBeforeDestructiveChange();
-    const deletingIds = new Set([item.id, ...descendantIds]);
-    await deleteItems(state.items.filter((candidate) => deletingIds.has(candidate.id)));
-    if (state.view.type === 'folder' && (state.view.value === item.id || descendantIds.includes(state.view.value))) {
-        state.view = { type: 'all', value: null };
-    }
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t('deleted'));
+    await runUserDataMutation(async () => {
+        const deletingIds = new Set([item.id, ...descendantIds]);
+        await deleteItems(state.items.filter((candidate) => deletingIds.has(candidate.id)));
+        if (state.view.type === 'folder' && (state.view.value === item.id || descendantIds.includes(state.view.value))) {
+            state.view = { type: 'all', value: null };
+        }
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t('deleted'));
+    });
 }
 
 function makeDraggable(element, id) {
@@ -280,15 +286,17 @@ async function moveItem(itemId, parentId) {
         return;
     }
 
-    const updated = toStorageRecord(item);
-    updated.parentId = parentId;
-    updated.updatedAt = new Date().toISOString();
-    updated.modifiedBy = state.sync.deviceId;
-    await saveItem(updated);
-    clearDragState();
-    await refreshData();
-    scheduleDataProtection();
-    showToast(t(parentId == null ? 'movedRoot' : 'movedFolder'));
+    await runUserDataMutation(async () => {
+        const updated = toStorageRecord(item);
+        updated.parentId = parentId;
+        updated.updatedAt = new Date().toISOString();
+        updated.modifiedBy = state.sync.deviceId;
+        await saveItem(updated);
+        clearDragState();
+        await refreshData();
+        scheduleDataProtection();
+        showToast(t(parentId == null ? 'movedRoot' : 'movedFolder'));
+    });
 }
 
 function clearDragState() {

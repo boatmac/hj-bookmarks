@@ -86,10 +86,13 @@ function createFolderTreeNode(folder, childrenMap, visited, ancestors) {
         toggle.addEventListener('click', async (event) => {
             event.stopPropagation();
             if (preventMutationDuringSync()) return;
-            folder.collapsed = !folder.collapsed;
-            await saveItem(toStorageRecord(folder));
-            scheduleAutoBackup();
-            renderSidebar();
+            await runUserDataMutation(async () => {
+                folder.collapsed = !folder.collapsed;
+                await saveItem(toStorageRecord(folder));
+                scheduleAutoBackup();
+                broadcastDataChanged('folder-state');
+                renderSidebar();
+            });
         });
     }
 

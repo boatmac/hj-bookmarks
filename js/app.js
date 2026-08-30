@@ -12,13 +12,16 @@ async function initialize() {
     applyInitialTheme();
     applyLanguage(state.language);
     bindStaticEvents();
+    initializeTabCoordination();
 
     try {
         state.db = await openDatabase();
         ui.storageStatus.textContent = t('dbConnected');
-        await initializeSyncIdentity();
-        await ensureSyncMetadata();
-        await pruneExpiredRecycleBin();
+        await withDataWriteLock(async () => {
+            await initializeSyncIdentity();
+            await ensureSyncMetadata();
+            await pruneExpiredRecycleBin();
+        });
         await refreshData();
         await Promise.all([initializePersistentStorage(), initializeBackup(), initializeWebDavSync()]);
     } catch (error) {
@@ -34,6 +37,7 @@ function cacheElements() {
         'all-count', 'favorites-count', 'recycle-bin-count',
         'sidebar-add-folder', 'folder-tree', 'tag-navigation', 'tags-count',
         'storage-status', 'language-select', 'theme-button', 'search-input', 'clear-search-button',
+        'tab-status', 'tab-status-text',
         'search-shortcut', 'import-file-input', 'export-menu',
         'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
         'sync-menu-status', 'conflict-center-menu-button', 'conflict-menu-status',
@@ -117,6 +121,7 @@ function applyLanguage(language, persist = false) {
     if (ui.syncMenuStatus) renderSyncSettings();
     if (ui.conflictBanner) renderConflictBanner();
     if (ui.conflictDialog?.open) renderConflictCenter();
+    renderTabCoordinationStatus();
 }
 
 function bindStaticEvents() {
