@@ -12,24 +12,24 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-19" defer></script>
-    <script src="js/core/config.js?v=20260829-19" defer></script>
-    <script src="js/core/coordination.js?v=20260829-19" defer></script>
-    <script src="js/core/storage.js?v=20260829-19" defer></script>
-    <script src="js/sync/backup.js?v=20260829-19" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-19" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-19" defer></script>
-    <script src="js/sync/providers.js?v=20260829-19" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-19" defer></script>
-    <script src="js/sync/merge.js?v=20260829-19" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-19" defer></script>
-    <script src="js/ui/help.js?v=20260829-19" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-19" defer></script>
-    <script src="js/ui/render.js?v=20260829-19" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-19" defer></script>
-    <script src="js/data/transfer.js?v=20260829-19" defer></script>
-    <script src="js/core/utils.js?v=20260829-19" defer></script>
-    <script src="js/app.js?v=20260829-19" defer></script>
+    <script src="js/core/translations.js?v=20260829-20" defer></script>
+    <script src="js/core/config.js?v=20260829-20" defer></script>
+    <script src="js/core/coordination.js?v=20260829-20" defer></script>
+    <script src="js/core/storage.js?v=20260829-20" defer></script>
+    <script src="js/sync/backup.js?v=20260829-20" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-20" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-20" defer></script>
+    <script src="js/sync/providers.js?v=20260829-20" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-20" defer></script>
+    <script src="js/sync/merge.js?v=20260829-20" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-20" defer></script>
+    <script src="js/ui/help.js?v=20260829-20" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-20" defer></script>
+    <script src="js/ui/render.js?v=20260829-20" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-20" defer></script>
+    <script src="js/data/transfer.js?v=20260829-20" defer></script>
+    <script src="js/core/utils.js?v=20260829-20" defer></script>
+    <script src="js/app.js?v=20260829-20" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -52,6 +52,7 @@
         <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></symbol>
         <symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 3.5 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 17.03 6.7 19.81l1.01-5.9-4.29-4.18 5.93-.86L12 3.5Z"/></symbol>
         <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
+        <symbol id="icon-sync" viewBox="0 0 24 24"><path d="M20 7h-5V2M4 17h5v5M19 7a8 8 0 0 0-13.3-3M5 17a8 8 0 0 0 13.3 3"/></symbol>
         <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
         <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 3h6l1 4H8l1-4Zm-2.5 4 .8 14h9.4l.8-14M10 11v6m4-6v6"/></symbol>
         <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M4 20h16"/></symbol>
@@ -141,6 +142,10 @@
 
                 <div class="topbar-actions">
                     <input id="import-file-input" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
+
+                    <button class="button button-secondary topbar-secondary topbar-sync-button" id="sync-entry-button" type="button" title="打开同步设置" aria-label="打开同步设置" data-i18n-title="syncEntryTitle" data-i18n-aria-label="syncEntryTitle">
+                        <svg><use href="#icon-sync"></use></svg><span data-i18n="syncEntry">同步设置</span>
+                    </button>
 
                     <details class="export-menu" id="export-menu">
                         <summary class="button button-quiet topbar-secondary" title="备份、同步与数据管理" data-i18n-title="exportTooltip">
@@ -269,7 +274,7 @@
                     <summary><span data-i18n="helpSynchronization">多设备同步</span><svg><use href="#icon-chevron-down"></use></svg></summary>
                     <div>
                         <ul>
-                            <li data-i18n="helpSync1">填写远端同步地址时，应用会自动选择兼容的连接方式。</li>
+                            <li data-i18n="helpSync1">使用远端同步时，应用会自动选择兼容的连接方式。</li>
                             <li data-i18n="helpSync2">本地同步目录模式适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端。</li>
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
@@ -445,7 +450,7 @@
                         <label class="sync-location-card">
                             <input type="radio" name="wizard-sync-mode" value="remote" checked>
                             <span class="sync-location-icon"><svg><use href="#icon-database"></use></svg></span>
-                            <span><strong data-i18n="remoteSyncLocation">远端同步地址</strong><small data-i18n="remoteSyncLocationHint">适用于 WebDAV、NAS 和支持的网盘地址</small></span>
+                            <span><strong data-i18n="remoteSyncLocation">远端同步</strong><small data-i18n="remoteSyncLocationHint">适用于 WebDAV、NAS 和支持的网盘地址</small></span>
                             <span class="selection-check"><svg><use href="#icon-check"></use></svg></span>
                         </label>
                         <label class="sync-location-card">
@@ -554,7 +559,7 @@
                 <label class="settings-field sync-mode-field">
                     <span><strong data-i18n="syncMethod">同步方式</strong><small data-i18n="syncMethodHint">选择远端服务或桌面云盘管理的本地目录</small></span>
                     <select id="sync-mode-select">
-                        <option value="remote" data-i18n="remoteServiceMode">远端同步地址</option>
+                        <option value="remote" data-i18n="remoteServiceMode">远端同步</option>
                         <option value="local-folder" data-i18n="localFolderMode">本地同步目录</option>
                     </select>
                 </label>

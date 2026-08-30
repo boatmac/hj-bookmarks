@@ -18,7 +18,7 @@
 UI
 ├── IndexedDB 本地书签
 ├── 自动本地目录备份
-├── 同步设置向导（只选择远端地址或本地目录）
+├── 同步设置向导（只选择远端同步或本地目录）
 ├── 同步协调器
 │   ├── LocalFolder Adapter
 │   └── Remote Adapter Resolver
@@ -40,7 +40,7 @@ UI
 | `syncBaselines` | 每个同步端点的最近成功基线及待确认远端状态 |
 | `syncConflicts` | 持久化的冲突记录 |
 
-向导不把 Koofr、Nextcloud 或 NAS 暴露为并列的用户同步类型。用户只决定数据位于远端地址还是本地目录；远端 Resolver 根据地址和能力选择兼容 Adapter。服务名称、CORS、Mount ID、REST 路径和条件写入令牌均属于适配层实现细节，仅在维护文档或高级错误诊断中出现。
+向导不把 Koofr、Nextcloud 或 NAS 暴露为并列的用户同步类型。用户只选择远端同步或本地目录；远端 Resolver 根据用户填写的地址和服务能力选择兼容 Adapter。服务名称、CORS、Mount ID、REST 路径和条件写入令牌均属于适配层实现细节，仅在维护文档或高级错误诊断中出现。
 
 书签使用本地数字 ID 作为 IndexedDB 主键，同时使用稳定 `syncId` UUID 进行跨设备识别。
 

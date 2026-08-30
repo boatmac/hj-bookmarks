@@ -783,6 +783,18 @@ svg {
     background: var(--panel-muted);
 }
 
+.topbar-sync-button {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.topbar-sync-button:hover {
+    color: var(--accent-hover);
+    background: color-mix(in srgb, var(--accent) 13%, var(--panel));
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+
 .add-button {
     margin-left: 4px;
 }
