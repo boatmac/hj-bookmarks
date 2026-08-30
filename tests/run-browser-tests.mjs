@@ -4,12 +4,16 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const testsDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(testsDirectory, '..');
-const testPageUrl = pathToFileURL(resolve(testsDirectory, 'index.html')).href;
+const requestedTestPage = process.argv[2] || resolve(testsDirectory, 'index.html');
+const testPagePath = isAbsolute(requestedTestPage)
+    ? resolve(requestedTestPage)
+    : resolve(repositoryRoot, requestedTestPage);
+const testPageUrl = pathToFileURL(testPagePath).href;
 const startupTimeoutMs = 20_000;
 const testTimeoutMs = 90_000;
 

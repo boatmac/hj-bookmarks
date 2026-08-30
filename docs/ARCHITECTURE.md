@@ -127,12 +127,13 @@ js/
 
 自动化环境可以用任意支持 DevTools Protocol 的浏览器读取 `window.__TEST_RESULTS__`，但这不是最终用户运行应用的前置条件。
 
-仓库还提供两个仅用于维护和 CI 的零 npm 依赖脚本：
+仓库还提供仅用于维护和 CI 的零 npm 依赖脚本：
 
 - `tests/static-checks.mjs`：执行 JavaScript 语法、HTML ID、DOM 缓存、双语词典、本地资源和缓存版本检查；
-- `tests/run-browser-tests.mjs`：查找本机 Edge/Chrome/Chromium，通过 DevTools Protocol 打开测试页并读取结果。
+- `tests/run-browser-tests.mjs`：查找本机 Edge/Chrome/Chromium，通过 DevTools Protocol 打开测试页并读取结果；
+- `scripts/prepare-static-package.mjs`：把运行文件、帮助文档和浏览器测试复制到干净的静态发布目录。
 
-`.github/workflows/browser-tests.yml` 在 push、pull request 和手动触发时使用 Node.js 22 与 GitHub Ubuntu runner 自带的 Chrome 执行上述检查。Node.js 只属于可选 CI harness，不进入应用加载链，不引入 npm 包、构建产物或最终用户运行要求。
+`.github/workflows/browser-tests.yml` 在 push、pull request 和手动触发时使用 Node.js 22 与 GitHub Ubuntu runner 自带的 Chrome 执行检查。测试通过后上传便携 ZIP；`main` 分支部署 GitHub Pages，`v*` 标签创建 GitHub Release。Node.js 只属于可选 CI/打包 harness，不转译应用代码，不进入应用加载链，也不引入 npm 包或最终用户运行要求。发布目录包含 `.nojekyll`，并排除工作流、Git 元数据和 CI Node 脚本。具体发布边界见 `docs/DEPLOYMENT.md`。
 
 ## 修改准则
 

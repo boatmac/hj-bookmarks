@@ -12,3 +12,4 @@ Desktop.ini
 # Local temporary files
 *.tmp
 *.bak
+dist/

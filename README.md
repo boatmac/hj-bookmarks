@@ -22,7 +22,10 @@ BoomarkManager/
 │   └── script.js      # 旧版 index.html 的兼容加载器
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── DEPLOYMENT.md
 │   └── SYNC-DESIGN.md
+├── scripts/
+│   └── prepare-static-package.mjs
 └── tests/
     ├── index.html
     ├── static-checks.mjs
@@ -43,6 +46,7 @@ BoomarkManager/
 仓库入口文档就是当前根目录的 [`README.md`](README.md)。其他维护文档：
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)：模块边界、加载顺序和测试架构
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)：GitHub Pages、便携包、Release 和其他静态平台
 - [`docs/SYNC-DESIGN.md`](docs/SYNC-DESIGN.md)：同步、加密、凭据和冲突协议
 
 最终用户不需要阅读设计文档。应用侧边栏底部提供 `?` 帮助按钮，页面内说明：
@@ -403,23 +407,29 @@ tests/index.html
 
 模块仍使用有序的普通 `<script defer>`，不使用 ES Module，因此继续兼容直接从 `file://` 打开。`js/script.js` 只作为旧缓存页面的轻量兼容加载器。
 
-### GitHub Actions
+### GitHub Actions、在线发布与便携包
 
 仓库包含 [`.github/workflows/browser-tests.yml`](.github/workflows/browser-tests.yml)。推送到 GitHub 或创建 Pull Request 时会自动：
 
 1. 使用 `node --check` 检查所有 JavaScript 语法；
 2. 检查 HTML ID、DOM 缓存、中英文词典、本地资源引用和缓存版本；
 3. 使用 Headless Chrome 直接打开 `tests/index.html`；
-4. 读取 `window.__TEST_RESULTS__`，任何测试失败都会让工作流失败。
+4. 读取 `window.__TEST_RESULTS__`，任何测试失败都会让工作流失败；
+5. 生成 `{repository-name}-portable.zip` 和 SHA-256 校验文件；
+6. `main` 分支通过后部署到 GitHub Pages；
+7. 推送 `v*` 标签时创建 GitHub Release 并附加便携包。
 
-CI 脚本不安装 npm 包，也不参与应用运行或构建。最终用户仍然只需双击 `index.html`。维护者若已安装 Node.js 22 和 Edge/Chrome，可以在本地选择运行：
+每次测试生成的 Actions Artifact 保留 14 天，适合开发验证；Release 附件适合最终用户长期下载。包名从 GitHub 当前仓库名动态生成，因此未来重命名仓库不需要修改工作流。用户解压 ZIP 后直接双击 `index.html` 即可使用。
+
+CI 脚本不安装 npm 包，也不参与应用运行或代码转译。最终用户仍然不需要 Node.js。维护者若已安装 Node.js 22 和 Edge/Chrome，可以在本地选择运行：
 
 ```bash
 node tests/static-checks.mjs
 node tests/run-browser-tests.mjs
+node scripts/prepare-static-package.mjs dist/site
 ```
 
-浏览器测试页本身仍可直接双击运行，不要求 Node.js。未来修改 GitHub 仓库名不会影响工作流中的相对路径；只有外部徽章或链接需要更新。
+浏览器测试页本身仍可直接双击运行。首次启用 Pages、创建版本标签、校验下载包以及 Cloudflare、Netlify、Azure 的部署说明详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
 ## 项目状态
 

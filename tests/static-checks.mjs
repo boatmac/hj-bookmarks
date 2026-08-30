@@ -27,6 +27,7 @@ async function collectFiles(directory, extensions) {
 async function checkJavaScriptSyntax() {
     const files = [
         ...await collectFiles(resolve(repositoryRoot, 'js'), new Set(['.js', '.mjs'])),
+        ...await collectFiles(resolve(repositoryRoot, 'scripts'), new Set(['.js', '.mjs'])),
         ...await collectFiles(resolve(repositoryRoot, 'tests'), new Set(['.js', '.mjs'])),
     ].sort();
     files.forEach((path) => {
