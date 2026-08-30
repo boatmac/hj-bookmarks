@@ -71,9 +71,15 @@ js/
 
 ## 备份加密边界
 
-`backup.js` 决定新快照使用明文还是加密文件名，并把完整 `bookmark-manager` payload 交给 `crypto.js` 加密。加密信封不包含书签摘要或导出时间；文件名仍携带历史快照时间。切换格式时只在新文件成功写入后删除另一格式的 `bookmarks-latest`，历史文件继续按统一保留数量清理。
+`backup.js` 决定新快照使用明文还是加密文件名，并把完整 `bookmark-manager` payload 交给 `crypto.js` 加密。加密信封不包含书签摘要或导出时间；文件名仍携带历史快照时间。切换格式时只在新的 latest 与 history 都完成写后验证后删除另一格式的 `bookmarks-latest`，历史文件继续按统一保留数量清理。
 
 备份口令默认只在 `state.backup` 中保留。用户明确选择刷新保留后，口令才写入独立 `sessionStorage` key，并同时绑定随机配置 ID；初始化仅在 Navigation Timing 为 `reload` 时恢复。恢复向导使用另一个 session key，且只有口令成功解密过快照后才允许持久到刷新会话。两者都不会进入 IndexedDB。
+
+## 备份健康边界
+
+自动备份不会把 `createWritable().close()` 视为最终成功。它会重新打开刚写入的 latest 和 history 文件，先比较完整文本，再解析明文或解密 AES-GCM 信封，并与本次内存 payload 逐字段序列化比对。两份文件都通过后才更新 `lastHash`、最近备份时间和最近验证元数据；验证失败时不显示成功状态。切换明文/加密格式时，另一格式的旧 latest 会保留到新 latest 与 history 都验证完成。
+
+`state.backup.health` 保存运行时状态；IndexedDB 设置只持久化最近验证时间、内容 hash、明文/加密格式、历史文件数量和非敏感状态，不保存口令。手动“检查备份”会比较最新文件中的书签数组与当前 IndexedDB 快照。验证成功后安排 24 小时后的只读复检；数据或加密配置变化会将状态标为待更新。历史文件只计数，不使用当前口令批量解密，因为同一目录可能包含旧口令快照。
 
 ## 备份恢复边界
 

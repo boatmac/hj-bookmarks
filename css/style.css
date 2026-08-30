@@ -851,6 +851,8 @@ svg {
 
 .export-menu[data-backup-state="ready"] summary::after,
 .export-menu[data-backup-state="running"] summary::after,
+.export-menu[data-backup-state="verifying"] summary::after,
+.export-menu[data-backup-state="health-warning"] summary::after,
 .export-menu[data-backup-state="error"] summary::after,
 .export-menu[data-backup-state="permission"] summary::after,
 .export-menu[data-sync-state="ready"] summary::after,
@@ -869,12 +871,14 @@ svg {
 }
 
 .export-menu[data-backup-state="running"] summary::after,
+.export-menu[data-backup-state="verifying"] summary::after,
 .export-menu[data-sync-state="running"] summary::after {
     background: var(--accent);
     animation: backup-pulse 1.1s ease-in-out infinite;
 }
 
 .export-menu[data-backup-state="permission"] summary::after,
+.export-menu[data-backup-state="health-warning"] summary::after,
 .export-menu[data-sync-state="conflict"] summary::after,
 .export-menu[data-sync-state="local-permission"] summary::after,
 .export-menu[data-sync-state="other-tab"] summary::after,
@@ -2194,7 +2198,8 @@ svg {
     line-height: 1.5;
 }
 
-.backup-status-card[data-state="running"] .backup-status-icon svg {
+.backup-status-card[data-state="running"] .backup-status-icon svg,
+.backup-status-card[data-state="verifying"] .backup-status-icon svg {
     animation: backup-pulse 1.1s ease-in-out infinite;
 }
 
@@ -2209,7 +2214,8 @@ svg {
 }
 
 .backup-status-card[data-state="conflict"],
-.backup-status-card[data-state="retry"] {
+.backup-status-card[data-state="retry"],
+.backup-status-card[data-state="health-warning"] {
     background: color-mix(in srgb, #d69724 12%, var(--panel));
     border-color: color-mix(in srgb, #d69724 32%, var(--border));
 }
@@ -2217,7 +2223,9 @@ svg {
 .backup-status-card[data-state="conflict"] .backup-status-icon,
 .backup-status-card[data-state="conflict"] strong,
 .backup-status-card[data-state="retry"] .backup-status-icon,
-.backup-status-card[data-state="retry"] strong {
+.backup-status-card[data-state="retry"] strong,
+.backup-status-card[data-state="health-warning"] .backup-status-icon,
+.backup-status-card[data-state="health-warning"] strong {
     color: #c3861d;
 }
 
@@ -2384,6 +2392,44 @@ svg {
 
 .settings-switch-row {
     cursor: pointer;
+}
+
+.backup-health-row {
+    min-height: 72px;
+}
+
+.backup-health-indicator {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    background: var(--text-faint);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--text-faint) 10%, transparent);
+}
+
+.backup-health-row[data-state="verified"] .backup-health-indicator {
+    background: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.backup-health-row[data-state="checking"] .backup-health-indicator {
+    background: var(--accent);
+    animation: backup-pulse 1.1s ease-in-out infinite;
+}
+
+.backup-health-row[data-state="stale"] .backup-health-indicator,
+.backup-health-row[data-state="locked"] .backup-health-indicator {
+    background: #c3861d;
+    box-shadow: 0 0 0 4px color-mix(in srgb, #d69724 14%, transparent);
+}
+
+.backup-health-row[data-state="failed"] .backup-health-indicator {
+    background: var(--danger);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.backup-health-row[data-state="failed"] .setting-copy small {
+    color: var(--danger);
 }
 
 .switch-control {

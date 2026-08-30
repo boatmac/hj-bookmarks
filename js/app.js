@@ -66,7 +66,8 @@ function cacheElements() {
         'backup-passphrase-input', 'backup-passphrase-confirm-input',
         'backup-remember-session-toggle', 'backup-encryption-status',
         'backup-directory-name', 'choose-backup-directory-button', 'backup-retention-select',
-        'last-backup-value', 'persistence-status-value',
+        'last-backup-value', 'backup-health-row', 'backup-health-value',
+        'verify-backup-button', 'persistence-status-value',
         'request-persistence-button', 'restore-backup-button',
         'disconnect-backup-button', 'backup-now-button',
         'backup-restore-dialog', 'backup-restore-title',
@@ -259,6 +260,7 @@ function bindStaticEvents() {
     ui.backupRememberSessionToggle.addEventListener('change', handleBackupRememberSession);
     ui.chooseBackupDirectoryButton.addEventListener('click', chooseBackupDirectory);
     ui.backupRetentionSelect.addEventListener('change', handleBackupRetentionChange);
+    ui.verifyBackupButton.addEventListener('click', handleVerifyBackup);
     ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
     ui.restoreBackupButton.addEventListener('click', () => openBackupRestoreDialog({ returnToBackupDialog: true }));
     ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);

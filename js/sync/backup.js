@@ -122,6 +122,8 @@ function clearSessionBackupCredentials() {
 function handleBackupHistoryRestore(event) {
     if (!event.persisted) return;
     window.clearTimeout(state.backup.timer);
+    window.clearTimeout(state.backup.health.timer);
+    state.backup.health.timer = null;
     state.backup.passphrase = '';
     state.backup.passphraseConfirmed = false;
     state.backup.rememberSession = false;
@@ -132,6 +134,7 @@ function handleBackupHistoryRestore(event) {
     }
     populateBackupEncryptionInputs();
     renderBackupSettings();
+    scheduleBackupHealthRecheck();
 }
 
 async function handleBackupEncryptionToggle() {
@@ -155,6 +158,7 @@ async function handleBackupEncryptionToggle() {
     backup.rememberSession = false;
     backup.lastHash = '';
     backup.error = '';
+    invalidateBackupHealth();
     clearSessionBackupCredentials();
     if (!enable) {
         safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
@@ -185,6 +189,7 @@ async function handleBackupEncryptionInput() {
     if (changed || (wasReady && !backup.passphraseConfirmed)) {
         clearSessionBackupCredentials();
         backup.lastHash = '';
+        invalidateBackupHealth();
     }
     const ready = backupEncryptionReady();
     const credentialsChangedAndReady = ready && (!wasReady || changed);
@@ -224,6 +229,279 @@ function handleBackupRememberSession() {
     renderBackupSettings();
 }
 
+function createCurrentBackupDigest() {
+    const records = state.items.map(toStorageRecord);
+    const stableContent = JSON.stringify(records);
+    const protectionFingerprint = state.backup.encryptionEnabled
+        ? `encrypted:${state.backup.encryptionProfileId}`
+        : 'plaintext';
+    const hashInput = `${protectionFingerprint}\u0000${stableContent}`;
+    return {
+        records,
+        stableContent,
+        contentHash: `${hashString(hashInput)}-${hashInput.length}`,
+    };
+}
+
+function createBackupHealthError(translationKey, code, variables = {}) {
+    const error = new Error(t(translationKey, variables));
+    error.code = code;
+    return error;
+}
+
+function validateBackupPayloadForHealth(payload) {
+    if (
+        !payload
+        || typeof payload !== 'object'
+        || Array.isArray(payload)
+        || payload.format !== 'bookmark-manager'
+        || ![1, 2].includes(Number(payload.version))
+        || !validDate(payload.exportedAt)
+        || !Array.isArray(payload.bookmarks)
+    ) {
+        throw createBackupHealthError('backupHealthInvalidPayload', 'BACKUP_HEALTH_FAILED');
+    }
+    return payload;
+}
+
+async function decodeBackupContentForHealth(content, encryption) {
+    let documentObject;
+    try {
+        documentObject = JSON.parse(content);
+    } catch {
+        throw createBackupHealthError('backupHealthUnreadable', 'BACKUP_HEALTH_FAILED');
+    }
+    try {
+        const payload = encryption.encrypted
+            ? await decryptBackupData(content, encryption.passphrase)
+            : documentObject;
+        if (
+            encryption.encrypted
+                ? documentObject?.format !== 'bookmark-manager-encrypted-backup'
+                : documentObject?.format === 'bookmark-manager-encrypted-backup'
+        ) {
+            throw createBackupHealthError('backupHealthFormatMismatch', 'BACKUP_HEALTH_FAILED');
+        }
+        return validateBackupPayloadForHealth(payload);
+    } catch (error) {
+        if (error?.code === 'BACKUP_HEALTH_FAILED') throw error;
+        throw createBackupHealthError('backupVerificationFailed', 'BACKUP_HEALTH_FAILED', {
+            message: error?.message || String(error),
+        });
+    }
+}
+
+async function readBackupFileText(fileHandle) {
+    const file = await fileHandle.getFile();
+    if (!file.size) throw createBackupHealthError('backupHealthEmptyFile', 'BACKUP_HEALTH_FAILED');
+    return file.text();
+}
+
+async function verifyWrittenBackupFile(
+    directory,
+    filename,
+    expectedContent,
+    expectedPayload,
+    encryption,
+) {
+    try {
+        const fileHandle = await directory.getFileHandle(filename);
+        const content = await readBackupFileText(fileHandle);
+        if (content !== expectedContent) {
+            throw createBackupHealthError('backupHealthContentMismatch', 'BACKUP_HEALTH_FAILED');
+        }
+        const payload = await decodeBackupContentForHealth(content, encryption);
+        if (JSON.stringify(payload) !== JSON.stringify(expectedPayload)) {
+            throw createBackupHealthError('backupHealthContentMismatch', 'BACKUP_HEALTH_FAILED');
+        }
+        return payload;
+    } catch (error) {
+        if (error?.code === 'BACKUP_HEALTH_FAILED') throw error;
+        throw createBackupHealthError('backupVerificationFailed', 'BACKUP_HEALTH_FAILED', {
+            message: error?.message || String(error),
+        });
+    }
+}
+
+async function backupFileExists(directory, filename) {
+    try {
+        await directory.getFileHandle(filename);
+        return true;
+    } catch (error) {
+        if (error?.name === 'NotFoundError') return false;
+        throw error;
+    }
+}
+
+async function verifyCurrentLatestBackup(digest, encryption) {
+    const expectedName = backupLatestFilename(encryption.encrypted);
+    let fileHandle;
+    try {
+        fileHandle = await state.backup.handle.getFileHandle(expectedName);
+    } catch (error) {
+        if (error?.name !== 'NotFoundError') throw error;
+        if (await backupFileExists(state.backup.handle, backupLatestFilename(!encryption.encrypted))) {
+            throw createBackupHealthError('backupHealthFormatPending', 'BACKUP_HEALTH_STALE');
+        }
+        throw createBackupHealthError('backupHealthLatestMissing', 'BACKUP_HEALTH_FAILED');
+    }
+    const content = await readBackupFileText(fileHandle);
+    const payload = await decodeBackupContentForHealth(content, encryption);
+    if (JSON.stringify(payload.bookmarks) !== digest.stableContent) {
+        throw createBackupHealthError('backupHealthOutdated', 'BACKUP_HEALTH_STALE');
+    }
+    return payload;
+}
+
+async function countBackupHistoryFiles(root = state.backup.handle) {
+    let history;
+    try {
+        history = await root.getDirectoryHandle('history');
+    } catch (error) {
+        if (error?.name === 'NotFoundError') return 0;
+        throw error;
+    }
+    let count = 0;
+    for await (const [name, handle] of history.entries()) {
+        if (
+            handle.kind === 'file'
+            && /^bookmarks-\d{4}-\d{2}-\d{2}T.*(?:\.enc)?\.json$/.test(name)
+        ) count += 1;
+    }
+    return count;
+}
+
+function markBackupHealthVerified(digest, encryption, snapshotCount) {
+    const health = state.backup.health;
+    health.status = 'verified';
+    health.lastVerifiedAt = new Date().toISOString();
+    health.lastVerifiedHash = digest.contentHash;
+    health.format = encryption.encrypted ? 'encrypted' : 'plaintext';
+    health.snapshotCount = snapshotCount;
+    health.error = '';
+    scheduleBackupHealthRecheck();
+}
+
+function invalidateBackupHealth(status = 'stale') {
+    window.clearTimeout(state.backup.health.timer);
+    state.backup.health.timer = null;
+    state.backup.health.status = state.backup.handle ? status : 'unknown';
+    state.backup.health.lastVerifiedHash = '';
+    state.backup.health.error = '';
+}
+
+function scheduleBackupHealthRecheck() {
+    const backup = state.backup;
+    const health = backup.health;
+    window.clearTimeout(health.timer);
+    health.timer = null;
+    if (
+        !backup.supported
+        || !backup.handle
+        || backup.permission !== 'granted'
+        || !backupEncryptionReady()
+        || health.status !== 'verified'
+    ) return;
+    const elapsed = validDate(health.lastVerifiedAt)
+        ? Date.now() - Date.parse(health.lastVerifiedAt)
+        : BACKUP_HEALTH_RECHECK_MS;
+    const delay = Math.max(1_000, BACKUP_HEALTH_RECHECK_MS - Math.max(0, elapsed));
+    health.timer = window.setTimeout(() => {
+        health.timer = null;
+        runBackupHealthCheck({ notify: false });
+    }, delay);
+}
+
+function backupHealthVerificationDue(contentHash) {
+    const health = state.backup.health;
+    return health.lastVerifiedHash !== contentHash
+        || !validDate(health.lastVerifiedAt)
+        || Date.now() - Date.parse(health.lastVerifiedAt) >= BACKUP_HEALTH_RECHECK_MS;
+}
+
+async function runBackupHealthCheck({ notify = false } = {}) {
+    const backup = state.backup;
+    const health = backup.health;
+    if (!backup.supported || !backup.handle) return false;
+    if (backup.running) return backup.currentPromise || false;
+    if (health.running) return health.currentPromise || false;
+    if (backup.encryptionEnabled && !backupEncryptionReady()) {
+        health.status = 'locked';
+        health.error = t('backupPassphraseRequired');
+        renderBackupSettings();
+        if (notify) showToast(health.error, 'warning');
+        return false;
+    }
+
+    health.running = true;
+    health.status = 'checking';
+    health.error = '';
+    renderBackupSettings();
+    const operation = (async () => {
+        backup.permission = await getBackupPermission(backup.handle, false);
+        if (backup.permission !== 'granted') {
+            throw createBackupHealthError('backupPermissionDenied', 'BACKUP_HEALTH_FAILED');
+        }
+        const digest = createCurrentBackupDigest();
+        const encryption = getCurrentBackupEncryptionContext();
+        const payload = await verifyCurrentLatestBackup(digest, encryption);
+        const snapshotCount = await countBackupHistoryFiles(backup.handle);
+        backup.lastHash = digest.contentHash;
+        backup.lastBackupAt = payload.exportedAt;
+        backup.error = '';
+        backup.lastNotifiedError = '';
+        markBackupHealthVerified(digest, encryption, snapshotCount);
+        await saveBackupPreferences();
+        if (notify) showToast(t('backupHealthVerifiedToast', { count: snapshotCount }));
+        return true;
+    })();
+    health.currentPromise = operation;
+    try {
+        return await operation;
+    } catch (error) {
+        console.warn('Backup health check failed:', error);
+        health.status = error?.code === 'BACKUP_HEALTH_STALE' ? 'stale' : 'failed';
+        health.error = ['BACKUP_HEALTH_STALE', 'BACKUP_HEALTH_FAILED'].includes(error?.code)
+            ? error.message
+            : t('backupHealthReadFailed');
+        health.lastVerifiedHash = '';
+        await saveBackupPreferences();
+        if (notify) showToast(t('backupHealthCheckFailed', { message: health.error }), 'warning');
+        if (health.status === 'stale' && backup.enabled) scheduleAutoBackup(150);
+        return false;
+    } finally {
+        health.running = false;
+        health.currentPromise = null;
+        renderBackupSettings();
+        if (backup.pending) {
+            backup.pending = false;
+            scheduleAutoBackup(150);
+        }
+    }
+}
+
+async function handleVerifyBackup() {
+    const backup = state.backup;
+    if (!backup.handle) {
+        await chooseBackupDirectory();
+        return;
+    }
+    backup.permission = await getBackupPermission(backup.handle, true);
+    if (backup.permission !== 'granted') {
+        renderBackupSettings();
+        showToast(t('backupPermissionDenied'), 'warning');
+        return;
+    }
+    if (backup.encryptionEnabled && !backupEncryptionReady()) {
+        backup.health.status = 'locked';
+        renderBackupSettings();
+        showToast(t('backupPassphraseRequired'), 'warning');
+        if (ui.backupDialog.open) window.requestAnimationFrame(() => ui.backupPassphraseInput.focus());
+        return;
+    }
+    await runBackupHealthCheck({ notify: true });
+}
+
 async function initializeBackup() {
     if (!isPageReload()) {
         clearSessionBackupCredentials();
@@ -250,6 +528,19 @@ async function initializeBackup() {
                 : '';
             state.backup.lastBackupAt = validDate(preferences.lastBackupAt) ? preferences.lastBackupAt : '';
             state.backup.lastHash = typeof preferences.lastHash === 'string' ? preferences.lastHash : '';
+            state.backup.health.lastVerifiedAt = validDate(preferences.lastVerifiedAt)
+                ? preferences.lastVerifiedAt
+                : '';
+            state.backup.health.lastVerifiedHash = typeof preferences.lastVerifiedHash === 'string'
+                ? preferences.lastVerifiedHash
+                : '';
+            state.backup.health.format = ['encrypted', 'plaintext'].includes(preferences.lastVerifiedFormat)
+                ? preferences.lastVerifiedFormat
+                : '';
+            state.backup.health.snapshotCount = Math.max(0, Number(preferences.lastVerifiedSnapshotCount) || 0);
+            state.backup.health.status = ['verified', 'stale', 'failed'].includes(preferences.backupHealthStatus)
+                ? preferences.backupHealthStatus
+                : 'unknown';
         }
         if (
             state.backup.encryptionEnabled
@@ -260,6 +551,23 @@ async function initializeBackup() {
             preferencesChanged = true;
         }
         restoreSessionBackupCredentials();
+        const persistedHealthStatus = state.backup.health.status;
+        state.backup.health.status = state.backup.encryptionEnabled && !backupEncryptionReady()
+            ? 'locked'
+            : persistedHealthStatus === 'failed'
+                ? 'failed'
+                : validDate(state.backup.health.lastVerifiedAt)
+                    && state.backup.health.lastVerifiedHash
+                    && state.backup.health.lastVerifiedHash === state.backup.lastHash
+                    ? 'verified'
+                    : persistedHealthStatus === 'stale' ? 'stale' : 'unknown';
+        if (
+            state.backup.health.status === 'verified'
+            && createCurrentBackupDigest().contentHash !== state.backup.health.lastVerifiedHash
+        ) {
+            state.backup.health.status = 'stale';
+            preferencesChanged = true;
+        }
         if (state.backup.handle) {
             state.backup.permission = await getBackupPermission(state.backup.handle, false);
         }
@@ -270,6 +578,7 @@ async function initializeBackup() {
     }
 
     renderBackupSettings();
+    scheduleBackupHealthRecheck();
     if (
         state.backup.enabled
         && state.backup.permission === 'granted'
@@ -286,6 +595,13 @@ async function saveBackupPreferences() {
             encryptionProfileId: state.backup.encryptionProfileId,
             lastBackupAt: state.backup.lastBackupAt,
             lastHash: state.backup.lastHash,
+            lastVerifiedAt: state.backup.health.lastVerifiedAt,
+            lastVerifiedHash: state.backup.health.lastVerifiedHash,
+            lastVerifiedFormat: state.backup.health.format,
+            lastVerifiedSnapshotCount: state.backup.health.snapshotCount,
+            backupHealthStatus: ['verified', 'stale', 'failed'].includes(state.backup.health.status)
+                ? state.backup.health.status
+                : 'unknown',
         });
         return true;
     } catch (error) {
@@ -308,6 +624,7 @@ function closeBackupDialog() {
 function renderBackupSettings() {
     if (!ui.backupMenuStatus) return;
     const backup = state.backup;
+    const busy = backup.running || backup.health.running;
     let status = 'ready';
     if (!backup.supported) status = 'unsupported';
     else if (backup.running) status = 'running';
@@ -317,6 +634,8 @@ function renderBackupSettings() {
     else if (backup.encryptionEnabled && !backup.encryptionSupported) status = 'encryption-unsupported';
     else if (backup.encryptionEnabled && !backupEncryptionReady()) status = 'locked';
     else if (!backup.enabled) status = 'paused';
+    else if (backup.health.running) status = 'verifying';
+    else if (backup.health.status === 'failed') status = 'health-warning';
 
     const statusContent = {
         unsupported: [t('backupUnsupportedTitle'), t('backupUnsupportedDetail'), t('backupMenuUnsupported')],
@@ -329,6 +648,12 @@ function renderBackupSettings() {
             t('backupRunningTitle'),
             t(backup.encryptionEnabled ? 'backupRunningEncryptedDetail' : 'backupRunningDetail'),
             t('backupMenuRunning'),
+        ],
+        verifying: [t('backupHealthCheckingTitle'), t('backupHealthCheckingDetail'), t('backupMenuChecking')],
+        'health-warning': [
+            t('backupHealthWarningTitle'),
+            backup.health.error || t('backupHealthWarningDetail'),
+            t('backupMenuHealthWarning'),
         ],
         error: [t('backupErrorTitle'), t('backupErrorDetail', { message: backup.error }), t('backupMenuError')],
         'not-configured': [t('backupNotConfiguredTitle'), t('backupNotConfiguredDetail'), t('backupMenuNotConfigured')],
@@ -355,17 +680,17 @@ function renderBackupSettings() {
     ui.backupDirectoryName.textContent = backup.handle?.name || t('backupNotSelected');
     ui.lastBackupValue.textContent = formatBackupTime(backup.lastBackupAt) || t('lastBackupNever');
     ui.autoBackupToggle.checked = backup.enabled;
-    ui.autoBackupToggle.disabled = !backup.supported || backup.running;
+    ui.autoBackupToggle.disabled = !backup.supported || busy;
     ui.backupEncryptionToggle.checked = backup.encryptionEnabled;
     ui.backupEncryptionToggle.disabled = !backup.supported
-        || backup.running
+        || busy
         || (!backup.encryptionSupported && !backup.encryptionEnabled);
     ui.backupEncryptionFields.classList.toggle('hidden', !backup.encryptionEnabled);
-    ui.backupPassphraseInput.disabled = !backup.supported || backup.running || !backup.encryptionSupported;
-    ui.backupPassphraseConfirmInput.disabled = !backup.supported || backup.running || !backup.encryptionSupported;
+    ui.backupPassphraseInput.disabled = !backup.supported || busy || !backup.encryptionSupported;
+    ui.backupPassphraseConfirmInput.disabled = !backup.supported || busy || !backup.encryptionSupported;
     ui.backupRememberSessionToggle.checked = backup.rememberSession;
     ui.backupRememberSessionToggle.disabled = !backup.supported
-        || backup.running
+        || busy
         || !backup.encryptionSupported
         || !backupEncryptionReady();
     const encryptionState = !backup.encryptionEnabled
@@ -384,13 +709,38 @@ function renderBackupSettings() {
         mismatch: 'backupPassphraseMismatch',
     }[encryptionState]);
     ui.backupRetentionSelect.value = String(backup.retention);
-    ui.backupRetentionSelect.disabled = !backup.supported || !backup.handle || backup.running;
-    ui.chooseBackupDirectoryButton.disabled = !backup.supported || backup.running;
-    ui.restoreBackupButton.disabled = !backup.supported || backup.running;
-    ui.backupNowButton.disabled = backup.running;
+    ui.backupRetentionSelect.disabled = !backup.supported || !backup.handle || busy;
+    ui.chooseBackupDirectoryButton.disabled = !backup.supported || busy;
+    ui.restoreBackupButton.disabled = !backup.supported || busy;
+    ui.backupNowButton.disabled = busy;
     ui.backupNowButton.textContent = backup.supported ? t('backupNow') : t('jsonBackup');
     ui.disconnectBackupButton.classList.toggle('hidden', !backup.handle);
-    ui.disconnectBackupButton.disabled = backup.running;
+    ui.disconnectBackupButton.disabled = backup.running || backup.health.running;
+
+    const health = backup.health;
+    const healthState = backup.encryptionEnabled && !backupEncryptionReady()
+        ? 'locked'
+        : health.status;
+    const healthText = {
+        unknown: t('backupHealthUnknown'),
+        checking: t('backupHealthChecking'),
+        verified: t('backupHealthVerified', {
+            time: formatBackupTime(health.lastVerifiedAt),
+            format: t(health.format === 'encrypted' ? 'encryptedBackupBadge' : 'backupFormatPlaintext'),
+            count: health.snapshotCount,
+        }),
+        stale: t('backupHealthStale'),
+        locked: t('backupHealthLocked'),
+        failed: t('backupHealthFailed', { message: health.error }),
+    }[healthState] || t('backupHealthUnknown');
+    ui.backupHealthRow.dataset.state = healthState;
+    ui.backupHealthValue.textContent = healthText;
+    ui.verifyBackupButton.disabled = !backup.supported
+        || !backup.handle
+        || backup.running
+        || health.running;
+    ui.verifyBackupButton.textContent = t(health.running ? 'verifyingBackup' : 'verifyBackup');
+    ui.verifyBackupButton.setAttribute('aria-busy', String(health.running));
 
     const persistenceText = {
         checking: t('persistenceChecking'),
@@ -466,6 +816,7 @@ async function chooseBackupDirectory() {
         state.backup.permissionNoticeShown = false;
         state.backup.lastNotifiedError = '';
         state.backup.lastHash = '';
+        invalidateBackupHealth('unknown');
         state.backup.handleRemembered = true;
         try {
             await saveSetting(BACKUP_HANDLE_KEY, handle);
@@ -493,6 +844,8 @@ async function handleBackupRetentionChange() {
         try {
             const history = await state.backup.handle.getDirectoryHandle('history', { create: true });
             await pruneBackupHistory(history, state.backup.retention);
+            state.backup.health.snapshotCount = await countBackupHistoryFiles(state.backup.handle);
+            await saveBackupPreferences();
         } catch (error) {
             console.warn('Unable to prune backup history:', error);
         }
@@ -503,6 +856,7 @@ async function handleBackupRetentionChange() {
 async function disconnectBackupDirectory() {
     if (!state.backup.handle || !window.confirm(t('confirmDisconnect'))) return;
     window.clearTimeout(state.backup.timer);
+    window.clearTimeout(state.backup.health.timer);
     try {
         await deleteSetting(BACKUP_HANDLE_KEY);
     } catch (error) {
@@ -521,6 +875,17 @@ async function disconnectBackupDirectory() {
     state.backup.passphrase = '';
     state.backup.passphraseConfirmed = false;
     state.backup.rememberSession = false;
+    Object.assign(state.backup.health, {
+        status: 'unknown',
+        lastVerifiedAt: '',
+        lastVerifiedHash: '',
+        format: '',
+        snapshotCount: 0,
+        error: '',
+        running: false,
+        currentPromise: null,
+        timer: null,
+    });
     state.backup.handleRemembered = true;
     clearSessionBackupCredentials();
     safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
@@ -567,14 +932,25 @@ async function getBackupPermission(handle, requestPermission) {
 }
 
 function scheduleAutoBackup(delay = 900) {
+    const backup = state.backup;
+    if (backup.supported && backup.handle && backup.health.status === 'verified') {
+        const currentHash = createCurrentBackupDigest().contentHash;
+        if (currentHash !== backup.health.lastVerifiedHash) {
+            window.clearTimeout(backup.health.timer);
+            backup.health.timer = null;
+            backup.health.status = 'stale';
+            backup.health.error = '';
+            saveBackupPreferences();
+        }
+    }
     if (
-        !state.backup.supported
-        || !state.backup.enabled
-        || !state.backup.handle
+        !backup.supported
+        || !backup.enabled
+        || !backup.handle
         || !backupEncryptionReady()
     ) return;
-    window.clearTimeout(state.backup.timer);
-    state.backup.timer = window.setTimeout(() => {
+    window.clearTimeout(backup.timer);
+    backup.timer = window.setTimeout(() => {
         runAutomaticBackup({ force: false, notify: false });
     }, delay);
 }
@@ -588,7 +964,13 @@ async function flushBackupBeforeDestructiveChange() {
 async function runAutomaticBackup({ force = false, notify = false, allowWhenPaused = false } = {}) {
     const backup = state.backup;
     if (!backup.supported || (!backup.enabled && !allowWhenPaused) || !backup.handle) return false;
+    if (backup.health.running) {
+        backup.pending = true;
+        return backup.health.currentPromise || false;
+    }
     if (backup.encryptionEnabled && !backupEncryptionReady()) {
+        backup.health.status = 'locked';
+        backup.health.error = t('backupPassphraseRequired');
         if (notify) {
             showToast(t(backup.encryptionSupported
                 ? 'backupPassphraseRequired'
@@ -607,6 +989,8 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
 
     backup.running = true;
     backup.error = '';
+    backup.health.status = 'checking';
+    backup.health.error = '';
     window.clearTimeout(backup.timer);
     renderBackupSettings();
 
@@ -615,28 +999,59 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
         if (backup.permission !== 'granted') {
             if (notify || !backup.permissionNoticeShown) showToast(t('backupPermissionDenied'));
             backup.permissionNoticeShown = true;
+            backup.health.status = 'failed';
+            backup.health.error = t('backupPermissionDenied');
             return false;
         }
         backup.permissionNoticeShown = false;
 
-        const stableContent = JSON.stringify(state.items.map(toStorageRecord));
-        const protectionFingerprint = backup.encryptionEnabled
-            ? `encrypted:${backup.encryptionProfileId}`
-            : 'plaintext';
-        const hashInput = `${protectionFingerprint}\u0000${stableContent}`;
-        const contentHash = `${hashString(hashInput)}-${hashInput.length}`;
+        const digest = createCurrentBackupDigest();
+        const contentHash = digest.contentHash;
+        const encryption = getCurrentBackupEncryptionContext();
         if (!force && contentHash === backup.lastHash) {
-            if (notify) showToast(t('backupUpToDate'));
-            return true;
+            if (!backupHealthVerificationDue(contentHash)) {
+                backup.health.status = 'verified';
+                backup.health.error = '';
+                if (notify) showToast(t('backupUpToDate'));
+                return true;
+            }
+            try {
+                await verifyCurrentLatestBackup(digest, encryption);
+                const snapshotCount = await countBackupHistoryFiles(backup.handle);
+                markBackupHealthVerified(digest, encryption, snapshotCount);
+                await saveBackupPreferences();
+                if (notify) showToast(t('backupUpToDate'));
+                return true;
+            } catch (error) {
+                console.warn('Existing latest backup failed verification; rewriting it:', error);
+            }
         }
 
-        const payload = createBackupPayload();
-        const encryption = getCurrentBackupEncryptionContext();
+        const payload = createBackupPayload(digest.records);
         const content = await createBackupFileContent(payload, encryption);
-        await writeLatestBackupFile(backup.handle, content, encryption.encrypted, false);
+        const latestName = await writeLatestBackupFile(
+            backup.handle,
+            content,
+            encryption.encrypted,
+            false,
+        );
         const history = await backup.handle.getDirectoryHandle('history', { create: true });
         const snapshotName = backupSnapshotFilename(new Date(), encryption.encrypted);
         await writeBackupFile(history, snapshotName, content);
+        await verifyWrittenBackupFile(
+            backup.handle,
+            latestName,
+            content,
+            payload,
+            encryption,
+        );
+        await verifyWrittenBackupFile(
+            history,
+            snapshotName,
+            content,
+            payload,
+            encryption,
+        );
         await removeBackupFileIfExists(backup.handle, backupLatestFilename(!encryption.encrypted));
         try {
             await pruneBackupHistory(history, backup.retention);
@@ -644,8 +1059,10 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
             console.warn('Unable to prune backup history:', error);
         }
 
+        const snapshotCount = await countBackupHistoryFiles(backup.handle);
         backup.lastHash = contentHash;
         backup.lastBackupAt = payload.exportedAt;
+        markBackupHealthVerified(digest, encryption, snapshotCount);
         backup.lastNotifiedError = '';
         try {
             await saveBackupPreferences();
@@ -664,6 +1081,10 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
     } catch (error) {
         console.error('Automatic backup failed:', error);
         backup.error = error?.message || String(error);
+        backup.health.status = error?.code === 'BACKUP_HEALTH_STALE' ? 'stale' : 'failed';
+        backup.health.error = backup.error;
+        backup.health.lastVerifiedHash = '';
+        await saveBackupPreferences();
         if (notify || backup.lastNotifiedError !== backup.error) {
             showToast(t('backupFailed', { message: backup.error }));
             backup.lastNotifiedError = backup.error;
@@ -745,8 +1166,8 @@ async function pruneBackupHistory(directory, retention) {
     await Promise.all(snapshots.slice(retention).map((name) => directory.removeEntry(name)));
 }
 
-function createBackupPayload() {
-    const bookmarks = state.items.map(toStorageRecord);
+function createBackupPayload(records = null) {
+    const bookmarks = records || state.items.map(toStorageRecord);
     const folderCount = bookmarks.filter((item) => !item.url).length;
     return {
         format: 'bookmark-manager',

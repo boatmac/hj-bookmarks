@@ -19,6 +19,7 @@ const SYNC_SESSION_CREDENTIALS_KEY = 'bookmark-manager.sync-session-credentials'
 const DEVICE_ID_KEY = 'sync-device-id';
 const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
 const PBKDF2_ITERATIONS = 250000;
+const BACKUP_HEALTH_RECHECK_MS = 24 * 60 * 60 * 1000;
 const SYNC_REQUEST_TIMEOUT_MS = Number(globalThis.BOOKMARK_TEST_SYNC_TIMEOUT_MS) || 20000;
 const SYNC_INITIAL_AUTO_DELAY_MS = 1800;
 const SYNC_RETRY_DELAYS_MS = [5000, 15000, 45000, 120000, 300000];
@@ -115,6 +116,17 @@ const state = {
         sessionCredentialsRestored: false,
         lastBackupAt: '',
         lastHash: '',
+        health: {
+            status: 'unknown',
+            lastVerifiedAt: '',
+            lastVerifiedHash: '',
+            format: '',
+            snapshotCount: 0,
+            error: '',
+            running: false,
+            currentPromise: null,
+            timer: null,
+        },
         permission: 'unknown',
         error: '',
         handleRemembered: true,

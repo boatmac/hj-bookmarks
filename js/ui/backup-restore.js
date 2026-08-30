@@ -93,7 +93,7 @@ function saveBackupRestoreSessionCredentials(session) {
 
 async function openBackupRestoreDialog(options = {}) {
     closeExportMenu();
-    if (state.backup.running || preventMutationDuringSync()) return;
+    if (state.backup.running || state.backup.health.running || preventMutationDuringSync()) return;
     if (!state.backup.supported) {
         showToast(t('restoreFolderUnsupported'), 'warning');
         ui.importFileInput.click();
@@ -1491,6 +1491,7 @@ async function adoptBackupRestoreDirectory(handle, lastBackupAt, options = {}) {
     state.backup.permissionNoticeShown = false;
     state.backup.lastNotifiedError = '';
     state.backup.lastHash = '';
+    invalidateBackupHealth();
     state.backup.lastBackupAt = validDate(lastBackupAt) ? lastBackupAt : state.backup.lastBackupAt;
     state.backup.handleRemembered = true;
     try {

@@ -436,6 +436,62 @@ test('加密备份隐藏明文并可与旧版明文快照混合恢复', async ()
     assert(plaintextLatestRemoved, 'Encrypted latest backup should replace the plaintext latest file');
 });
 
+test('备份写入后会重新读取并拒绝不一致内容', async () => {
+    const payload = {
+        format: 'bookmark-manager',
+        version: 2,
+        exportedAt: '2026-01-05T00:00:00.000Z',
+        summary: { items: 1, bookmarks: 1, folders: 0 },
+        bookmarks: [{
+            id: 1,
+            syncId: 'verified-item',
+            title: 'Verified item',
+            url: 'https://verified.example/',
+            parentId: null,
+        }],
+    };
+    const root = createMemoryDirectory('Verification');
+    const plaintext = await createBackupFileContent(payload, { encrypted: false, passphrase: '' });
+    await writeBackupFile(root, 'bookmarks-latest.json', plaintext);
+    const verifiedPlaintext = await verifyWrittenBackupFile(
+        root,
+        'bookmarks-latest.json',
+        plaintext,
+        payload,
+        { encrypted: false, passphrase: '' },
+    );
+    assertEqual(verifiedPlaintext.bookmarks[0].title, 'Verified item');
+
+    await writeBackupFile(root, 'bookmarks-latest.json', `${plaintext} `);
+    let mismatchRejected = false;
+    try {
+        await verifyWrittenBackupFile(
+            root,
+            'bookmarks-latest.json',
+            plaintext,
+            payload,
+            { encrypted: false, passphrase: '' },
+        );
+    } catch (error) {
+        mismatchRejected = error?.code === 'BACKUP_HEALTH_FAILED';
+    }
+    assert(mismatchRejected, 'Read-back mismatch should fail verification');
+
+    const encrypted = await createBackupFileContent(payload, {
+        encrypted: true,
+        passphrase: 'verification passphrase',
+    });
+    await writeBackupFile(root, 'bookmarks-latest.enc.json', encrypted);
+    const verifiedEncrypted = await verifyWrittenBackupFile(
+        root,
+        'bookmarks-latest.enc.json',
+        encrypted,
+        payload,
+        { encrypted: true, passphrase: 'verification passphrase' },
+    );
+    assertEqual(verifiedEncrypted.bookmarks[0].title, 'Verified item');
+});
+
 test('恢复前紧急备份会保存当前状态', async () => {
     const previousItems = state.items;
     const previousDeviceId = state.sync.deviceId;
@@ -778,6 +834,7 @@ test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
         passphrase: state.backup.passphrase,
         passphraseConfirmed: state.backup.passphraseConfirmed,
     };
+    const previousBackupHealth = { ...state.backup.health };
     Object.assign(state.backup, {
         enabled: true,
         retention: 30,
@@ -786,12 +843,23 @@ test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
         passphrase: 'must not enter indexeddb',
         passphraseConfirmed: true,
     });
+    Object.assign(state.backup.health, {
+        status: 'verified',
+        lastVerifiedAt: '2026-01-06T00:00:00.000Z',
+        lastVerifiedHash: 'verified-health-hash',
+        format: 'encrypted',
+        snapshotCount: 4,
+    });
     assert(await saveBackupPreferences());
     const storedBackupPreferences = await getSetting(BACKUP_PREFERENCES_KEY);
     assertEqual(storedBackupPreferences.encryptionEnabled, true);
     assertEqual(storedBackupPreferences.encryptionProfileId, 'test-backup-profile');
+    assertEqual(storedBackupPreferences.lastVerifiedHash, 'verified-health-hash');
+    assertEqual(storedBackupPreferences.lastVerifiedFormat, 'encrypted');
+    assertEqual(storedBackupPreferences.lastVerifiedSnapshotCount, 4);
     assert(!Object.hasOwn(storedBackupPreferences, 'passphrase'));
     Object.assign(state.backup, previousBackupState);
+    Object.assign(state.backup.health, previousBackupHealth);
 
     const record = {
         syncId: 'db-item',
