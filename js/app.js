@@ -40,8 +40,8 @@ function cacheElements() {
         'search-input', 'clear-search-button',
         'tab-status', 'tab-status-text',
         'search-shortcut', 'import-file-input', 'sync-entry-button', 'export-menu',
-        'backup-settings-button', 'backup-menu-status', 'sync-wizard-menu-button',
-        'sync-settings-button', 'sync-menu-status',
+        'backup-settings-button', 'backup-menu-status', 'restore-backup-menu-button',
+        'sync-wizard-menu-button', 'sync-settings-button', 'sync-menu-status',
         'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
@@ -51,7 +51,8 @@ function cacheElements() {
         'page-description', 'result-count', 'add-folder-button', 'results-label',
         'sort-select', 'folder-grid', 'bookmark-grid', 'recovery-list', 'empty-state',
         'empty-icon-use', 'empty-title', 'empty-description', 'empty-action-button',
-        'empty-action-icon', 'empty-action-label', 'item-dialog', 'item-form',
+        'empty-action-icon', 'empty-action-label', 'empty-restore-button',
+        'item-dialog', 'item-form',
         'item-id', 'item-kind', 'dialog-eyebrow', 'dialog-title',
         'dialog-close-button', 'dialog-cancel-button', 'dialog-submit-button',
         'item-title-input', 'item-url-input', 'item-description-input',
@@ -63,8 +64,23 @@ function cacheElements() {
         'auto-backup-toggle', 'backup-directory-name',
         'choose-backup-directory-button', 'backup-retention-select',
         'last-backup-value', 'persistence-status-value',
-        'request-persistence-button', 'disconnect-backup-button',
-        'backup-now-button', 'sync-wizard-dialog', 'sync-wizard-title',
+        'request-persistence-button', 'restore-backup-button',
+        'disconnect-backup-button', 'backup-now-button',
+        'backup-restore-dialog', 'backup-restore-title',
+        'backup-restore-close-button', 'backup-restore-source-name',
+        'backup-restore-source-detail', 'choose-restore-directory-button',
+        'backup-restore-loading', 'backup-restore-loading-text',
+        'backup-restore-empty', 'backup-restore-empty-title',
+        'backup-restore-empty-detail', 'backup-snapshot-workspace',
+        'backup-snapshot-count', 'backup-snapshot-list',
+        'backup-preview-empty', 'backup-preview', 'backup-preview-kind',
+        'backup-preview-title', 'backup-preview-time',
+        'backup-preview-bookmark-count', 'backup-preview-folder-count',
+        'backup-preview-item-count', 'backup-preview-items',
+        'backup-restore-mode-section', 'backup-replace-warning',
+        'backup-restore-error', 'backup-restore-cancel-button',
+        'backup-restore-apply-button',
+        'sync-wizard-dialog', 'sync-wizard-title',
         'sync-wizard-close-button', 'sync-wizard-progress',
         'wizard-connection-hint', 'wizard-remote-fields',
         'wizard-local-folder-fields', 'wizard-local-folder-name',
@@ -140,6 +156,7 @@ function applyLanguage(language, persist = false) {
     if (ui.conflictBanner) renderConflictBanner();
     if (ui.conflictDialog?.open) renderConflictCenter();
     if (ui.syncWizardDialog?.open) renderSyncWizard();
+    if (ui.backupRestoreDialog?.open) renderBackupRestoreDialog();
     renderTabCoordinationStatus();
 }
 
@@ -173,6 +190,7 @@ function bindStaticEvents() {
     });
     ui.importFileInput.addEventListener('change', handleImport);
     ui.backupSettingsButton.addEventListener('click', openBackupDialog);
+    ui.restoreBackupMenuButton.addEventListener('click', () => openBackupRestoreDialog());
     ui.syncEntryButton.addEventListener('click', openSyncDialog);
     ui.syncWizardMenuButton.addEventListener('click', () => {
         closeExportMenu();
@@ -223,8 +241,23 @@ function bindStaticEvents() {
     ui.chooseBackupDirectoryButton.addEventListener('click', chooseBackupDirectory);
     ui.backupRetentionSelect.addEventListener('change', handleBackupRetentionChange);
     ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
+    ui.restoreBackupButton.addEventListener('click', () => openBackupRestoreDialog({ returnToBackupDialog: true }));
     ui.disconnectBackupButton.addEventListener('click', disconnectBackupDirectory);
     ui.backupNowButton.addEventListener('click', handleBackupNow);
+
+    ui.backupRestoreCloseButton.addEventListener('click', () => closeBackupRestoreDialog());
+    ui.backupRestoreCancelButton.addEventListener('click', () => closeBackupRestoreDialog());
+    ui.chooseRestoreDirectoryButton.addEventListener('click', chooseBackupRestoreDirectory);
+    ui.backupSnapshotList.addEventListener('change', handleBackupRestoreSnapshotChange);
+    ui.backupRestoreModeSection.addEventListener('change', handleBackupRestoreModeChange);
+    ui.backupRestoreApplyButton.addEventListener('click', applySelectedBackupRestore);
+    ui.backupRestoreDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeBackupRestoreDialog();
+    });
+    ui.backupRestoreDialog.addEventListener('mousedown', (event) => {
+        if (event.target === ui.backupRestoreDialog) closeBackupRestoreDialog();
+    });
 
     ui.syncWizardButton.addEventListener('click', openSyncWizard);
     ui.syncWizardCloseButton.addEventListener('click', closeSyncWizard);
@@ -288,6 +321,7 @@ function bindStaticEvents() {
     ui.applyFieldMergeButton.addEventListener('click', () => resolveCurrentConflict('merge'));
 
     ui.emptyActionButton.addEventListener('click', handleEmptyAction);
+    ui.emptyRestoreButton.addEventListener('click', () => openBackupRestoreDialog());
 
     document.addEventListener('keydown', handleGlobalKeydown);
     document.addEventListener('click', (event) => {

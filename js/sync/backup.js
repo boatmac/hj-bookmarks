@@ -136,6 +136,7 @@ function renderBackupSettings() {
     ui.backupRetentionSelect.value = String(backup.retention);
     ui.backupRetentionSelect.disabled = !backup.supported || !backup.handle || backup.running;
     ui.chooseBackupDirectoryButton.disabled = !backup.supported || backup.running;
+    ui.restoreBackupButton.disabled = !backup.supported || backup.running;
     ui.backupNowButton.disabled = backup.running;
     ui.backupNowButton.textContent = backup.supported ? t('backupNow') : t('jsonBackup');
     ui.disconnectBackupButton.classList.toggle('hidden', !backup.handle);
@@ -201,6 +202,10 @@ async function chooseBackupDirectory() {
         const permission = await getBackupPermission(handle, true);
         if (permission !== 'granted') {
             showToast(t('backupPermissionDenied'));
+            return;
+        }
+        if (!state.items.length && await backupDirectoryContainsPotentialSnapshots(handle)) {
+            await openBackupRestoreDialog({ handle, returnToBackupDialog: ui.backupDialog.open });
             return;
         }
 
@@ -415,11 +420,18 @@ async function pruneBackupHistory(directory, retention) {
 }
 
 function createBackupPayload() {
+    const bookmarks = state.items.map(toStorageRecord);
+    const folderCount = bookmarks.filter((item) => !item.url).length;
     return {
         format: 'bookmark-manager',
         version: 2,
         exportedAt: new Date().toISOString(),
-        bookmarks: state.items.map(toStorageRecord),
+        summary: {
+            items: bookmarks.length,
+            bookmarks: bookmarks.length - folderCount,
+            folders: folderCount,
+        },
+        bookmarks,
     };
 }
 

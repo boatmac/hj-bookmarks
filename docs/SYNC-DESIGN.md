@@ -231,11 +231,15 @@ Remote = 当前解密后的远端状态
 ```text
 backup-directory/
 ├── bookmarks-latest.json
-└── history/
-    └── bookmarks-{timestamp}.json
+├── history/
+│   └── bookmarks-{timestamp}.json
+└── emergency/
+    └── bookmarks-before-restore-{timestamp}.json
 ```
 
 支持 7、30、90 份历史快照。删除或清空前会先尝试刷新备份。该备份是恢复机制，不替代同步协议。
+
+恢复向导支持合并和替换。替换前先写入最多保留 10 份的紧急备份；恢复项目统一更新 `updatedAt` 和 `modifiedBy`，被替换掉的当前项目写入墓碑，因此之后的三方同步会将恢复识别为明确的本机修改，而不是让较新的远端状态静默覆盖恢复结果。
 
 ## 安全约束
 

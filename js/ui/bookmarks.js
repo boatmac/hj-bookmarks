@@ -5,7 +5,10 @@
 function renderEmptyState(content) {
     const empty = content.folders.length === 0 && content.bookmarks.length === 0;
     ui.emptyState.classList.toggle('hidden', !empty);
-    if (!empty) return;
+    if (!empty) {
+        ui.emptyRestoreButton.classList.add('hidden');
+        return;
+    }
 
     const hasAnyData = state.items.length > 0;
     const hasFilter = Boolean(state.query || state.view.type !== 'all');
@@ -16,13 +19,17 @@ function renderEmptyState(content) {
         ui.emptyActionIcon.setAttribute('href', '#icon-x');
         ui.emptyActionLabel.textContent = t('clearFilters');
         ui.emptyActionButton.dataset.action = 'clear';
+        ui.emptyRestoreButton.classList.add('hidden');
     } else {
         ui.emptyIconUse.setAttribute('href', '#icon-bookmark');
         ui.emptyTitle.textContent = t('emptyFirstTitle');
-        ui.emptyDescription.textContent = t('emptyLocalDescription');
+        ui.emptyDescription.textContent = t(state.backup.supported
+            ? 'emptyRestoreDescription'
+            : 'emptyLocalDescription');
         ui.emptyActionIcon.setAttribute('href', '#icon-plus');
         ui.emptyActionLabel.textContent = t('addBookmark');
         ui.emptyActionButton.dataset.action = 'add';
+        ui.emptyRestoreButton.classList.toggle('hidden', !state.backup.supported);
     }
 }
 

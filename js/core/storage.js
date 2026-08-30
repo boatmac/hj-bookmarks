@@ -350,6 +350,68 @@ async function ensureSyncMetadata() {
     });
 }
 
+function replaceItemsFromRestore(records, currentItems = state.items) {
+    return new Promise((resolve, reject) => {
+        const transaction = state.db.transaction([STORE_NAME, TOMBSTONE_STORE_NAME], 'readwrite');
+        const bookmarkStore = transaction.objectStore(STORE_NAME);
+        const tombstoneStore = transaction.objectStore(TOMBSTONE_STORE_NAME);
+        const restoredIds = new Map();
+        const usedSyncIds = new Set();
+        const parentSyncIds = new Map(currentItems.map((item) => [item.id, item.syncId]));
+        const restoredAt = new Date().toISOString();
+        let index = 0;
+        let restoredCount = 0;
+
+        bookmarkStore.clear();
+        currentItems.forEach((item) => {
+            if (!item.syncId) return;
+            tombstoneStore.put({
+                syncId: item.syncId,
+                deletedAt: restoredAt,
+                updatedAt: restoredAt,
+                modifiedBy: state.sync.deviceId,
+                item: createDeletedItemSnapshot(item, parentSyncIds),
+            });
+        });
+
+        transaction.oncomplete = () => resolve(restoredCount);
+        transaction.onerror = () => reject(transaction.error || new Error(t('backupRestoreTransactionFailed')));
+        transaction.onabort = () => reject(transaction.error || new Error(t('backupRestoreTransactionFailed')));
+
+        const addNext = () => {
+            if (index >= records.length) return;
+            const source = records[index++];
+            const preferredSyncId = typeof source.syncId === 'string' ? source.syncId : '';
+            const syncId = preferredSyncId && !usedSyncIds.has(preferredSyncId)
+                ? preferredSyncId
+                : createUuid();
+            usedSyncIds.add(syncId);
+            tombstoneStore.delete(syncId);
+            const item = {
+                syncId,
+                title: source.title,
+                url: source.url,
+                description: source.description,
+                tags: parseTags(source.tags),
+                parentId: source.parentKey ? (restoredIds.get(source.parentKey) ?? null) : null,
+                isPinned: source.isPinned === true,
+                collapsed: false,
+                createdAt: validDate(source.createdAt) ? source.createdAt : restoredAt,
+                updatedAt: restoredAt,
+                modifiedBy: state.sync.deviceId,
+            };
+            const request = bookmarkStore.add(item);
+            request.onsuccess = () => {
+                restoredCount += 1;
+                restoredIds.set(source.sourceKey, request.result);
+                addNext();
+            };
+        };
+
+        addNext();
+    });
+}
+
 function addImportedRecords(records) {
     return new Promise((resolve, reject) => {
         if (!records.length) {

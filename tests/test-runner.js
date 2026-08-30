@@ -87,6 +87,10 @@ function createMemoryDirectory(name = 'memory') {
             entries.set(fileName, handle);
             return handle;
         },
+        async removeEntry(childName) {
+            if (!entries.has(childName)) throw new DOMException('Not found', 'NotFoundError');
+            entries.delete(childName);
+        },
         async *entries() {
             yield* entries.entries();
         },
@@ -185,6 +189,75 @@ test('浏览器书签 HTML 导入保留文件夹', () => {
     assertEqual(parsed.records[0].url, '');
     assertEqual(parsed.records[1].parentKey, parsed.records[0].sourceKey);
     assertDeepEqual(parsed.records[1].tags, ['docs', 'test']);
+});
+
+test('备份恢复会发现快照、预览内容并拒绝不兼容版本', async () => {
+    const root = createMemoryDirectory('Backup');
+    const history = await root.getDirectoryHandle('history', { create: true });
+    const latestPayload = {
+        format: 'bookmark-manager',
+        version: 2,
+        exportedAt: '2026-01-03T00:00:00.000Z',
+        bookmarks: [
+            { id: 1, syncId: 'restore-folder', title: 'Saved folder', url: '', parentId: null },
+            { id: 2, syncId: 'restore-link', title: 'Saved link', url: 'https://example.com', parentId: 1 },
+        ],
+    };
+    await writeBackupFile(root, 'bookmarks-latest.json', JSON.stringify(latestPayload));
+    await writeBackupFile(
+        history,
+        'bookmarks-2026-01-02T00-00-00-000Z.json',
+        JSON.stringify({ ...latestPayload, exportedAt: '2026-01-02T00:00:00.000Z' }),
+    );
+    await writeBackupFile(
+        history,
+        'bookmarks-2026-01-01T00-00-00-000Z.json',
+        JSON.stringify({ ...latestPayload, version: 99 }),
+    );
+    await writeBackupFile(
+        history,
+        'bookmarks-2025-12-31T00-00-00-000Z.json',
+        JSON.stringify({
+            ...latestPayload,
+            exportedAt: '2025-12-31T00:00:00.000Z',
+            bookmarks: [{ id: 1, title: 'Unsafe', url: 'javascript:alert(1)', parentId: null }],
+        }),
+    );
+
+    assert(await backupDirectoryContainsPotentialSnapshots(root));
+    const snapshots = await scanBackupSnapshotFiles(root);
+    assertEqual(snapshots.length, 4);
+    assertEqual(snapshots.filter((snapshot) => !snapshot.invalid).length, 2);
+    assertEqual(snapshots[0].kind, 'latest');
+    assertEqual(snapshots[0].bookmarks, 1);
+    assertEqual(snapshots[0].folders, 1);
+    assertEqual(snapshots.filter((snapshot) => snapshot.invalid).length, 2);
+    assert(snapshots.some((snapshot) => snapshot.invalid && snapshot.error.includes('99')));
+    const records = await readBackupSnapshotRecords(snapshots[0]);
+    assertEqual(records.length, 2);
+    assertEqual(records[1].parentKey, records[0].sourceKey);
+});
+
+test('合并恢复会复用文件夹并跳过已有网址', () => {
+    const previousItems = state.items;
+    state.items = [
+        { id: 1, syncId: 'existing-folder', title: 'Research', url: '', parentId: null },
+        { id: 2, syncId: 'existing-link', title: 'Existing', url: 'https://example.com/docs', parentId: 1 },
+    ];
+    try {
+        const records = parseJsonImport(JSON.stringify([
+            { id: 10, syncId: 'backup-folder', title: 'Research', url: '', parentId: null },
+            { id: 11, syncId: 'backup-existing', title: 'Duplicate', url: 'https://example.com/docs', parentId: 10 },
+            { id: 12, syncId: 'backup-new', title: 'New link', url: 'https://example.com/new', parentId: 10 },
+        ])).records;
+        const prepared = prepareImportMerge(records);
+        assertEqual(prepared.duplicateCount, 1);
+        assertEqual(prepared.mergedFolderCount, 1);
+        assertEqual(prepared.records.length, 2);
+        assertEqual(prepared.records[0].existingId, 1);
+    } finally {
+        state.items = previousItems;
+    }
 });
 
 test('同步数据和回收站快照加密后不包含书签明文', async () => {
@@ -393,6 +466,27 @@ test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
     });
     assertEqual(await pruneExpiredRecycleBin(), 1);
     assert(!(await getAllTombstones())[0].item, 'Expired recovery payload should be purged');
+
+    const currentBeforeRestore = {
+        ...record,
+        syncId: 'current-before-restore',
+        title: 'Current before restore',
+    };
+    delete currentBeforeRestore.id;
+    currentBeforeRestore.id = await saveItem(currentBeforeRestore);
+    state.items = [currentBeforeRestore];
+    const restoreRecords = parseJsonImport(JSON.stringify([
+        { id: 20, syncId: 'restored-folder', title: 'Restored folder', url: '', parentId: null },
+        { id: 21, syncId: 'restored-link', title: 'Restored link', url: 'https://example.com/restored', parentId: 20 },
+    ])).records;
+    assertEqual(await replaceItemsFromRestore(restoreRecords, state.items), 2);
+    const restoredSnapshot = await getAllItems();
+    assertEqual(restoredSnapshot.length, 2);
+    const restoredFolder = restoredSnapshot.find((item) => item.syncId === 'restored-folder');
+    const restoredLink = restoredSnapshot.find((item) => item.syncId === 'restored-link');
+    assertEqual(restoredLink.parentId, restoredFolder.id);
+    assertEqual(restoredLink.modifiedBy, state.sync.deviceId);
+    assert((await getAllTombstones()).some((item) => item.syncId === 'current-before-restore'));
 
     const baseline = { items: [makeSyncItem()], tombstones: [] };
     await saveSyncBaseline('test-endpoint', baseline);
