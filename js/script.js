@@ -2,7 +2,7 @@
 'use strict';
 
 (() => {
-    const version = '20260829-25';
+    const version = '20260829-26';
     const modules = [
         'core/translations.js',
         'core/config.js',
