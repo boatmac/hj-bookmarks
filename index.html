@@ -11,26 +11,26 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-27">
-    <script src="js/core/translations.js?v=20260829-27" defer></script>
-    <script src="js/core/config.js?v=20260829-27" defer></script>
-    <script src="js/core/coordination.js?v=20260829-27" defer></script>
-    <script src="js/core/storage.js?v=20260829-27" defer></script>
-    <script src="js/sync/backup.js?v=20260829-27" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-27" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-27" defer></script>
-    <script src="js/sync/providers.js?v=20260829-27" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-27" defer></script>
-    <script src="js/sync/merge.js?v=20260829-27" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-27" defer></script>
-    <script src="js/ui/help.js?v=20260829-27" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-27" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-27" defer></script>
-    <script src="js/ui/render.js?v=20260829-27" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-27" defer></script>
-    <script src="js/data/transfer.js?v=20260829-27" defer></script>
-    <script src="js/core/utils.js?v=20260829-27" defer></script>
-    <script src="js/app.js?v=20260829-27" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-28">
+    <script src="js/core/translations.js?v=20260829-28" defer></script>
+    <script src="js/core/config.js?v=20260829-28" defer></script>
+    <script src="js/core/coordination.js?v=20260829-28" defer></script>
+    <script src="js/core/storage.js?v=20260829-28" defer></script>
+    <script src="js/sync/backup.js?v=20260829-28" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-28" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-28" defer></script>
+    <script src="js/sync/providers.js?v=20260829-28" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-28" defer></script>
+    <script src="js/sync/merge.js?v=20260829-28" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-28" defer></script>
+    <script src="js/ui/help.js?v=20260829-28" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-28" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-28" defer></script>
+    <script src="js/ui/render.js?v=20260829-28" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-28" defer></script>
+    <script src="js/data/transfer.js?v=20260829-28" defer></script>
+    <script src="js/core/utils.js?v=20260829-28" defer></script>
+    <script src="js/app.js?v=20260829-28" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -167,6 +167,10 @@
                         </div>
                     </details>
 
+                    <button class="button button-secondary quick-sync-button" id="quick-sync-button" type="button" title="立即运行一次同步" aria-label="立即同步" disabled>
+                        <svg><use id="quick-sync-icon-use" href="#icon-sync"></use></svg><span id="quick-sync-label" data-i18n="syncNow">立即同步</span>
+                    </button>
+
                     <button class="button button-primary add-button" id="add-bookmark-button" type="button">
                         <svg><use href="#icon-plus"></use></svg><span data-i18n="addBookmark">添加书签</span>
                     </button>
@@ -293,6 +297,7 @@
                             <li data-i18n="helpSync2">本地同步目录模式适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端。</li>
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
+                            <li data-i18n="helpSync5">顶部快捷按钮可立即同步、重试、解锁或进入冲突中心。</li>
                         </ul>
                     </div>
                 </details>

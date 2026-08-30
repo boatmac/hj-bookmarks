@@ -688,6 +688,66 @@ function activeSyncTime() {
         : state.sync.lastSyncAt;
 }
 
+function renderQuickSyncButton(status, detail, otherTabSync) {
+    if (!ui.quickSyncButton) return;
+    const sync = state.sync;
+    let labelKey = 'syncNow';
+    let titleKey = 'quickSyncTitle';
+    let iconName = 'sync';
+    let disabled = false;
+    let useStatusDetail = false;
+
+    if (!sync.initialized) {
+        labelKey = 'quickSyncPreparing';
+        titleKey = 'quickSyncPreparing';
+        disabled = true;
+    } else if (sync.running) {
+        labelKey = 'syncMenuRunning';
+        titleKey = 'syncRunningDetail';
+        disabled = true;
+        useStatusDetail = true;
+    } else if (sync.conflicts.length) {
+        labelKey = 'reviewConflicts';
+        titleKey = 'syncConflictStatusTitle';
+        iconName = 'alert';
+        useStatusDetail = true;
+    } else if (otherTabSync) {
+        labelKey = 'syncMenuOtherTab';
+        titleKey = 'syncOtherTabDetail';
+        disabled = true;
+        useStatusDetail = true;
+    } else if (status === 'unsupported' || status === 'local-unsupported') {
+        labelKey = 'syncMenuUnsupported';
+        titleKey = status === 'local-unsupported' ? 'localFolderUnsupportedDetail' : 'syncUnsupportedDetail';
+        disabled = true;
+        useStatusDetail = true;
+    } else if (!sync.setupComplete || !isSyncModeConfigured()) {
+        labelKey = 'syncEntry';
+        titleKey = 'syncEntryTitle';
+    } else if (!hasUsableCurrentSyncCredentials()) {
+        labelKey = 'quickUnlockSync';
+        titleKey = 'quickUnlockSyncTitle';
+    } else if (status === 'local-permission') {
+        labelKey = 'quickReauthorizeSync';
+        titleKey = 'localFolderPermissionDetail';
+        iconName = 'folder';
+        useStatusDetail = true;
+    } else if (status === 'retry' || status === 'error') {
+        labelKey = 'quickRetrySync';
+        titleKey = 'quickRetrySyncTitle';
+        useStatusDetail = true;
+    }
+
+    const label = t(labelKey);
+    ui.quickSyncButton.dataset.state = status;
+    ui.quickSyncButton.disabled = disabled;
+    ui.quickSyncButton.title = useStatusDetail && detail ? detail : t(titleKey);
+    ui.quickSyncButton.setAttribute('aria-label', label);
+    ui.quickSyncButton.setAttribute('aria-busy', String(sync.running));
+    ui.quickSyncIconUse.setAttribute('href', `#icon-${iconName}`);
+    ui.quickSyncLabel.textContent = label;
+}
+
 function renderSyncSettings() {
     if (!ui.syncMenuStatus) return;
     const sync = state.sync;
@@ -783,6 +843,7 @@ function renderSyncSettings() {
         localMode ? !localFolder.handle : (!sync.endpoint && !sync.username),
     );
     ui.disconnectSyncButton.disabled = sync.running || otherTabSync;
+    renderQuickSyncButton(status, statusContent[1], otherTabSync);
     if (typeof renderSyncOnboarding === 'function') renderSyncOnboarding();
 }
 
@@ -915,14 +976,19 @@ function resetSyncRetryState(clearTimer = false) {
     sync.retryAt = 0;
 }
 
+function hasUsableCurrentSyncCredentials() {
+    const sync = state.sync;
+    return sync.passphrase.length >= 8
+        && (sync.mode === 'local-folder' || !sync.username || Boolean(sync.password));
+}
+
 function canRetryAutomaticRemoteSync() {
     const sync = state.sync;
     return sync.mode === 'remote'
         && sync.supported
         && sync.automatic
         && Boolean(sync.endpoint)
-        && sync.passphrase.length >= 8
-        && (!sync.username || Boolean(sync.password))
+        && hasUsableCurrentSyncCredentials()
         && !sync.conflicts.length;
 }
 
@@ -981,6 +1047,33 @@ function preventMutationDuringSync() {
     if (!state.sync.running && !otherTab) return false;
     showToast(t(otherTab ? 'dataBusyOtherTab' : 'syncMutationBlocked'));
     return true;
+}
+
+async function handleQuickSync() {
+    closeExportMenu();
+    const sync = state.sync;
+    if (!sync.initialized || sync.running) return;
+    if (sync.conflicts.length) {
+        openConflictCenter();
+        return;
+    }
+    if (hasOtherTabSyncing()) {
+        showToast(t('dataBusyOtherTab'), 'warning');
+        return;
+    }
+    if (!sync.setupComplete || !isSyncModeConfigured()) {
+        openSyncDialog();
+        return;
+    }
+    if (!hasUsableCurrentSyncCredentials()) {
+        openSyncDialog();
+        window.requestAnimationFrame(() => {
+            const missingPassword = sync.mode === 'remote' && sync.username && !sync.password;
+            (missingPassword ? ui.syncPasswordInput : ui.syncPassphraseInput).focus();
+        });
+        return;
+    }
+    await handleSyncNow();
 }
 
 async function handleSyncNow() {

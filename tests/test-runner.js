@@ -232,6 +232,63 @@ test('自动同步超时会隐藏内部路径并安排渐进重试', async () =>
     }
 });
 
+test('顶部同步快捷按钮会随状态切换操作', () => {
+    const sync = state.sync;
+    const previousSync = {
+        initialized: sync.initialized,
+        setupComplete: sync.setupComplete,
+        mode: sync.mode,
+        endpoint: sync.endpoint,
+        passphrase: sync.passphrase,
+        username: sync.username,
+        password: sync.password,
+        conflicts: sync.conflicts,
+        running: sync.running,
+    };
+    const previousUi = {
+        quickSyncButton: ui.quickSyncButton,
+        quickSyncIconUse: ui.quickSyncIconUse,
+        quickSyncLabel: ui.quickSyncLabel,
+    };
+    const button = document.createElement('button');
+    const iconUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    const label = document.createElement('span');
+    ui.quickSyncButton = button;
+    ui.quickSyncIconUse = iconUse;
+    ui.quickSyncLabel = label;
+
+    try {
+        Object.assign(sync, {
+            initialized: true,
+            setupComplete: true,
+            mode: 'remote',
+            endpoint: 'https://dav.example.com/bookmarks/',
+            passphrase: 'test passphrase',
+            username: '',
+            password: '',
+            conflicts: [],
+            running: false,
+        });
+        renderQuickSyncButton('retry', t('syncRetryDetail'), false);
+        assertEqual(label.textContent, t('quickRetrySync'));
+        assertEqual(button.dataset.state, 'retry');
+        assert(!button.disabled);
+
+        sync.passphrase = '';
+        renderQuickSyncButton('locked', t('syncLockedDetail'), false);
+        assertEqual(label.textContent, t('quickUnlockSync'));
+
+        sync.passphrase = 'test passphrase';
+        sync.conflicts = [{ syncId: 'conflict' }];
+        renderQuickSyncButton('conflict', t('syncConflictStatusTitle'), false);
+        assertEqual(label.textContent, t('reviewConflicts'));
+        assertEqual(iconUse.getAttribute('href'), '#icon-alert');
+    } finally {
+        Object.assign(sync, previousSync);
+        Object.assign(ui, previousUi);
+    }
+});
+
 test('JSON 导入保留父子层级与同步标识', () => {
     state.sync.deviceId = 'test-device';
     const parsed = parseJsonImport(JSON.stringify([

@@ -783,6 +783,46 @@ svg {
     background: var(--panel-muted);
 }
 
+.quick-sync-button {
+    max-width: 170px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent-soft) 58%, var(--panel));
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.quick-sync-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quick-sync-button:hover:not(:disabled) {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+
+.quick-sync-button[data-state="retry"],
+.quick-sync-button[data-state="conflict"],
+.quick-sync-button[data-state="local-permission"] {
+    color: #b97a12;
+    background: color-mix(in srgb, #d69724 12%, var(--panel));
+    border-color: color-mix(in srgb, #d69724 38%, var(--border));
+}
+
+.quick-sync-button[data-state="error"] {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.quick-sync-button[data-state="running"] svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .add-button {
     margin-left: 4px;
 }
@@ -3718,8 +3758,14 @@ body.syncing .mini-icon-button {
 
     .search-box kbd,
     .topbar-secondary span,
+    .quick-sync-button span,
     #tab-status-text {
         display: none;
+    }
+
+    .quick-sync-button {
+        width: 40px;
+        padding: 8px;
     }
 
     .tab-status {
