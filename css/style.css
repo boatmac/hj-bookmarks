@@ -885,6 +885,16 @@ svg {
     background: var(--panel-muted);
 }
 
+.export-popover .wizard-menu-item {
+    margin-bottom: 3px;
+    background: color-mix(in srgb, var(--accent-soft) 68%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.export-popover .wizard-menu-item strong {
+    color: var(--accent);
+}
+
 .export-popover strong {
     font-size: 11px;
     font-weight: 680;

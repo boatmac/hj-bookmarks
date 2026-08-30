@@ -40,8 +40,9 @@ function cacheElements() {
         'search-input', 'clear-search-button',
         'tab-status', 'tab-status-text',
         'search-shortcut', 'import-file-input', 'sync-entry-button', 'export-menu',
-        'backup-settings-button', 'backup-menu-status', 'sync-settings-button',
-        'sync-menu-status', 'conflict-center-menu-button', 'conflict-menu-status',
+        'backup-settings-button', 'backup-menu-status', 'sync-wizard-menu-button',
+        'sync-settings-button', 'sync-menu-status',
+        'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
         'add-bookmark-button', 'conflict-banner', 'sync-onboarding', 'conflict-banner-title',
@@ -173,6 +174,10 @@ function bindStaticEvents() {
     ui.importFileInput.addEventListener('change', handleImport);
     ui.backupSettingsButton.addEventListener('click', openBackupDialog);
     ui.syncEntryButton.addEventListener('click', openSyncDialog);
+    ui.syncWizardMenuButton.addEventListener('click', () => {
+        closeExportMenu();
+        openSyncWizard();
+    });
     ui.syncSettingsButton.addEventListener('click', openSyncDialog);
     ui.conflictCenterMenuButton.addEventListener('click', handleConflictCenterMenu);
     ui.exportJsonButton.addEventListener('click', exportJson);
