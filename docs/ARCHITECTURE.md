@@ -112,6 +112,13 @@ js/
 
 自动化环境可以用任意支持 DevTools Protocol 的浏览器读取 `window.__TEST_RESULTS__`，但这不是最终用户运行应用的前置条件。
 
+仓库还提供两个仅用于维护和 CI 的零 npm 依赖脚本：
+
+- `tests/static-checks.mjs`：执行 JavaScript 语法、HTML ID、DOM 缓存、双语词典、本地资源和缓存版本检查；
+- `tests/run-browser-tests.mjs`：查找本机 Edge/Chrome/Chromium，通过 DevTools Protocol 打开测试页并读取结果。
+
+`.github/workflows/browser-tests.yml` 在 push、pull request 和手动触发时使用 Node.js 22 与 GitHub Ubuntu runner 自带的 Chrome 执行上述检查。Node.js 只属于可选 CI harness，不进入应用加载链，不引入 npm 包、构建产物或最终用户运行要求。
+
 ## 修改准则
 
 - 新的纯算法优先放在独立模块并增加浏览器测试。

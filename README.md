@@ -8,6 +8,8 @@
 
 ```text
 BoomarkManager/
+├── .github/workflows/
+│   └── browser-tests.yml
 ├── index.html
 ├── css/
 │   └── style.css
@@ -22,7 +24,9 @@ BoomarkManager/
 │   ├── ARCHITECTURE.md
 │   └── SYNC-DESIGN.md
 └── tests/
-    └── index.html
+    ├── index.html
+    ├── static-checks.mjs
+    └── run-browser-tests.mjs
 ```
 
 不需要执行以下任何操作：
@@ -378,6 +382,24 @@ tests/index.html
 - IndexedDB schema、墓碑、基线和冲突存储
 
 模块仍使用有序的普通 `<script defer>`，不使用 ES Module，因此继续兼容直接从 `file://` 打开。`js/script.js` 只作为旧缓存页面的轻量兼容加载器。
+
+### GitHub Actions
+
+仓库包含 [`.github/workflows/browser-tests.yml`](.github/workflows/browser-tests.yml)。推送到 GitHub 或创建 Pull Request 时会自动：
+
+1. 使用 `node --check` 检查所有 JavaScript 语法；
+2. 检查 HTML ID、DOM 缓存、中英文词典、本地资源引用和缓存版本；
+3. 使用 Headless Chrome 直接打开 `tests/index.html`；
+4. 读取 `window.__TEST_RESULTS__`，任何测试失败都会让工作流失败。
+
+CI 脚本不安装 npm 包，也不参与应用运行或构建。最终用户仍然只需双击 `index.html`。维护者若已安装 Node.js 22 和 Edge/Chrome，可以在本地选择运行：
+
+```bash
+node tests/static-checks.mjs
+node tests/run-browser-tests.mjs
+```
+
+浏览器测试页本身仍可直接双击运行，不要求 Node.js。未来修改 GitHub 仓库名不会影响工作流中的相对路径；只有外部徽章或链接需要更新。
 
 ## 项目状态
 
