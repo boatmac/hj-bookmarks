@@ -344,19 +344,64 @@ test('备份恢复会发现快照、预览内容并拒绝不兼容版本', async
             bookmarks: [{ id: 1, title: 'Unsafe', url: 'javascript:alert(1)', parentId: null }],
         }),
     );
+    await writeBackupFile(
+        history,
+        'bookmarks-2025-12-30T00-00-00-000Z.json',
+        JSON.stringify({
+            ...latestPayload,
+            exportedAt: '2025-12-30T00:00:00.000Z',
+            bookmarks: [
+                { id: 1, title: 'Not a folder', url: 'https://example.com/parent', parentId: null },
+                { id: 2, title: 'Invalid child', url: 'https://example.com/child', parentId: 1 },
+            ],
+        }),
+    );
 
     assert(await backupDirectoryContainsPotentialSnapshots(root));
     const snapshots = await scanBackupSnapshotFiles(root);
-    assertEqual(snapshots.length, 4);
+    assertEqual(snapshots.length, 5);
     assertEqual(snapshots.filter((snapshot) => !snapshot.invalid).length, 2);
     assertEqual(snapshots[0].kind, 'latest');
     assertEqual(snapshots[0].bookmarks, 1);
     assertEqual(snapshots[0].folders, 1);
-    assertEqual(snapshots.filter((snapshot) => snapshot.invalid).length, 2);
+    assertEqual(snapshots.filter((snapshot) => snapshot.invalid).length, 3);
     assert(snapshots.some((snapshot) => snapshot.invalid && snapshot.error.includes('99')));
     const records = await readBackupSnapshotRecords(snapshots[0]);
     assertEqual(records.length, 2);
     assertEqual(records[1].parentKey, records[0].sourceKey);
+});
+
+test('恢复前紧急备份会保存当前状态', async () => {
+    const previousItems = state.items;
+    const previousDeviceId = state.sync.deviceId;
+    state.sync.deviceId = 'restore-safety-device';
+    state.items = [{
+        id: 1,
+        syncId: 'safety-item',
+        title: 'Before restore',
+        url: 'https://before.example/',
+        description: '',
+        tags: [],
+        parentId: null,
+        isPinned: false,
+        collapsed: false,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        modifiedBy: 'restore-safety-device',
+    }];
+    try {
+        const root = createMemoryDirectory('Backup');
+        const filename = await writeRestoreEmergencyBackup(root);
+        assert(filename.startsWith('bookmarks-before-restore-'));
+        const emergency = await root.getDirectoryHandle('emergency');
+        const file = await emergency.getFileHandle(filename);
+        const payload = JSON.parse(await (await file.getFile()).text());
+        assertEqual(payload.reason, 'before-restore');
+        assertEqual(payload.bookmarks[0].title, 'Before restore');
+    } finally {
+        state.items = previousItems;
+        state.sync.deviceId = previousDeviceId;
+    }
 });
 
 test('合并恢复会复用文件夹并跳过已有网址', () => {
@@ -379,6 +424,114 @@ test('合并恢复会复用文件夹并跳过已有网址', () => {
     } finally {
         state.items = previousItems;
     }
+});
+
+test('备份差异预览和选择恢复计划会保护当前内容', () => {
+    const currentItems = [
+        {
+            id: 1,
+            syncId: 'folder-1',
+            title: 'Work',
+            url: '',
+            description: '',
+            tags: [],
+            parentId: null,
+            isPinned: false,
+            collapsed: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-03T00:00:00.000Z',
+            modifiedBy: 'device-current',
+        },
+        {
+            id: 2,
+            syncId: 'same-link',
+            title: 'Same',
+            url: 'https://same.example/',
+            description: '',
+            tags: ['docs'],
+            parentId: 1,
+            isPinned: false,
+            collapsed: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-03T00:00:00.000Z',
+            modifiedBy: 'device-current',
+        },
+        {
+            id: 3,
+            syncId: 'changed-link',
+            title: 'Changed',
+            url: 'https://changed.example/',
+            description: 'Current note',
+            tags: [],
+            parentId: 1,
+            isPinned: false,
+            collapsed: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-03T00:00:00.000Z',
+            modifiedBy: 'device-current',
+        },
+        {
+            id: 4,
+            syncId: 'current-only',
+            title: 'Keep me',
+            url: 'https://current.example/',
+            description: '',
+            tags: [],
+            parentId: null,
+            isPinned: false,
+            collapsed: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-03T00:00:00.000Z',
+            modifiedBy: 'device-current',
+        },
+    ];
+    const records = parseJsonImport(JSON.stringify([
+        { id: 10, syncId: 'folder-1', title: 'Work', url: '', parentId: null },
+        { id: 11, syncId: 'same-link', title: 'Same', url: 'https://same.example/', tags: ['docs'], parentId: 10 },
+        { id: 12, syncId: 'changed-link', title: 'Changed', url: 'https://changed.example/', description: 'Saved note', parentId: 10 },
+        { id: 13, syncId: 'new-folder', title: 'Archive', url: '', parentId: 10 },
+        { id: 14, syncId: 'new-link', title: 'Recovered', url: 'https://new.example/', parentId: 13 },
+        { id: 15, syncId: 'duplicate-link', title: 'Duplicate URL', url: 'https://same.example/', parentId: null },
+    ])).records;
+
+    const diff = createBackupRestoreDiff(records, currentItems);
+    assertDeepEqual(diff.counts, { add: 3, update: 1, same: 2, remove: 1 });
+    assertDeepEqual(
+        diff.entries.find((entry) => entry.effectiveSyncId === 'changed-link').changedFields,
+        ['description'],
+    );
+
+    const mergePlan = createBackupRestorePlan(diff, 'merge');
+    assertEqual(mergePlan.entries.length, 2);
+    assertEqual(mergePlan.duplicateCount, 1);
+    assert(mergePlan.entries.some((entry) => entry.effectiveSyncId === 'new-folder'));
+    assert(mergePlan.entries.some((entry) => entry.effectiveSyncId === 'new-link'));
+
+    const newLink = diff.entries.find((entry) => entry.effectiveSyncId === 'new-link');
+    const selectivePlan = createBackupRestorePlan(diff, 'selective', new Set([newLink.key]));
+    assertEqual(selectivePlan.requestedCount, 1);
+    assertEqual(selectivePlan.entries.length, 2);
+    assertEqual(selectivePlan.autoIncludedCount, 1);
+    assertEqual(selectivePlan.entries[0].effectiveSyncId, 'new-folder');
+    assertEqual(selectivePlan.entries[1].parentEffectiveSyncId, 'new-folder');
+
+    const replacePlan = createBackupRestorePlan(diff, 'replace');
+    assertEqual(replacePlan.entries.length, 6);
+    assertEqual(replacePlan.removeCount, 1);
+    assertEqual(replacePlan.actionCount, 5);
+
+    const semanticRecords = parseJsonImport(JSON.stringify([
+        { id: 20, syncId: 'another-work-folder', title: 'Work', url: '', parentId: null },
+        { id: 21, syncId: 'semantic-child', title: 'Child', url: 'https://semantic.example/', parentId: 20 },
+    ])).records;
+    const semanticDiff = createBackupRestoreDiff(semanticRecords, currentItems);
+    const semanticMerge = createBackupRestorePlan(semanticDiff, 'merge');
+    assertEqual(semanticMerge.entries.length, 1);
+    assertEqual(semanticMerge.reusedFolderCount, 1);
+    assertEqual(
+        semanticMerge.parentSyncIdOverrides.get(semanticMerge.entries[0].key),
+        'folder-1',
+    );
 });
 
 test('同步数据和回收站快照加密后不包含书签明文', async () => {

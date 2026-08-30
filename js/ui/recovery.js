@@ -51,6 +51,7 @@ function renderEmptyRecoveryState() {
     ui.emptyActionIcon.setAttribute('href', '#icon-grid');
     ui.emptyActionLabel.textContent = t('backToBookmarks');
     ui.emptyActionButton.dataset.action = 'all';
+    ui.emptyRestoreButton.classList.toggle('hidden', !state.backup.supported);
 }
 
 function createRecoveryToolbar(items) {
@@ -75,6 +76,9 @@ function createRecoveryToolbar(items) {
 
     const count = createElement('span', 'recovery-selection-count', t('selectedItems', { count: selectedCount }));
     const actions = createElement('div', 'recovery-batch-actions');
+    const history = createElement('button', 'button button-quiet', t('browseBackupHistory'));
+    history.type = 'button';
+    history.addEventListener('click', () => openBackupRestoreDialog());
     const restore = createElement('button', 'button button-secondary', t('restoreSelected'));
     restore.type = 'button';
     restore.disabled = selectedCount === 0;
@@ -83,6 +87,7 @@ function createRecoveryToolbar(items) {
     remove.type = 'button';
     remove.disabled = selectedCount === 0;
     remove.addEventListener('click', () => permanentlyDeleteRecoveryItems(selectedIds));
+    if (state.backup.supported) actions.append(history);
     actions.append(restore, remove);
     toolbar.append(selectLabel, count, actions);
     return toolbar;

@@ -483,5 +483,8 @@ async function refreshData() {
         [...state.recoverySelection].filter((syncId) => recoverableIds.has(syncId)),
     );
     renderAll();
+    if (typeof refreshOpenBackupRestoreComparison === 'function') {
+        refreshOpenBackupRestoreComparison();
+    }
     ui.storageStatus.textContent = t('storageStatus', { count: state.items.length });
 }

@@ -78,7 +78,13 @@ function cacheElements() {
         'backup-preview-title', 'backup-preview-time',
         'backup-preview-bookmark-count', 'backup-preview-folder-count',
         'backup-preview-item-count', 'backup-preview-items',
-        'backup-restore-mode-section', 'backup-replace-warning',
+        'backup-comparison', 'backup-diff-hint',
+        'backup-diff-add-count', 'backup-diff-update-count',
+        'backup-diff-same-count', 'backup-diff-remove-count',
+        'backup-restore-mode-section', 'backup-restore-impact', 'backup-replace-warning',
+        'backup-selective-section', 'backup-selective-count',
+        'backup-select-all-button', 'backup-clear-selection-button',
+        'backup-selective-list', 'backup-selective-empty',
         'backup-restore-error', 'backup-restore-cancel-button',
         'backup-restore-apply-button',
         'sync-wizard-dialog', 'sync-wizard-title',
@@ -253,6 +259,9 @@ function bindStaticEvents() {
     ui.chooseRestoreDirectoryButton.addEventListener('click', chooseBackupRestoreDirectory);
     ui.backupSnapshotList.addEventListener('change', handleBackupRestoreSnapshotChange);
     ui.backupRestoreModeSection.addEventListener('change', handleBackupRestoreModeChange);
+    ui.backupSelectiveList.addEventListener('change', handleBackupRestoreSelectionChange);
+    ui.backupSelectAllButton.addEventListener('click', selectAllBackupRestoreItems);
+    ui.backupClearSelectionButton.addEventListener('click', clearBackupRestoreSelection);
     ui.backupRestoreApplyButton.addEventListener('click', applySelectedBackupRestore);
     ui.backupRestoreDialog.addEventListener('cancel', (event) => {
         event.preventDefault();

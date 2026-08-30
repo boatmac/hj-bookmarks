@@ -11,26 +11,26 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-28">
-    <script src="js/core/translations.js?v=20260829-28" defer></script>
-    <script src="js/core/config.js?v=20260829-28" defer></script>
-    <script src="js/core/coordination.js?v=20260829-28" defer></script>
-    <script src="js/core/storage.js?v=20260829-28" defer></script>
-    <script src="js/sync/backup.js?v=20260829-28" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-28" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-28" defer></script>
-    <script src="js/sync/providers.js?v=20260829-28" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-28" defer></script>
-    <script src="js/sync/merge.js?v=20260829-28" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-28" defer></script>
-    <script src="js/ui/help.js?v=20260829-28" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-28" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-28" defer></script>
-    <script src="js/ui/render.js?v=20260829-28" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-28" defer></script>
-    <script src="js/data/transfer.js?v=20260829-28" defer></script>
-    <script src="js/core/utils.js?v=20260829-28" defer></script>
-    <script src="js/app.js?v=20260829-28" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-29">
+    <script src="js/core/translations.js?v=20260829-29" defer></script>
+    <script src="js/core/config.js?v=20260829-29" defer></script>
+    <script src="js/core/coordination.js?v=20260829-29" defer></script>
+    <script src="js/core/storage.js?v=20260829-29" defer></script>
+    <script src="js/sync/backup.js?v=20260829-29" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-29" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-29" defer></script>
+    <script src="js/sync/providers.js?v=20260829-29" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-29" defer></script>
+    <script src="js/sync/merge.js?v=20260829-29" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-29" defer></script>
+    <script src="js/ui/help.js?v=20260829-29" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-29" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-29" defer></script>
+    <script src="js/ui/render.js?v=20260829-29" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-29" defer></script>
+    <script src="js/data/transfer.js?v=20260829-29" defer></script>
+    <script src="js/core/utils.js?v=20260829-29" defer></script>
+    <script src="js/app.js?v=20260829-29" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -157,7 +157,7 @@
                             <hr>
                             <p class="export-section-label" data-i18n="backupTransferSection">备份与迁移</p>
                             <button class="backup-menu-item" id="backup-settings-button" type="button"><strong data-i18n="automaticBackup">自动本地备份</strong><small id="backup-menu-status">尚未设置</small></button>
-                            <button id="restore-backup-menu-button" type="button"><strong data-i18n="restoreBackup">从备份恢复</strong><small data-i18n="restoreBackupMenuHint">预览最新备份或历史快照后安全恢复</small></button>
+                            <button id="restore-backup-menu-button" type="button"><strong data-i18n="restoreBackup">从备份恢复</strong><small data-i18n="restoreBackupMenuHint">比较最新备份或历史快照后选择恢复方式</small></button>
                             <button id="import-menu-button" type="button"><strong data-i18n="import">导入数据</strong><small data-i18n="importTooltip">支持 JSON 或浏览器书签 HTML</small></button>
                             <button id="export-json-button" type="button"><strong data-i18n="jsonBackup">导出 JSON 备份</strong><small data-i18n="jsonBackupDescription">保留全部应用数据</small></button>
                             <button id="export-html-button" type="button"><strong data-i18n="browserHtml">导出浏览器 HTML</strong><small data-i18n="browserHtmlDescription">可导入其他浏览器</small></button>
@@ -282,7 +282,7 @@
                         <ul>
                             <li data-i18n="helpBackup1">在“备份/同步”中选择自动本地备份，并授权一个目录。</li>
                             <li data-i18n="helpBackup2">最新备份和历史快照会自动写入所选目录。</li>
-                            <li data-i18n="helpBackup3">“从备份恢复”可预览快照，并选择合并或替换当前内容。</li>
+                            <li data-i18n="helpBackup3">“从备份恢复”会先比较快照与当前数据，可安全合并、选择部分项目或完整替换。</li>
                             <li data-i18n="helpBackup4">回收站保留删除项目 30 天，支持单项和批量恢复。</li>
                             <li data-i18n="helpBackup5">JSON 用于完整备份；浏览器 HTML 用于与浏览器迁移。</li>
                         </ul>
@@ -492,6 +492,18 @@
                                 <span><strong id="backup-preview-folder-count">0</strong><small data-i18n="folders">文件夹</small></span>
                                 <span><strong id="backup-preview-item-count">0</strong><small data-i18n="totalItems">总项目</small></span>
                             </div>
+                            <section class="backup-comparison hidden" id="backup-comparison" aria-labelledby="backup-comparison-title">
+                                <header>
+                                    <h4 id="backup-comparison-title" data-i18n="backupComparisonTitle">与当前数据比较</h4>
+                                    <small id="backup-diff-hint">仅完整替换会移除当前独有项目</small>
+                                </header>
+                                <div class="backup-diff-stats">
+                                    <span class="is-add"><strong id="backup-diff-add-count">0</strong><small data-i18n="backupDiffAdd">可新增</small></span>
+                                    <span class="is-update"><strong id="backup-diff-update-count">0</strong><small data-i18n="backupDiffUpdate">有差异</small></span>
+                                    <span class="is-same"><strong id="backup-diff-same-count">0</strong><small data-i18n="backupDiffSame">相同</small></span>
+                                    <span class="is-remove"><strong id="backup-diff-remove-count">0</strong><small data-i18n="backupDiffRemove">当前独有</small></span>
+                                </div>
+                            </section>
                             <h4 data-i18n="backupRestoreContentPreview">内容预览</h4>
                             <ul class="backup-preview-items" id="backup-preview-items"></ul>
                         </div>
@@ -503,22 +515,41 @@
                     <div class="backup-restore-mode-options">
                         <label class="backup-restore-mode-card">
                             <input type="radio" name="backup-restore-mode" value="merge" checked>
-                            <span><strong data-i18n="backupRestoreMerge">合并恢复</strong><small data-i18n="backupRestoreMergeHint">保留当前内容，只补回缺少的文件夹和书签。</small></span>
+                            <span><strong data-i18n="backupRestoreMerge">安全合并</strong><small data-i18n="backupRestoreMergeHint">只补回缺少的项目，不覆盖当前修改。</small></span>
+                        </label>
+                        <label class="backup-restore-mode-card">
+                            <input type="radio" name="backup-restore-mode" value="selective">
+                            <span><strong data-i18n="backupRestoreSelective">选择恢复</strong><small data-i18n="backupRestoreSelectiveHint">选择要新增或恢复为备份版本的项目。</small></span>
                         </label>
                         <label class="backup-restore-mode-card">
                             <input type="radio" name="backup-restore-mode" value="replace">
-                            <span><strong data-i18n="backupRestoreReplace">替换恢复</strong><small data-i18n="backupRestoreReplaceHint">将当前书签恢复为所选快照的状态。</small></span>
+                            <span><strong data-i18n="backupRestoreReplace">完整替换</strong><small data-i18n="backupRestoreReplaceHint">将当前书签恢复为所选快照的状态。</small></span>
                         </label>
                     </div>
-                    <p class="backup-replace-warning hidden" id="backup-replace-warning" data-i18n="backupRestoreReplaceWarning">替换前会在所选目录中创建一份紧急备份；当前快照中不存在的项目会移入回收记录。</p>
+                    <p class="backup-restore-impact" id="backup-restore-impact" aria-live="polite"></p>
+                    <p class="backup-restore-safety-note" data-i18n="backupRestoreSafetyNote">执行任何恢复前，都会先在所选目录保存当前状态。</p>
+                    <p class="backup-replace-warning hidden" id="backup-replace-warning" data-i18n="backupRestoreReplaceWarning">当前快照中不存在的项目会生成删除记录，并可通过恢复前紧急备份撤销。</p>
                 </fieldset>
+
+                <section class="backup-selective-section hidden" id="backup-selective-section" aria-labelledby="backup-selective-title">
+                    <header>
+                        <div><h3 id="backup-selective-title" data-i18n="backupRestoreChooseItems">选择要恢复的项目</h3><p id="backup-selective-count"></p></div>
+                        <span class="backup-selective-actions">
+                            <button class="button button-quiet compact-button" id="backup-select-all-button" type="button" data-i18n="selectAll">全选</button>
+                            <button class="button button-quiet compact-button" id="backup-clear-selection-button" type="button" data-i18n="clearSelection">清空选择</button>
+                        </span>
+                    </header>
+                    <p class="backup-selective-note" data-i18n="backupRestoreParentFoldersNote">如果所选项目需要尚不存在的上级文件夹，应用会自动一并恢复。</p>
+                    <div class="backup-selective-list" id="backup-selective-list"></div>
+                    <p class="backup-selective-empty hidden" id="backup-selective-empty" data-i18n="backupRestoreNoSelectableItems">此快照与当前数据没有可选择恢复的差异。</p>
+                </section>
                 <p class="wizard-error hidden" id="backup-restore-error" role="alert"></p>
             </div>
 
             <footer class="dialog-footer backup-restore-footer">
                 <button class="button button-secondary" id="backup-restore-cancel-button" type="button" data-i18n="cancel">取消</button>
                 <span class="dialog-footer-spacer"></span>
-                <button class="button button-primary" id="backup-restore-apply-button" type="button" disabled data-i18n="backupRestoreMergeAction">合并所选备份</button>
+                <button class="button button-primary" id="backup-restore-apply-button" type="button" disabled data-i18n="backupRestoreMergeAction">安全合并</button>
             </footer>
         </div>
     </dialog>

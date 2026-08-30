@@ -2416,10 +2416,23 @@ svg {
     width: min(900px, calc(100vw - 30px));
 }
 
+.backup-restore-dialog .dialog-panel {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.backup-restore-dialog .dialog-header,
+.backup-restore-dialog .dialog-footer {
+    flex: 0 0 auto;
+}
+
 .backup-restore-content {
     display: grid;
+    min-height: 0;
     gap: 16px;
     padding: 20px 25px 24px;
+    overflow-y: auto;
 }
 
 .backup-restore-source {
@@ -2748,6 +2761,72 @@ svg {
     font-size: 8px;
 }
 
+.backup-comparison {
+    padding: 11px;
+    margin: 0 0 13px;
+    background: color-mix(in srgb, var(--panel-muted) 72%, var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 9px;
+}
+
+.backup-comparison > header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 9px;
+    margin-bottom: 8px;
+}
+
+.backup-comparison > header h4 {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 9px;
+}
+
+.backup-comparison > header small {
+    color: var(--text-faint);
+    font-size: 7px;
+    text-align: right;
+}
+
+.backup-diff-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.backup-diff-stats > span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px;
+    background: var(--panel);
+    border-radius: 7px;
+}
+
+.backup-diff-stats strong {
+    color: var(--text);
+    font-size: 12px;
+}
+
+.backup-diff-stats small {
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.backup-diff-stats .is-add strong {
+    color: var(--accent);
+}
+
+.backup-diff-stats .is-update strong,
+.backup-diff-stats .is-remove strong {
+    color: #c3861d;
+}
+
 .backup-preview h4 {
     margin: 0 0 7px;
     color: var(--text-soft);
@@ -2800,7 +2879,7 @@ svg {
 
 .backup-restore-mode-options {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 9px;
 }
 
@@ -2843,15 +2922,198 @@ svg {
     line-height: 1.45;
 }
 
+.backup-restore-impact,
+.backup-restore-safety-note,
 .backup-replace-warning {
     margin: 9px 0 0;
     padding: 9px 11px;
-    color: #a56b12;
     font-size: 9px;
     line-height: 1.55;
+    border-radius: 8px;
+}
+
+.backup-restore-impact {
+    color: var(--text-soft);
+    background: var(--panel-muted);
+    border: 1px solid var(--border);
+}
+
+.backup-restore-safety-note {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+}
+
+.backup-replace-warning {
+    color: #a56b12;
     background: color-mix(in srgb, #d69724 12%, var(--panel));
     border: 1px solid color-mix(in srgb, #d69724 35%, var(--border));
+}
+
+.backup-selective-section {
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.backup-selective-section > header {
+    display: flex;
+    min-height: 51px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--panel-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.backup-selective-section > header > div:first-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.backup-selective-section h3,
+.backup-selective-section p {
+    margin: 0;
+}
+
+.backup-selective-section h3 {
+    color: var(--text);
+    font-size: 11px;
+}
+
+.backup-selective-section > header p {
+    color: var(--text-faint);
+    font-size: 8px;
+}
+
+.backup-selective-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 5px;
+}
+
+.backup-selective-actions .button {
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 8px;
+}
+
+.backup-selective-note {
+    padding: 9px 12px;
+    color: var(--text-faint);
+    font-size: 8px;
+    line-height: 1.5;
+    border-bottom: 1px solid var(--border);
+}
+
+.backup-selective-list {
+    display: grid;
+    max-height: 270px;
+    gap: 6px;
+    padding: 8px;
+    overflow-y: auto;
+}
+
+.backup-selective-item {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 17px 31px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 9px;
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
+    cursor: pointer;
+}
+
+.backup-selective-item:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.backup-selective-item.selected {
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+
+.backup-selective-item > input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.backup-selective-item:has(input:focus-visible) {
+    outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    outline-offset: 1px;
+}
+
+.backup-selective-icon {
+    display: grid;
+    width: 31px;
+    height: 31px;
+    color: var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    place-items: center;
+}
+
+.backup-selective-copy,
+.backup-selective-heading {
+    display: flex;
+    min-width: 0;
+}
+
+.backup-selective-copy {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.backup-selective-heading {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.backup-selective-heading strong,
+.backup-selective-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.backup-selective-heading strong {
+    font-size: 9px;
+}
+
+.backup-selective-detail {
+    color: var(--text-faint);
+    font-size: 8px;
+}
+
+.backup-change-badge {
+    flex: 0 0 auto;
+    padding: 3px 6px;
+    color: var(--accent);
+    font-size: 7px;
+    font-weight: 720;
+    background: var(--panel);
+    border-radius: 999px;
+}
+
+.backup-change-badge.is-update {
+    color: #a56b12;
+}
+
+.backup-selective-empty {
+    padding: 24px 15px;
+    color: var(--text-faint);
+    font-size: 9px;
+    text-align: center;
 }
 
 .backup-restore-footer {
@@ -3975,6 +4237,15 @@ body.syncing .mini-icon-button {
 
     .backup-restore-mode-options {
         grid-template-columns: 1fr;
+    }
+
+    .backup-selective-section > header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .backup-selective-actions .button {
+        flex: 1;
     }
 
     .sync-fields,

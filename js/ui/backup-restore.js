@@ -24,6 +24,8 @@ async function openBackupRestoreDialog(options = {}) {
         snapshots: [],
         selectedId: '',
         selectedRecords: null,
+        diff: null,
+        selectedKeys: new Set(),
         mode: 'merge',
         loading: false,
         selectedLoading: false,
@@ -72,10 +74,13 @@ async function scanBackupRestoreDirectory(handle) {
     if (!session) return;
     const token = createUuid();
     session.scanToken = token;
+    session.selectionToken = '';
     session.handle = handle;
     session.snapshots = [];
     session.selectedId = '';
     session.selectedRecords = null;
+    session.diff = null;
+    session.selectedKeys.clear();
     session.loading = true;
     session.selectedLoading = false;
     session.error = '';
@@ -224,6 +229,8 @@ function inspectBackupPayload(content) {
     const seenIds = new Set();
     const seenSyncIds = new Set();
     const parentById = new Map();
+    const itemKindById = new Map();
+    const parentReferences = [];
     let bookmarks = 0;
     let folders = 0;
     const previewItems = [];
@@ -231,11 +238,15 @@ function inspectBackupPayload(content) {
         if (!item || typeof item !== 'object' || typeof item.title !== 'string' || !item.title.trim()) {
             throw new Error(t('backupSnapshotDamagedItems'));
         }
+        let itemId = null;
         if (item.id != null) {
-            const id = String(item.id);
-            if (seenIds.has(id)) throw new Error(t('backupSnapshotDamagedItems'));
-            seenIds.add(id);
-            if (item.parentId != null) parentById.set(id, String(item.parentId));
+            itemId = String(item.id);
+            if (seenIds.has(itemId)) throw new Error(t('backupSnapshotDamagedItems'));
+            seenIds.add(itemId);
+            if (item.parentId != null) parentById.set(itemId, String(item.parentId));
+        }
+        if (item.parentId != null) {
+            parentReferences.push({ itemId, parentId: String(item.parentId) });
         }
         if (typeof item.syncId === 'string' && item.syncId) {
             if (seenSyncIds.has(item.syncId)) throw new Error(t('backupSnapshotDamagedItems'));
@@ -252,8 +263,14 @@ function inspectBackupPayload(content) {
         } else {
             folders += 1;
         }
+        if (itemId != null) itemKindById.set(itemId, rawUrl ? 'bookmark' : 'folder');
         if (previewItems.length < 8) {
             previewItems.push({ title: item.title.trim(), folder: !rawUrl });
+        }
+    });
+    parentReferences.forEach(({ itemId, parentId }) => {
+        if (!seenIds.has(parentId) || itemKindById.get(parentId) !== 'folder' || itemId === parentId) {
+            throw new Error(t('backupSnapshotDamagedItems'));
         }
     });
     parentById.forEach((_, startId) => {
@@ -297,6 +314,8 @@ async function selectBackupRestoreSnapshot(id) {
     session.selectionToken = token;
     session.selectedId = id;
     session.selectedRecords = null;
+    session.diff = null;
+    session.selectedKeys.clear();
     session.selectedLoading = true;
     session.error = '';
     renderBackupRestoreDialog();
@@ -304,6 +323,12 @@ async function selectBackupRestoreSnapshot(id) {
         const records = await readBackupSnapshotRecords(snapshot);
         if (backupRestoreSession !== session || session.selectionToken !== token) return;
         session.selectedRecords = records;
+        session.diff = createBackupRestoreDiff(records, state.items);
+        session.selectedKeys = new Set(
+            session.diff.entries
+                .filter((entry) => entry.category !== 'same')
+                .map((entry) => entry.key),
+        );
         session.selectedLoading = false;
         snapshot.items = records.length;
         snapshot.bookmarks = records.filter((record) => Boolean(record.url)).length;
@@ -321,13 +346,50 @@ async function selectBackupRestoreSnapshot(id) {
 
 function handleBackupRestoreModeChange(event) {
     if (!backupRestoreSession || !event.target.matches('input[name="backup-restore-mode"]')) return;
-    backupRestoreSession.mode = event.target.value === 'replace' ? 'replace' : 'merge';
+    backupRestoreSession.mode = ['merge', 'selective', 'replace'].includes(event.target.value)
+        ? event.target.value
+        : 'merge';
     renderBackupRestoreDialog();
 }
 
 function handleBackupRestoreSnapshotChange(event) {
     if (!event.target.matches('input[name="backup-restore-snapshot"]')) return;
     selectBackupRestoreSnapshot(event.target.value);
+}
+
+function handleBackupRestoreSelectionChange(event) {
+    const session = backupRestoreSession;
+    if (!session || session.applying || !event.target.matches('input[name="backup-restore-item"]')) return;
+    if (event.target.checked) session.selectedKeys.add(event.target.value);
+    else session.selectedKeys.delete(event.target.value);
+    event.target.closest('.backup-selective-item')?.classList.toggle('selected', event.target.checked);
+    updateBackupRestoreSelectionControls();
+}
+
+function selectAllBackupRestoreItems() {
+    const session = backupRestoreSession;
+    if (!session?.diff || session.applying) return;
+    session.selectedKeys = new Set(
+        session.diff.entries
+            .filter((entry) => entry.category !== 'same')
+            .map((entry) => entry.key),
+    );
+    ui.backupSelectiveList.querySelectorAll('input[name="backup-restore-item"]').forEach((input) => {
+        input.checked = true;
+        input.closest('.backup-selective-item')?.classList.add('selected');
+    });
+    updateBackupRestoreSelectionControls();
+}
+
+function clearBackupRestoreSelection() {
+    const session = backupRestoreSession;
+    if (!session || session.applying) return;
+    session.selectedKeys.clear();
+    ui.backupSelectiveList.querySelectorAll('input[name="backup-restore-item"]').forEach((input) => {
+        input.checked = false;
+        input.closest('.backup-selective-item')?.classList.remove('selected');
+    });
+    updateBackupRestoreSelectionControls();
 }
 
 function renderBackupRestoreDialog() {
@@ -338,6 +400,10 @@ function renderBackupRestoreDialog() {
     const hasHandle = Boolean(session.handle);
     const noSnapshots = hasHandle && !session.loading && !session.snapshots.length;
     const onlyInvalid = hasHandle && !session.loading && session.snapshots.length > 0 && !validSnapshots.length;
+    const ready = Boolean(selected && !selected.invalid && session.selectedRecords && session.diff);
+    const plan = ready
+        ? createBackupRestorePlan(session.diff, session.mode, session.selectedKeys)
+        : emptyBackupRestorePlan();
 
     ui.backupRestoreSourceName.textContent = session.handle?.name || t('backupRestoreNoFolder');
     ui.backupRestoreSourceDetail.textContent = session.loading
@@ -361,25 +427,32 @@ function renderBackupRestoreDialog() {
     ui.backupSnapshotCount.textContent = t('backupRestoreSnapshotCount', { count: validSnapshots.length });
     renderBackupRestoreSnapshotList();
     renderBackupRestorePreview(selected);
+    renderBackupRestoreComparison();
 
-    ui.backupRestoreModeSection.classList.toggle('hidden', session.applying || !selected || selected.invalid);
-    ui.backupReplaceWarning.classList.toggle('hidden', session.applying || session.mode !== 'replace' || !selected);
+    ui.backupRestoreModeSection.classList.toggle('hidden', session.applying || !ready);
+    ui.backupReplaceWarning.classList.toggle('hidden', session.applying || session.mode !== 'replace' || !ready);
+    ui.backupSelectiveSection.classList.toggle('hidden', session.applying || session.mode !== 'selective' || !ready);
     document.querySelectorAll('input[name="backup-restore-mode"]').forEach((input) => {
         input.checked = input.value === session.mode;
         input.disabled = session.applying;
     });
+    renderBackupRestoreImpact(plan);
+    renderBackupRestoreSelection();
+
     ui.backupRestoreError.textContent = session.error;
     ui.backupRestoreError.classList.toggle('hidden', !session.error);
     ui.backupRestoreCancelButton.disabled = session.applying;
     ui.backupRestoreApplyButton.disabled = session.loading
         || session.selectedLoading
         || session.applying
-        || !selected
-        || selected.invalid
-        || !session.selectedRecords;
-    ui.backupRestoreApplyButton.textContent = t(session.mode === 'replace'
-        ? 'backupRestoreReplaceAction'
-        : 'backupRestoreMergeAction');
+        || !ready
+        || plan.actionCount === 0;
+    const actionKey = {
+        merge: 'backupRestoreMergeAction',
+        selective: 'backupRestoreSelectiveAction',
+        replace: 'backupRestoreReplaceAction',
+    }[session.mode] || 'backupRestoreMergeAction';
+    ui.backupRestoreApplyButton.textContent = t(actionKey);
 }
 
 function renderBackupRestoreSnapshotList() {
@@ -452,33 +525,539 @@ function renderBackupRestorePreview(snapshot) {
     }
 }
 
+function renderBackupRestoreComparison() {
+    const diff = backupRestoreSession?.diff;
+    ui.backupComparison.classList.toggle('hidden', !diff);
+    if (!diff) return;
+    ui.backupDiffAddCount.textContent = String(diff.counts.add);
+    ui.backupDiffUpdateCount.textContent = String(diff.counts.update);
+    ui.backupDiffSameCount.textContent = String(diff.counts.same);
+    ui.backupDiffRemoveCount.textContent = String(diff.counts.remove);
+    ui.backupDiffHint.textContent = t('backupDiffHint');
+}
+
+function renderBackupRestoreImpact(plan) {
+    const session = backupRestoreSession;
+    if (!session?.diff) {
+        ui.backupRestoreImpact.textContent = '';
+        return;
+    }
+    const counts = session.diff.counts;
+    if (!plan.actionCount) {
+        ui.backupRestoreImpact.textContent = t(session.mode === 'selective'
+            ? 'backupRestoreSelectAtLeastOne'
+            : 'backupRestoreNoChanges');
+        return;
+    }
+    if (session.mode === 'replace') {
+        ui.backupRestoreImpact.textContent = t('backupRestoreReplaceImpact', {
+            add: counts.add,
+            update: counts.update,
+            remove: counts.remove,
+        });
+        return;
+    }
+    if (session.mode === 'selective') {
+        ui.backupRestoreImpact.textContent = t('backupRestoreSelectiveImpact', {
+            selected: plan.requestedCount,
+            count: plan.entries.length,
+            automatic: plan.autoIncludedCount,
+            current: counts.remove,
+        });
+        return;
+    }
+    ui.backupRestoreImpact.textContent = t('backupRestoreMergeImpact', {
+        count: plan.entries.length,
+        changed: counts.update,
+        current: counts.remove,
+        duplicates: plan.duplicateCount,
+        folders: plan.reusedFolderCount,
+    });
+}
+
+function renderBackupRestoreSelection() {
+    const session = backupRestoreSession;
+    ui.backupSelectiveList.replaceChildren();
+    if (!session?.diff || session.mode !== 'selective') {
+        ui.backupSelectiveCount.textContent = '';
+        ui.backupSelectiveEmpty.classList.remove('hidden');
+        return;
+    }
+
+    const entries = session.diff.entries.filter((entry) => entry.category !== 'same');
+    ui.backupSelectiveEmpty.classList.toggle('hidden', entries.length > 0);
+    entries.forEach((entry) => {
+        const selected = session.selectedKeys.has(entry.key);
+        const label = createElement(
+            'label',
+            `backup-selective-item is-${entry.category}${selected ? ' selected' : ''}`,
+        );
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = 'backup-restore-item';
+        input.value = entry.key;
+        input.checked = selected;
+        input.disabled = session.applying;
+        input.setAttribute('aria-label', entry.record.title);
+
+        const icon = createElement('span', 'backup-selective-icon');
+        icon.append(createIcon(entry.folder ? 'folder' : 'bookmark', 15));
+        const copy = createElement('span', 'backup-selective-copy');
+        const heading = createElement('span', 'backup-selective-heading');
+        heading.append(
+            createElement('strong', '', entry.record.title),
+            createElement('small', `backup-change-badge is-${entry.category}`, t(entry.category === 'add'
+                ? 'backupDiffAdd'
+                : 'backupDiffUpdate')),
+        );
+        const details = [t('backupRestoreLocation', { path: backupRestoreEntryPath(entry) })];
+        if (entry.category === 'update') {
+            details.push(t('backupRestoreChangedFields', {
+                fields: backupRestoreChangedFieldLabels(entry.changedFields),
+            }));
+        }
+        copy.append(heading, createElement('small', 'backup-selective-detail', details.join(' · ')));
+        label.append(input, icon, copy);
+        ui.backupSelectiveList.append(label);
+    });
+    updateBackupRestoreSelectionControls();
+}
+
+function updateBackupRestoreSelectionControls() {
+    const session = backupRestoreSession;
+    if (!session?.diff || session.mode !== 'selective') return;
+    const entries = session.diff.entries.filter((entry) => entry.category !== 'same');
+    const selectedCount = entries.filter((entry) => session.selectedKeys.has(entry.key)).length;
+    ui.backupSelectiveCount.textContent = t('backupRestoreSelectedCount', {
+        selected: selectedCount,
+        total: entries.length,
+    });
+    ui.backupSelectAllButton.disabled = session.applying || !entries.length || selectedCount === entries.length;
+    ui.backupClearSelectionButton.disabled = session.applying || selectedCount === 0;
+    const plan = createBackupRestorePlan(session.diff, session.mode, session.selectedKeys);
+    renderBackupRestoreImpact(plan);
+    ui.backupRestoreApplyButton.disabled = session.applying || !plan.actionCount;
+}
+
+function backupRestoreEntryPath(entry) {
+    return entry.pathTitles.length ? `/ ${entry.pathTitles.join(' / ')}` : t('rootFolder');
+}
+
+function backupRestoreChangedFieldLabels(fields) {
+    const translationKeys = {
+        title: 'conflictFieldTitle',
+        url: 'conflictFieldUrl',
+        description: 'conflictFieldDescription',
+        tags: 'conflictFieldTags',
+        isPinned: 'conflictFieldFavorite',
+        parentSyncId: 'conflictFieldParent',
+    };
+    return fields.map((field) => t(translationKeys[field] || field)).join(t('listSeparator'));
+}
+
+function createBackupRestoreDiff(records, currentItems = state.items) {
+    const currentParentSyncIds = new Map(
+        currentItems.map((item) => [item.id, item.syncId || null]),
+    );
+    const currentBySyncId = new Map();
+    const currentBookmarksByUrl = new Map();
+    const currentFoldersByLocation = new Map();
+    currentItems.forEach((item) => {
+        if (item.syncId && !currentBySyncId.has(item.syncId)) currentBySyncId.set(item.syncId, item);
+        if (item.url) {
+            const url = canonicalUrl(item.url);
+            if (!currentBookmarksByUrl.has(url)) currentBookmarksByUrl.set(url, []);
+            currentBookmarksByUrl.get(url).push(item);
+        } else {
+            const key = backupRestoreFolderMatchKey(item.parentId, item.title);
+            if (!currentFoldersByLocation.has(key)) currentFoldersByLocation.set(key, []);
+            currentFoldersByLocation.get(key).push(item);
+        }
+    });
+
+    const matchedCurrentItems = new Set();
+    const reservedSyncIds = new Set(currentItems.map((item) => item.syncId).filter(Boolean));
+    const usedEffectiveSyncIds = new Set();
+    const entries = [];
+    const entriesByKey = new Map();
+
+    records.forEach((record) => {
+        const folder = !record.url;
+        const preferredSyncId = typeof record.syncId === 'string' ? record.syncId : '';
+        let current = null;
+        let matchType = 'none';
+        if (preferredSyncId) {
+            const candidate = currentBySyncId.get(preferredSyncId);
+            if (
+                candidate
+                && Boolean(candidate.url) === Boolean(record.url)
+                && !matchedCurrentItems.has(candidate)
+            ) {
+                current = candidate;
+                matchType = 'syncId';
+            }
+        } else if (record.url) {
+            current = takeUnmatchedBackupRestoreItem(
+                currentBookmarksByUrl.get(canonicalUrl(record.url)),
+                matchedCurrentItems,
+            );
+            if (current) matchType = 'url';
+        } else {
+            const parentEntry = record.parentKey ? entriesByKey.get(record.parentKey) : null;
+            const canMatchParent = !record.parentKey || Boolean(parentEntry?.current);
+            if (canMatchParent) {
+                const parentId = parentEntry?.current?.id ?? null;
+                current = takeUnmatchedBackupRestoreItem(
+                    currentFoldersByLocation.get(backupRestoreFolderMatchKey(parentId, record.title)),
+                    matchedCurrentItems,
+                );
+                if (current) matchType = 'folder';
+            }
+        }
+        if (current) matchedCurrentItems.add(current);
+
+        let effectiveSyncId = current?.syncId || '';
+        if (!effectiveSyncId && preferredSyncId && !reservedSyncIds.has(preferredSyncId)) {
+            effectiveSyncId = preferredSyncId;
+        }
+        while (!effectiveSyncId || usedEffectiveSyncIds.has(effectiveSyncId)) effectiveSyncId = createUuid();
+        usedEffectiveSyncIds.add(effectiveSyncId);
+
+        const parentEntry = record.parentKey ? entriesByKey.get(record.parentKey) : null;
+        const parentEffectiveSyncId = parentEntry?.effectiveSyncId || null;
+        const changedFields = current
+            ? getBackupRestoreChangedFields(record, current, parentEffectiveSyncId, currentParentSyncIds)
+            : [];
+        const entry = {
+            key: record.sourceKey,
+            record,
+            current,
+            matchType,
+            folder,
+            effectiveSyncId,
+            parentEffectiveSyncId,
+            pathTitles: parentEntry
+                ? [...parentEntry.pathTitles, parentEntry.record.title]
+                : [],
+            changedFields,
+            category: current ? (changedFields.length ? 'update' : 'same') : 'add',
+        };
+        entries.push(entry);
+        entriesByKey.set(entry.key, entry);
+    });
+
+    const currentOnly = currentItems.filter((item) => !matchedCurrentItems.has(item));
+    return {
+        entries,
+        entriesByKey,
+        currentItems,
+        currentOnly,
+        currentSignature: createBackupRestoreCurrentSignature(currentItems),
+        counts: {
+            add: entries.filter((entry) => entry.category === 'add').length,
+            update: entries.filter((entry) => entry.category === 'update').length,
+            same: entries.filter((entry) => entry.category === 'same').length,
+            remove: currentOnly.length,
+        },
+    };
+}
+
+function backupRestoreFolderMatchKey(parentId, title) {
+    return `${parentId == null ? 'root' : String(parentId)}\u0000${String(title || '').trim().toLocaleLowerCase('en-US')}`;
+}
+
+function takeUnmatchedBackupRestoreItem(candidates = [], matchedItems) {
+    return candidates.find((item) => !matchedItems.has(item)) || null;
+}
+
+function getBackupRestoreChangedFields(record, current, parentSyncId, currentParentSyncIds) {
+    const changed = [];
+    if (record.title !== current.title) changed.push('title');
+    if (backupRestoreComparableUrl(record.url) !== backupRestoreComparableUrl(current.url)) changed.push('url');
+    if ((record.description || '') !== (current.description || '')) changed.push('description');
+    const backupTags = parseTags(record.tags).slice().sort();
+    const currentTags = parseTags(current.tags).slice().sort();
+    if (JSON.stringify(backupTags) !== JSON.stringify(currentTags)) changed.push('tags');
+    if ((record.isPinned === true) !== (current.isPinned === true)) changed.push('isPinned');
+    const currentParentSyncId = current.parentId == null
+        ? null
+        : (currentParentSyncIds.get(current.parentId) || null);
+    if (parentSyncId !== currentParentSyncId) changed.push('parentSyncId');
+    return changed;
+}
+
+function backupRestoreComparableUrl(value) {
+    if (!value) return '';
+    try {
+        return normalizeUrl(value);
+    } catch {
+        return String(value).trim();
+    }
+}
+
+function createBackupRestoreCurrentSignature(items) {
+    const records = items.map((item) => ({
+        id: item.id ?? null,
+        syncId: item.syncId || '',
+        parentId: item.parentId ?? null,
+        title: item.title,
+        url: item.url || '',
+        description: item.description || '',
+        tags: parseTags(item.tags),
+        isPinned: item.isPinned === true,
+        collapsed: item.collapsed === true,
+        createdAt: item.createdAt || '',
+        updatedAt: item.updatedAt || '',
+        modifiedBy: item.modifiedBy || '',
+    }));
+    records.sort((left, right) => (
+        String(left.syncId || left.id).localeCompare(String(right.syncId || right.id))
+    ));
+    return JSON.stringify(records);
+}
+
+function emptyBackupRestorePlan() {
+    return {
+        entries: [],
+        requestedCount: 0,
+        autoIncludedCount: 0,
+        duplicateCount: 0,
+        reusedFolderCount: 0,
+        parentSyncIdOverrides: new Map(),
+        addCount: 0,
+        updateCount: 0,
+        removeCount: 0,
+        actionCount: 0,
+    };
+}
+
+function createBackupRestorePlan(diff, mode, selectedKeys = new Set()) {
+    if (!diff) return emptyBackupRestorePlan();
+    if (mode === 'replace') {
+        const actionCount = diff.counts.add + diff.counts.update + diff.counts.remove;
+        return {
+            ...emptyBackupRestorePlan(),
+            entries: diff.entries,
+            requestedCount: diff.entries.length,
+            addCount: diff.counts.add,
+            updateCount: diff.counts.update,
+            removeCount: diff.counts.remove,
+            actionCount,
+        };
+    }
+
+    let requestedEntries = [];
+    let duplicateCount = 0;
+    let reusedFolderCount = 0;
+    let parentSyncIdOverrides = new Map();
+    if (mode === 'selective') {
+        requestedEntries = diff.entries.filter((entry) => (
+            entry.category !== 'same' && selectedKeys.has(entry.key)
+        ));
+    } else {
+        const safeMerge = createSafeMergeRestoreEntries(diff);
+        requestedEntries = safeMerge.entries;
+        duplicateCount = safeMerge.duplicateCount;
+        reusedFolderCount = safeMerge.reusedFolderCount;
+        parentSyncIdOverrides = safeMerge.parentSyncIdOverrides;
+    }
+
+    const requestedKeys = new Set(requestedEntries.map((entry) => entry.key));
+    const expandedKeys = mode === 'selective'
+        ? expandBackupRestoreEntryKeys(diff, requestedKeys)
+        : requestedKeys;
+    const entries = diff.entries.filter((entry) => expandedKeys.has(entry.key));
+    return {
+        ...emptyBackupRestorePlan(),
+        entries,
+        requestedCount: requestedEntries.length,
+        autoIncludedCount: entries.filter((entry) => !requestedKeys.has(entry.key)).length,
+        duplicateCount,
+        reusedFolderCount,
+        parentSyncIdOverrides,
+        addCount: entries.filter((entry) => entry.category === 'add').length,
+        updateCount: entries.filter((entry) => entry.category === 'update').length,
+        actionCount: entries.length,
+    };
+}
+
+function createSafeMergeRestoreEntries(diff) {
+    const knownUrls = new Set(
+        diff.currentItems
+            .map((item) => item.url)
+            .filter(Boolean)
+            .map(canonicalUrl)
+            .filter(Boolean),
+    );
+    const currentFolders = new Map();
+    diff.currentItems.filter((item) => !item.url).forEach((folder) => {
+        const key = backupRestoreFolderMatchKey(folder.parentId, folder.title);
+        if (!currentFolders.has(key)) currentFolders.set(key, []);
+        currentFolders.get(key).push(folder);
+    });
+
+    const entries = [];
+    const resolutions = new Map();
+    const parentSyncIdOverrides = new Map();
+    let duplicateCount = 0;
+    let reusedFolderCount = 0;
+    diff.entries.forEach((entry) => {
+        if (entry.current) {
+            resolutions.set(entry.key, { existing: entry.current });
+            return;
+        }
+        const parentResolution = entry.record.parentKey
+            ? resolutions.get(entry.record.parentKey)
+            : { existing: null };
+        if (!entry.record.url && parentResolution && Object.hasOwn(parentResolution, 'existing')) {
+            const parentId = parentResolution.existing?.id ?? null;
+            const match = (currentFolders.get(backupRestoreFolderMatchKey(parentId, entry.record.title)) || [])[0];
+            if (match) {
+                resolutions.set(entry.key, { existing: match });
+                reusedFolderCount += 1;
+                return;
+            }
+        }
+        if (entry.record.url) {
+            const url = canonicalUrl(entry.record.url);
+            if (url && knownUrls.has(url)) {
+                duplicateCount += 1;
+                return;
+            }
+            if (url) knownUrls.add(url);
+        }
+        entries.push(entry);
+        resolutions.set(entry.key, { entry });
+        if (parentResolution?.existing?.syncId) {
+            parentSyncIdOverrides.set(entry.key, parentResolution.existing.syncId);
+        }
+    });
+    return { entries, duplicateCount, reusedFolderCount, parentSyncIdOverrides };
+}
+
+function expandBackupRestoreEntryKeys(diff, selectedKeys) {
+    const expanded = new Set(selectedKeys);
+    const queue = [...expanded];
+    while (queue.length) {
+        const entry = diff.entriesByKey.get(queue.shift());
+        const parent = entry?.record.parentKey
+            ? diff.entriesByKey.get(entry.record.parentKey)
+            : null;
+        if (!parent || parent.current || expanded.has(parent.key)) continue;
+        expanded.add(parent.key);
+        queue.push(parent.key);
+    }
+    return expanded;
+}
+
+function backupRestoreEntryToSyncItem(entry, parentSyncIdOverride) {
+    const source = entry.record;
+    return {
+        syncId: entry.effectiveSyncId,
+        parentSyncId: parentSyncIdOverride === undefined
+            ? entry.parentEffectiveSyncId
+            : parentSyncIdOverride,
+        title: source.title,
+        url: source.url,
+        description: source.description || '',
+        tags: parseTags(source.tags),
+        isPinned: source.isPinned === true,
+        createdAt: source.createdAt,
+        updatedAt: source.updatedAt,
+        modifiedBy: source.modifiedBy || state.sync.deviceId,
+    };
+}
+
+function recordsForFullBackupRestore(diff) {
+    return diff.entries.map((entry) => ({
+        ...entry.record,
+        syncId: entry.effectiveSyncId,
+    }));
+}
+
+function refreshOpenBackupRestoreComparison() {
+    const session = backupRestoreSession;
+    if (!session?.selectedRecords || !session.diff || session.applying) return;
+    const signature = createBackupRestoreCurrentSignature(state.items);
+    if (signature === session.diff.currentSignature) return;
+    rebaseBackupRestoreComparison(state.items, t('backupRestoreDataChanged'));
+    renderBackupRestoreDialog();
+}
+
+function rebaseBackupRestoreComparison(currentItems, message = '') {
+    const session = backupRestoreSession;
+    if (!session?.selectedRecords) return;
+    const previousSelection = new Set(session.selectedKeys);
+    session.diff = createBackupRestoreDiff(session.selectedRecords, currentItems);
+    const actionableKeys = new Set(
+        session.diff.entries
+            .filter((entry) => entry.category !== 'same')
+            .map((entry) => entry.key),
+    );
+    session.selectedKeys = new Set(
+        [...previousSelection].filter((key) => actionableKeys.has(key)),
+    );
+    if (message) session.error = message;
+}
+
 async function applySelectedBackupRestore() {
     const session = backupRestoreSession;
-    if (!session || session.applying || session.selectedLoading || !session.selectedRecords) return;
+    if (
+        !session
+        || session.applying
+        || session.selectedLoading
+        || !session.selectedRecords
+        || !session.diff
+    ) return;
     if (preventMutationDuringSync()) return;
     const snapshot = session.snapshots.find((entry) => entry.id === session.selectedId && !entry.invalid);
     if (!snapshot) return;
-    if (session.mode === 'replace' && !window.confirm(t('backupRestoreReplaceConfirm'))) return;
+    const previewPlan = createBackupRestorePlan(session.diff, session.mode, session.selectedKeys);
+    if (!previewPlan.actionCount) return;
+    if (
+        session.mode === 'replace'
+        && !window.confirm(t('backupRestoreReplaceConfirm', {
+            add: session.diff.counts.add,
+            update: session.diff.counts.update,
+            remove: session.diff.counts.remove,
+        }))
+    ) return;
 
     session.applying = true;
     session.error = '';
     renderBackupRestoreDialog();
     try {
         const mutation = await runUserDataMutation(async () => {
-            let emergencyName = '';
+            const latestItems = (await getAllItems()).map(normalizeItem);
+            const latestSignature = createBackupRestoreCurrentSignature(latestItems);
+            if (latestSignature !== session.diff.currentSignature) {
+                await refreshData();
+                rebaseBackupRestoreComparison(state.items, t('backupRestoreDataChanged'));
+                session.applying = false;
+                renderBackupRestoreDialog();
+                return { stale: true };
+            }
+
+            const plan = createBackupRestorePlan(session.diff, session.mode, session.selectedKeys);
+            if (!plan.actionCount) {
+                session.applying = false;
+                renderBackupRestoreDialog();
+                return { noAction: true };
+            }
+
+            const emergencyName = await writeRestoreEmergencyBackup(session.handle);
             let restoredCount = 0;
-            let duplicateCount = 0;
             if (session.mode === 'replace') {
-                if (state.items.length) emergencyName = await writeRestoreEmergencyBackup(session.handle);
-                restoredCount = await replaceItemsFromRestore(session.selectedRecords, state.items);
+                restoredCount = await replaceItemsFromRestore(
+                    recordsForFullBackupRestore(session.diff),
+                    state.items,
+                );
             } else {
-                const prepared = prepareImportMerge(session.selectedRecords);
-                const restoredAt = new Date().toISOString();
-                const records = prepared.records.map((record) => record.existingId != null
-                    ? record
-                    : { ...record, updatedAt: restoredAt, modifiedBy: state.sync.deviceId });
-                restoredCount = await addImportedRecords(records);
-                duplicateCount = prepared.duplicateCount;
+                await restoreResolvedSyncItems(plan.entries.map((entry) => backupRestoreEntryToSyncItem(
+                    entry,
+                    plan.parentSyncIdOverrides.get(entry.key),
+                )));
+                restoredCount = plan.entries.length;
             }
 
             state.view = { type: 'all', value: null };
@@ -489,7 +1068,14 @@ async function applySelectedBackupRestore() {
             await refreshData();
             await adoptBackupRestoreDirectory(session.handle, snapshot.exportedAt);
             scheduleDataProtection();
-            return { restoredCount, duplicateCount, emergencyName };
+            return {
+                mode: session.mode,
+                restoredCount,
+                duplicateCount: plan.duplicateCount,
+                reusedFolderCount: plan.reusedFolderCount,
+                autoIncludedCount: plan.autoIncludedCount,
+                emergencyName,
+            };
         });
         if (!mutation.applied) {
             session.applying = false;
@@ -497,12 +1083,19 @@ async function applySelectedBackupRestore() {
             return;
         }
         const result = mutation.value;
-        const mode = session.mode;
+        if (result.stale || result.noAction) return;
         session.applying = false;
         closeBackupRestoreDialog(false);
-        showToast(t(mode === 'replace' ? 'backupRestoreReplaced' : 'backupRestoreMerged', {
+        const toastKey = {
+            merge: 'backupRestoreMerged',
+            selective: 'backupRestoreSelected',
+            replace: 'backupRestoreReplaced',
+        }[result.mode];
+        showToast(t(toastKey, {
             count: result.restoredCount,
-            skipped: result.duplicateCount,
+            duplicates: result.duplicateCount,
+            folders: result.reusedFolderCount,
+            automatic: result.autoIncludedCount,
         }));
     } catch (error) {
         console.error('Backup restore failed:', error);
