@@ -44,7 +44,7 @@ function cacheElements() {
         'sync-menu-status', 'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
-        'add-bookmark-button', 'conflict-banner', 'conflict-banner-title',
+        'add-bookmark-button', 'conflict-banner', 'sync-onboarding', 'conflict-banner-title',
         'conflict-banner-detail', 'open-conflict-center-button', 'breadcrumbs',
         'page-eyebrow', 'page-title',
         'page-description', 'result-count', 'add-folder-button', 'results-label',

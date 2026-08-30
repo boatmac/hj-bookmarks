@@ -330,6 +330,7 @@ async function finishSyncWizard() {
         state.sync.setupComplete = true;
         if (state.sync.rememberSession) saveSessionSyncCredentials();
         await saveSyncPreferences();
+        renderSyncSettings();
         syncWizardFinished = true;
         syncWizardOutcome = result === 'conflicts' ? 'conflicts' : 'success';
         startLocalFolderPolling();

@@ -164,6 +164,7 @@ function renderBreadcrumbs() {
 }
 
 function renderContent() {
+    renderSyncOnboarding();
     ui.folderGrid.replaceChildren();
     ui.bookmarkGrid.replaceChildren();
     if (state.view.type === 'trash') {
@@ -186,6 +187,15 @@ function renderContent() {
     ui.folderGrid.classList.toggle('hidden', content.folders.length === 0);
     ui.bookmarkGrid.classList.toggle('hidden', content.bookmarks.length === 0);
     renderEmptyState(content);
+}
+
+function renderSyncOnboarding() {
+    if (!ui.syncOnboarding) return;
+    const visible = state.sync.initialized
+        && state.sync.supported
+        && state.view.type === 'all'
+        && (!state.sync.setupComplete || !isSyncModeConfigured());
+    ui.syncOnboarding.classList.toggle('hidden', !visible);
 }
 
 function getVisibleContent() {

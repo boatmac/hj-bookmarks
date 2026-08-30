@@ -12,24 +12,24 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-20" defer></script>
-    <script src="js/core/config.js?v=20260829-20" defer></script>
-    <script src="js/core/coordination.js?v=20260829-20" defer></script>
-    <script src="js/core/storage.js?v=20260829-20" defer></script>
-    <script src="js/sync/backup.js?v=20260829-20" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-20" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-20" defer></script>
-    <script src="js/sync/providers.js?v=20260829-20" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-20" defer></script>
-    <script src="js/sync/merge.js?v=20260829-20" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-20" defer></script>
-    <script src="js/ui/help.js?v=20260829-20" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-20" defer></script>
-    <script src="js/ui/render.js?v=20260829-20" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-20" defer></script>
-    <script src="js/data/transfer.js?v=20260829-20" defer></script>
-    <script src="js/core/utils.js?v=20260829-20" defer></script>
-    <script src="js/app.js?v=20260829-20" defer></script>
+    <script src="js/core/translations.js?v=20260829-21" defer></script>
+    <script src="js/core/config.js?v=20260829-21" defer></script>
+    <script src="js/core/coordination.js?v=20260829-21" defer></script>
+    <script src="js/core/storage.js?v=20260829-21" defer></script>
+    <script src="js/sync/backup.js?v=20260829-21" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-21" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-21" defer></script>
+    <script src="js/sync/providers.js?v=20260829-21" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-21" defer></script>
+    <script src="js/sync/merge.js?v=20260829-21" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-21" defer></script>
+    <script src="js/ui/help.js?v=20260829-21" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-21" defer></script>
+    <script src="js/ui/render.js?v=20260829-21" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-21" defer></script>
+    <script src="js/data/transfer.js?v=20260829-21" defer></script>
+    <script src="js/core/utils.js?v=20260829-21" defer></script>
+    <script src="js/app.js?v=20260829-21" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -143,10 +143,6 @@
                 <div class="topbar-actions">
                     <input id="import-file-input" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
 
-                    <button class="button button-secondary topbar-secondary topbar-sync-button" id="sync-entry-button" type="button" title="打开同步设置" aria-label="打开同步设置" data-i18n-title="syncEntryTitle" data-i18n-aria-label="syncEntryTitle">
-                        <svg><use href="#icon-sync"></use></svg><span data-i18n="syncEntry">同步设置</span>
-                    </button>
-
                     <details class="export-menu" id="export-menu">
                         <summary class="button button-quiet topbar-secondary" title="备份、同步与数据管理" data-i18n-title="exportTooltip">
                             <svg><use href="#icon-database"></use></svg><span data-i18n="export">备份/同步</span>
@@ -178,6 +174,15 @@
                     <span class="conflict-banner-icon"><svg><use href="#icon-database"></use></svg></span>
                     <span class="conflict-banner-copy"><strong id="conflict-banner-title">发现同步冲突</strong><small id="conflict-banner-detail">双方版本均已安全保留，请在应用内选择处理方式。</small></span>
                     <button class="button button-secondary" id="open-conflict-center-button" type="button" data-i18n="reviewConflicts">处理冲突</button>
+                </section>
+
+                <section class="sync-onboarding hidden" id="sync-onboarding" aria-labelledby="sync-onboarding-title">
+                    <span class="sync-onboarding-icon"><svg><use href="#icon-sync"></use></svg></span>
+                    <span class="sync-onboarding-copy">
+                        <strong id="sync-onboarding-title" data-i18n="syncOnboardingTitle">在多个设备间保持书签一致</strong>
+                        <small data-i18n="syncOnboardingDetail">书签会先在本机加密，再同步到你选择的位置。</small>
+                    </span>
+                    <button class="button button-primary" id="sync-entry-button" type="button" title="打开同步向导" data-i18n="syncEntry" data-i18n-title="syncEntryTitle">设置同步</button>
                 </section>
 
                 <nav class="breadcrumbs hidden" id="breadcrumbs" aria-label="文件夹路径" data-i18n-aria-label="folderPathLabel"></nav>

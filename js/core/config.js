@@ -50,6 +50,7 @@ const state = {
     },
     sync: {
         supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
+        initialized: false,
         deviceId: '',
         mode: 'remote',
         endpoint: '',

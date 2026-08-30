@@ -4,7 +4,11 @@
 
 async function initializeWebDavSync() {
     renderSyncSettings();
-    if (!state.sync.supported) return;
+    if (!state.sync.supported) {
+        state.sync.initialized = true;
+        renderSyncSettings();
+        return;
+    }
     let storedSetupComplete = null;
     try {
         const preferences = await getSetting(SYNC_PREFERENCES_KEY);
@@ -41,6 +45,7 @@ async function initializeWebDavSync() {
         console.error('Unable to restore WebDAV sync settings:', error);
         state.sync.error = error?.message || String(error);
     }
+    state.sync.initialized = true;
     renderSyncSettings();
     renderConflictBanner();
     if (
@@ -771,6 +776,7 @@ function renderSyncSettings() {
         localMode ? !localFolder.handle : (!sync.endpoint && !sync.username),
     );
     ui.disconnectSyncButton.disabled = sync.running || otherTabSync;
+    if (typeof renderSyncOnboarding === 'function') renderSyncOnboarding();
 }
 
 async function handleRememberSessionCredentials() {
