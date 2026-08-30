@@ -29,6 +29,7 @@ js/
 │   └── transfer.js      JSON/HTML 导入导出和清空流程
 ├── sync/
 │   ├── backup.js        File System Access 自动备份
+│   ├── local-folder.js  桌面云盘本地目录双向同步
 │   ├── coordinator.js   同步生命周期、凭据和冲突中心
 │   ├── providers.js     标准 WebDAV 与 Koofr Adapter
 │   ├── crypto.js        PBKDF2 + AES-GCM

@@ -817,6 +817,7 @@ svg {
 .export-menu[data-sync-state="running"] summary::after,
 .export-menu[data-sync-state="error"] summary::after,
 .export-menu[data-sync-state="conflict"] summary::after,
+.export-menu[data-sync-state="local-permission"] summary::after,
 .export-menu[data-sync-state="other-tab"] summary::after {
     display: block;
 }
@@ -834,6 +835,7 @@ svg {
 
 .export-menu[data-backup-state="permission"] summary::after,
 .export-menu[data-sync-state="conflict"] summary::after,
+.export-menu[data-sync-state="local-permission"] summary::after,
 .export-menu[data-sync-state="other-tab"] summary::after {
     background: #d69724;
 }
@@ -956,12 +958,14 @@ svg {
 
 .export-popover .backup-menu-item[data-state="permission"],
 .export-popover .sync-menu-item[data-state="conflict"],
+.export-popover .sync-menu-item[data-state="local-permission"],
 .export-popover .sync-menu-item[data-state="other-tab"] {
     background: color-mix(in srgb, #d69724 12%, var(--panel));
 }
 
 .export-popover .backup-menu-item[data-state="permission"] strong,
 .export-popover .sync-menu-item[data-state="conflict"] strong,
+.export-popover .sync-menu-item[data-state="local-permission"] strong,
 .export-popover .sync-menu-item[data-state="other-tab"] strong {
     color: #b97a12;
 }
@@ -2017,6 +2021,9 @@ svg {
 }
 
 .backup-status-card[data-state="unsupported"],
+.backup-status-card[data-state="local-unsupported"],
+.backup-status-card[data-state="local-not-configured"],
+.backup-status-card[data-state="local-permission"],
 .backup-status-card[data-state="paused"],
 .backup-status-card[data-state="permission"],
 .backup-status-card[data-state="other-tab"],
@@ -2028,6 +2035,9 @@ svg {
 }
 
 .backup-status-card[data-state="unsupported"] .backup-status-icon,
+.backup-status-card[data-state="local-unsupported"] .backup-status-icon,
+.backup-status-card[data-state="local-not-configured"] .backup-status-icon,
+.backup-status-card[data-state="local-permission"] .backup-status-icon,
 .backup-status-card[data-state="paused"] .backup-status-icon,
 .backup-status-card[data-state="permission"] .backup-status-icon,
 .backup-status-card[data-state="other-tab"] .backup-status-icon,
@@ -2240,7 +2250,8 @@ svg {
     white-space: nowrap;
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field select {
     width: 100%;
     height: 41px;
     padding: 0 11px;
@@ -2252,14 +2263,53 @@ svg {
     transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.settings-field input:focus {
+.settings-field input:focus,
+.settings-field select:focus {
     border-color: color-mix(in srgb, var(--accent) 54%, var(--border));
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
 }
 
-.settings-field input:disabled {
+.settings-field input:disabled,
+.settings-field select:disabled {
     cursor: wait;
     opacity: 0.65;
+}
+
+.sync-mode-field {
+    padding: 11px;
+    background: var(--panel-muted);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+}
+
+.local-folder-sync-fields {
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+}
+
+.local-folder-sync-icon {
+    display: grid;
+    width: 39px;
+    height: 39px;
+    flex: 0 0 auto;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 10px;
+    place-items: center;
+}
+
+.local-folder-sync-fields .setting-copy {
+    flex: 1;
+}
+
+.common-sync-fields {
+    grid-template-columns: 1fr;
 }
 
 .remember-credentials-option {
@@ -2919,6 +2969,18 @@ body.syncing .mini-icon-button {
 
     .settings-field small {
         text-align: left;
+    }
+
+    .local-folder-sync-fields {
+        flex-wrap: wrap;
+    }
+
+    .local-folder-sync-fields .setting-copy {
+        min-width: calc(100% - 54px);
+    }
+
+    .local-folder-sync-fields .button {
+        width: 100%;
     }
 
     .setting-row {

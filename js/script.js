@@ -2,13 +2,14 @@
 'use strict';
 
 (() => {
-    const version = '20260829-16';
+    const version = '20260829-17';
     const modules = [
         'core/translations.js',
         'core/config.js',
         'core/coordination.js',
         'core/storage.js',
         'sync/backup.js',
+        'sync/local-folder.js',
         'sync/coordinator.js',
         'sync/providers.js',
         'sync/crypto.js',

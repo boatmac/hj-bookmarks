@@ -45,6 +45,54 @@ function makeDataset(item, tombstones = []) {
     return { items: item ? [item] : [], tombstones };
 }
 
+function createMemoryDirectory(name = 'memory') {
+    const entries = new Map();
+    return {
+        kind: 'directory',
+        name,
+        async getDirectoryHandle(childName, options = {}) {
+            if (entries.has(childName)) return entries.get(childName);
+            if (!options.create) throw new DOMException('Not found', 'NotFoundError');
+            const directory = createMemoryDirectory(childName);
+            entries.set(childName, directory);
+            return directory;
+        },
+        async getFileHandle(fileName, options = {}) {
+            if (entries.has(fileName)) return entries.get(fileName);
+            if (!options.create) throw new DOMException('Not found', 'NotFoundError');
+            let content = '';
+            let lastModified = Date.now();
+            const handle = {
+                kind: 'file',
+                name: fileName,
+                async getFile() {
+                    return {
+                        size: new Blob([content]).size,
+                        lastModified,
+                        text: async () => content,
+                    };
+                },
+                async createWritable() {
+                    let nextContent = '';
+                    return {
+                        write: async (value) => { nextContent += String(value); },
+                        close: async () => {
+                            content = nextContent;
+                            lastModified += 1;
+                        },
+                        abort: async () => {},
+                    };
+                },
+            };
+            entries.set(fileName, handle);
+            return handle;
+        },
+        async *entries() {
+            yield* entries.entries();
+        },
+    };
+}
+
 function deleteTestDatabase() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.deleteDatabase(DB_NAME);
@@ -118,6 +166,28 @@ test('同步数据和回收站快照加密后不包含书签明文', async () =>
     const normalized = parseRemoteSyncDataset(decrypted);
     assertEqual(normalized.items[0].title, 'Secret bookmark');
     assertEqual(normalized.tombstones[0].item.title, 'Deleted secret');
+});
+
+test('本地同步目录按设备写入独立加密文件', async () => {
+    const root = createMemoryDirectory('Cloud Drive');
+    state.sync.deviceId = 'device-a';
+    await writeLocalSyncDeviceFile(
+        root,
+        makeDataset(makeSyncItem({ syncId: 'item-a', title: 'From A' })),
+        'local folder passphrase',
+    );
+    state.sync.deviceId = 'device-b';
+    await writeLocalSyncDeviceFile(
+        root,
+        makeDataset(makeSyncItem({ syncId: 'item-b', title: 'From B' })),
+        'local folder passphrase',
+    );
+    const fileSet = await listLocalSyncDeviceFiles(root);
+    assertEqual(fileSet.files.length, 2);
+    assert(fileSet.files.some((entry) => entry.name === 'device-a.enc.json'));
+    assert(fileSet.files.some((entry) => entry.name === 'device-b.enc.json'));
+    const aggregate = await readLocalSyncDeviceFiles(fileSet.files, 'local folder passphrase');
+    assertDeepEqual(aggregate.items.map((item) => item.title).sort(), ['From A', 'From B']);
 });
 
 test('旧版同步 payload v1 会安全升级墓碑字段', () => {

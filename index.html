@@ -12,21 +12,22 @@
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/core/translations.js?v=20260829-16" defer></script>
-    <script src="js/core/config.js?v=20260829-16" defer></script>
-    <script src="js/core/coordination.js?v=20260829-16" defer></script>
-    <script src="js/core/storage.js?v=20260829-16" defer></script>
-    <script src="js/sync/backup.js?v=20260829-16" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-16" defer></script>
-    <script src="js/sync/providers.js?v=20260829-16" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-16" defer></script>
-    <script src="js/sync/merge.js?v=20260829-16" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-16" defer></script>
-    <script src="js/ui/render.js?v=20260829-16" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-16" defer></script>
-    <script src="js/data/transfer.js?v=20260829-16" defer></script>
-    <script src="js/core/utils.js?v=20260829-16" defer></script>
-    <script src="js/app.js?v=20260829-16" defer></script>
+    <script src="js/core/translations.js?v=20260829-17" defer></script>
+    <script src="js/core/config.js?v=20260829-17" defer></script>
+    <script src="js/core/coordination.js?v=20260829-17" defer></script>
+    <script src="js/core/storage.js?v=20260829-17" defer></script>
+    <script src="js/sync/backup.js?v=20260829-17" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-17" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-17" defer></script>
+    <script src="js/sync/providers.js?v=20260829-17" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-17" defer></script>
+    <script src="js/sync/merge.js?v=20260829-17" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-17" defer></script>
+    <script src="js/ui/render.js?v=20260829-17" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-17" defer></script>
+    <script src="js/data/transfer.js?v=20260829-17" defer></script>
+    <script src="js/core/utils.js?v=20260829-17" defer></script>
+    <script src="js/app.js?v=20260829-17" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -141,7 +142,7 @@
                         </summary>
                         <div class="export-popover">
                             <p class="export-section-label" data-i18n="syncSection">同步与冲突</p>
-                            <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">云端加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
+                            <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
                             <button class="conflict-menu-item" id="conflict-center-menu-button" type="button"><strong data-i18n="conflictCenter">冲突中心</strong><small id="conflict-menu-status">暂无待处理冲突</small></button>
                             <hr>
                             <p class="export-section-label" data-i18n="backupTransferSection">备份与迁移</p>
@@ -331,7 +332,7 @@
     <dialog class="item-dialog sync-dialog" id="sync-dialog">
         <div class="dialog-panel">
             <header class="dialog-header">
-                <div><p class="eyebrow" data-i18n="syncEyebrow">跨设备同步</p><h2 id="sync-dialog-title" data-i18n="syncSettings">云端加密同步</h2></div>
+                <div><p class="eyebrow" data-i18n="syncEyebrow">跨设备同步</p><h2 id="sync-dialog-title" data-i18n="syncSettings">加密同步设置</h2></div>
                 <button class="icon-button dialog-close" id="sync-dialog-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
                     <svg><use href="#icon-x"></use></svg>
                 </button>
@@ -340,10 +341,18 @@
             <div class="sync-settings-content">
                 <section class="backup-status-card sync-status-card" id="sync-status-card" aria-live="polite">
                     <span class="backup-status-icon"><svg><use href="#icon-database"></use></svg></span>
-                    <span><strong id="sync-status-title">尚未配置 WebDAV</strong><small id="sync-status-detail">填写远端地址和凭据后即可进行加密同步。</small></span>
+                    <span><strong id="sync-status-title">尚未配置云端同步</strong><small id="sync-status-detail">选择同步方式并完成设置即可开始。</small></span>
                 </section>
 
-                <div class="sync-fields">
+                <label class="settings-field sync-mode-field">
+                    <span><strong data-i18n="syncMethod">同步方式</strong><small data-i18n="syncMethodHint">选择远端服务或桌面云盘管理的本地目录</small></span>
+                    <select id="sync-mode-select">
+                        <option value="remote" data-i18n="remoteServiceMode">云端服务（WebDAV / Koofr）</option>
+                        <option value="local-folder" data-i18n="localFolderMode">本地同步目录（OneDrive / Google Drive / Syncthing）</option>
+                    </select>
+                </label>
+
+                <div class="sync-fields" id="remote-sync-fields">
                     <label class="settings-field">
                         <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="webDavUrlHint">支持标准 WebDAV 和 Koofr 地址</small></span>
                         <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="url">
@@ -353,11 +362,20 @@
                         <input id="sync-username-input" type="text" autocomplete="username">
                     </label>
                     <label class="settings-field">
-                        <span><strong data-i18n="webDavPassword">密码或应用密码</strong><small data-i18n="sessionOnly">仅保留在当前页面内存中</small></span>
+                        <span><strong data-i18n="webDavPassword">密码或应用密码</strong><small data-i18n="sessionOnly">默认仅保留在当前页面内存中</small></span>
                         <input id="sync-password-input" type="password" autocomplete="off">
                     </label>
+                </div>
+
+                <div class="local-folder-sync-fields hidden" id="local-folder-sync-fields">
+                    <span class="local-folder-sync-icon"><svg><use href="#icon-folder"></use></svg></span>
+                    <span class="setting-copy"><strong data-i18n="localSyncFolder">本地同步目录</strong><small id="local-sync-folder-name">尚未选择目录</small></span>
+                    <button class="button button-secondary compact-button" id="choose-local-sync-folder-button" type="button" data-i18n="chooseFolder">选择目录</button>
+                </div>
+
+                <div class="sync-fields common-sync-fields">
                     <label class="settings-field">
-                        <span><strong data-i18n="encryptionPassphrase">加密口令</strong><small data-i18n="encryptionPassphraseHint">至少 8 个字符；遗失后无法解密远端数据</small></span>
+                        <span><strong data-i18n="encryptionPassphrase">加密口令</strong><small data-i18n="encryptionPassphraseHint">至少 8 个字符；其他设备必须使用相同口令</small></span>
                         <input id="sync-passphrase-input" type="password" minlength="8" autocomplete="off">
                     </label>
                 </div>
@@ -371,7 +389,7 @@
                 </label>
 
                 <div class="settings-list sync-options-list">
-                    <label class="setting-row settings-switch-row">
+                    <label class="setting-row settings-switch-row" id="auto-create-directory-row">
                         <span class="setting-copy"><strong data-i18n="autoCreateWebDavFolder">自动创建同步目录</strong><small data-i18n="autoCreateWebDavFolderHint">目录不存在时仅创建同步文件所在的最后一级目录</small></span>
                         <span class="switch-control">
                             <input id="auto-create-directory-toggle" type="checkbox" checked>
@@ -394,7 +412,7 @@
                 </div>
 
                 <p class="sync-security-note" data-i18n="syncSecurityNote">书签会先在本机加密后再上传；密码和加密口令不会写入远端文件。</p>
-                <p class="sync-compatibility" data-i18n="syncCorsNote">如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。</p>
+                <p class="sync-compatibility" id="sync-compatibility-note" data-i18n="syncCorsNote">如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。</p>
             </div>
 
             <footer class="dialog-footer sync-dialog-footer">

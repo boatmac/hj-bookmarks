@@ -103,6 +103,27 @@ UI
 
 取消选项或移除同步配置时立即删除；不写入 IndexedDB 或 localStorage。这样即使浏览器复用了 sessionStorage，普通重新打开和会话恢复也不会自动解锁。
 
+## 本地云盘目录 Adapter
+
+本地目录模式使用 File System Access API，将用户选择的 OneDrive、Google Drive、Dropbox 或 Syncthing 本地目录作为传输层：
+
+```text
+selected-folder/
+└── devices/
+    └── {deviceId}.enc.json
+```
+
+每台设备只写以自身稳定设备 ID 命名的文件，避免云盘客户端对同一个文件执行最后写入覆盖。同步时枚举 `devices` 中所有 `.enc.json`，逐个解密并聚合，再使用与远端同步相同的基线三方合并和冲突中心。
+
+触发条件：
+
+- 本机数据变化后 1.8 秒防抖；
+- 页面可见时每 15 秒轮询文件名、大小和 `lastModified`；
+- `visibilitychange` 回到前台；
+- 用户点击“立即同步”。
+
+如果目录签名和本地数据 hash 都未改变，后台轮询不会重复解密或写入。目录句柄存储于 IndexedDB；浏览器重启后可能需要用户重新授权。加密口令遵守同一 sessionStorage 策略。
+
 ## 标准 WebDAV Adapter
 
 请求流程：

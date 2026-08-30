@@ -64,6 +64,9 @@ function cacheElements() {
         'backup-now-button', 'sync-dialog', 'sync-dialog-title',
         'sync-dialog-close-button', 'sync-dialog-cancel-button',
         'sync-status-card', 'sync-status-title', 'sync-status-detail',
+        'sync-mode-select', 'remote-sync-fields', 'local-folder-sync-fields',
+        'local-sync-folder-name', 'choose-local-sync-folder-button',
+        'auto-create-directory-row', 'sync-compatibility-note',
         'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
         'sync-passphrase-input', 'auto-create-directory-toggle',
         'auto-sync-toggle', 'remember-session-credentials-toggle',
@@ -201,6 +204,8 @@ function bindStaticEvents() {
     ui.syncDialog.addEventListener('mousedown', (event) => {
         if (event.target === ui.syncDialog) closeSyncDialog();
     });
+    ui.syncModeSelect.addEventListener('change', handleSyncModeChange);
+    ui.chooseLocalSyncFolderButton.addEventListener('click', chooseLocalSyncDirectory);
     ui.syncEndpointInput.addEventListener('input', updateSyncSecretsFromForm);
     ui.syncUsernameInput.addEventListener('input', updateSyncSecretsFromForm);
     ui.syncEndpointInput.addEventListener('change', saveSyncPreferences);

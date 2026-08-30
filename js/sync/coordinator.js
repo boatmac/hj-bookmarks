@@ -8,19 +8,27 @@ async function initializeWebDavSync() {
     try {
         const preferences = await getSetting(SYNC_PREFERENCES_KEY);
         if (preferences && typeof preferences === 'object') {
+            state.sync.mode = preferences.mode === 'local-folder' ? 'local-folder' : 'remote';
             state.sync.endpoint = typeof preferences.endpoint === 'string' ? preferences.endpoint : '';
             state.sync.username = typeof preferences.username === 'string' ? preferences.username : '';
             state.sync.koofrMountId = typeof preferences.koofrMountId === 'string' ? preferences.koofrMountId : '';
             state.sync.koofrMountName = typeof preferences.koofrMountName === 'string' ? preferences.koofrMountName : '';
             state.sync.koofrMountUser = typeof preferences.koofrMountUser === 'string' ? preferences.koofrMountUser : '';
+            state.sync.localFolder.id = typeof preferences.localFolderId === 'string' ? preferences.localFolderId : '';
+            state.sync.localFolder.name = typeof preferences.localFolderName === 'string' ? preferences.localFolderName : '';
+            state.sync.localFolder.lastSyncAt = validDate(preferences.localFolderLastSyncAt)
+                ? preferences.localFolderLastSyncAt
+                : '';
             state.sync.createDirectory = preferences.createDirectory !== false;
             state.sync.automatic = preferences.automatic === true;
             state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
         }
+        await initializeLocalFolderSync();
+        ui.syncModeSelect.value = state.sync.mode;
         ui.syncEndpointInput.value = state.sync.endpoint;
         ui.syncUsernameInput.value = state.sync.username;
         restoreSessionSyncCredentials();
-        state.sync.hasBaseline = state.sync.endpoint
+        state.sync.hasBaseline = isSyncModeConfigured()
             ? Boolean(await getSyncBaseline(syncEndpointKey()))
             : false;
         await loadSyncConflicts();
@@ -34,14 +42,24 @@ async function initializeWebDavSync() {
         state.sync.sessionCredentialsRestored
         && state.sync.automatic
         && !state.sync.conflicts.length
-        && state.sync.password
         && state.sync.passphrase.length >= 8
+        && (state.sync.mode !== 'local-folder' || state.sync.localFolder.permission === 'granted')
+        && (state.sync.mode === 'local-folder' || !state.sync.username || state.sync.password)
     ) {
         window.setTimeout(() => runWebDavSync({ notify: false }), 180);
     }
 }
 
+function isSyncModeConfigured() {
+    return state.sync.mode === 'local-folder'
+        ? Boolean(state.sync.localFolder.id && state.sync.localFolder.handle)
+        : Boolean(state.sync.endpoint);
+}
+
 function syncEndpointKey(endpoint = state.sync.endpoint, username = state.sync.username) {
+    if (state.sync.mode === 'local-folder') {
+        return `local-folder\u0000${state.sync.localFolder.id || 'unconfigured'}`;
+    }
     return `${String(username || '').trim().toLocaleLowerCase('en-US')}\u0000${String(endpoint || '').trim()}`;
 }
 
@@ -82,7 +100,7 @@ function saveSessionSyncCredentials() {
     return safeSessionStorageSet(SYNC_SESSION_CREDENTIALS_KEY, JSON.stringify({
         version: 1,
         endpointKey: syncEndpointKey(),
-        password: state.sync.password,
+        password: state.sync.mode === 'remote' ? state.sync.password : '',
         passphrase: state.sync.passphrase,
         savedAt: new Date().toISOString(),
     }));
@@ -95,7 +113,7 @@ function clearSessionSyncCredentials() {
 
 async function loadSyncConflicts() {
     const endpointKey = syncEndpointKey();
-    if (!state.sync.endpoint) {
+    if (!isSyncModeConfigured()) {
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = '';
     } else {
@@ -394,7 +412,10 @@ async function resolveCurrentConflictUnlocked(strategy) {
     await deleteSyncBaseline(pendingSyncBaselineKey(endpointKey));
     closeConflictCenter();
     showToast(t('allConflictsResolved'));
-    if (state.sync.password && state.sync.passphrase) {
+    if (
+        state.sync.passphrase
+        && (state.sync.mode === 'local-folder' || !state.sync.username || state.sync.password)
+    ) {
         window.setTimeout(() => runWebDavSync({ notify: true }), 120);
     }
 }
@@ -520,11 +541,15 @@ function restoreResolvedSyncItems(items) {
 async function saveSyncPreferences() {
     try {
         await saveSetting(SYNC_PREFERENCES_KEY, {
+            mode: state.sync.mode,
             endpoint: state.sync.endpoint,
             username: state.sync.username,
             koofrMountId: state.sync.koofrMountId,
             koofrMountName: state.sync.koofrMountName,
             koofrMountUser: state.sync.koofrMountUser,
+            localFolderId: state.sync.localFolder.id,
+            localFolderName: state.sync.localFolder.name,
+            localFolderLastSyncAt: state.sync.localFolder.lastSyncAt,
             createDirectory: state.sync.createDirectory,
             automatic: state.sync.automatic,
             lastSyncAt: state.sync.lastSyncAt,
@@ -538,6 +563,7 @@ async function saveSyncPreferences() {
 
 function openSyncDialog() {
     closeExportMenu();
+    ui.syncModeSelect.value = state.sync.mode;
     ui.syncEndpointInput.value = state.sync.endpoint;
     ui.syncUsernameInput.value = state.sync.username;
     ui.syncPasswordInput.value = state.sync.password;
@@ -563,6 +589,35 @@ function cancelWebDavSync() {
     state.sync.phase = 'syncPhaseCanceling';
     window.clearTimeout(state.sync.timer);
     state.sync.abortController?.abort();
+    renderSyncSettings();
+}
+
+async function handleSyncModeChange() {
+    if (state.sync.running || hasOtherTabSyncing()) {
+        ui.syncModeSelect.value = state.sync.mode;
+        showToast(t('dataBusyOtherTab'));
+        return;
+    }
+    const previousKey = syncEndpointKey();
+    state.sync.mode = ui.syncModeSelect.value === 'local-folder' ? 'local-folder' : 'remote';
+    state.sync.provider = state.sync.mode === 'local-folder' ? 'local-folder' : '';
+    state.sync.unlocked = false;
+    state.sync.error = '';
+    const nextKey = syncEndpointKey();
+    if (previousKey !== nextKey) {
+        state.sync.conflicts = [];
+        state.sync.conflictEndpointKey = nextKey;
+        state.sync.conflictIndex = 0;
+        state.sync.conflictSelections = {};
+        state.sync.hasBaseline = isSyncModeConfigured()
+            ? Boolean(await getSyncBaseline(nextKey))
+            : false;
+        await loadSyncConflicts();
+    }
+    clearSessionSyncCredentials();
+    state.sync.rememberSession = false;
+    await saveSyncPreferences();
+    startLocalFolderPolling();
     renderSyncSettings();
 }
 
@@ -598,6 +653,8 @@ function updateSyncSecretsFromForm() {
 
 function syncSessionFingerprint() {
     return [
+        state.sync.mode,
+        state.sync.localFolder.id,
         state.sync.endpoint,
         state.sync.username,
         state.sync.password,
@@ -605,22 +662,34 @@ function syncSessionFingerprint() {
     ].join('\u0000');
 }
 
+function activeSyncTime() {
+    return state.sync.mode === 'local-folder'
+        ? state.sync.localFolder.lastSyncAt
+        : state.sync.lastSyncAt;
+}
+
 function renderSyncSettings() {
     if (!ui.syncMenuStatus) return;
     const sync = state.sync;
+    const localMode = sync.mode === 'local-folder';
+    const localFolder = sync.localFolder;
     const otherTabSync = hasOtherTabSyncing();
     let status = 'ready';
-    if (!sync.supported) status = 'unsupported';
+    if (localMode && !localFolder.supported) status = 'local-unsupported';
+    else if (!localMode && !sync.supported) status = 'unsupported';
     else if (sync.running) status = 'running';
     else if (sync.conflicts.length) status = 'conflict';
     else if (otherTabSync) status = 'other-tab';
     else if (sync.error) status = 'error';
-    else if (!sync.endpoint) status = 'not-configured';
-    else if (!sync.unlocked && sync.passphrase.length >= 8 && (!sync.username || sync.password)) status = 'credentials-ready';
+    else if (localMode && !localFolder.handle) status = 'local-not-configured';
+    else if (localMode && localFolder.permission !== 'granted') status = 'local-permission';
+    else if (!localMode && !sync.endpoint) status = 'not-configured';
+    else if (!sync.unlocked && sync.passphrase.length >= 8 && (localMode || !sync.username || sync.password)) status = 'credentials-ready';
     else if (!sync.unlocked) status = 'locked';
 
     const statusContent = {
         unsupported: [t('syncUnsupportedTitle'), t('syncUnsupportedDetail'), t('syncMenuUnsupported')],
+        'local-unsupported': [t('localFolderUnsupportedTitle'), t('localFolderUnsupportedDetail'), t('syncMenuUnsupported')],
         running: [t('syncRunningTitle'), sync.phase ? t(sync.phase) : t('syncRunningDetail'), t('syncMenuRunning')],
         error: [t('syncErrorTitle'), t('syncErrorDetail', { message: sync.error }), t('syncMenuError')],
         conflict: [
@@ -630,7 +699,13 @@ function renderSyncSettings() {
         ],
         'other-tab': [t('syncOtherTabTitle'), t('syncOtherTabDetail'), t('syncMenuOtherTab')],
         'not-configured': [t('syncNotConfiguredTitle'), t('syncNotConfiguredDetail'), t('syncMenuNotConfigured')],
-        locked: [t('syncLockedTitle'), t('syncLockedDetail'), t('syncMenuLocked')],
+        'local-not-configured': [t('localFolderNotConfiguredTitle'), t('localFolderNotConfiguredDetail'), t('syncMenuNotConfigured')],
+        'local-permission': [t('localFolderPermissionTitle'), t('localFolderPermissionDetail'), t('backupMenuPermission')],
+        locked: [
+            t(localMode ? 'localFolderLockedTitle' : 'syncLockedTitle'),
+            t(localMode ? 'localFolderLockedDetail' : 'syncLockedDetail'),
+            t('syncMenuLocked'),
+        ],
         'credentials-ready': [
             t('syncCredentialsReadyTitle'),
             t('syncCredentialsReadyDetail'),
@@ -638,10 +713,23 @@ function renderSyncSettings() {
         ],
         ready: [
             t('syncReadyTitle'),
-            t(sync.provider === 'koofr' ? 'syncReadyKoofrDetail' : 'syncReadyDetail'),
-            t('syncMenuReady', { time: formatBackupTime(sync.lastSyncAt, true) }),
+            localMode
+                ? t('localFolderReadyDetail', { name: localFolder.name || t('localSyncFolderNotSelected') })
+                : t(sync.provider === 'koofr' ? 'syncReadyKoofrDetail' : 'syncReadyDetail'),
+            t('syncMenuReady', { time: formatBackupTime(activeSyncTime(), true) }),
         ],
     }[status];
+
+    ui.syncModeSelect.value = sync.mode;
+    ui.syncModeSelect.disabled = sync.running || otherTabSync;
+    ui.remoteSyncFields.classList.toggle('hidden', localMode);
+    ui.localFolderSyncFields.classList.toggle('hidden', !localMode);
+    ui.autoCreateDirectoryRow.classList.toggle('hidden', localMode);
+    ui.localSyncFolderName.textContent = localFolder.handle
+        ? t('localSyncFolderSelected', { name: localFolder.name })
+        : t('localSyncFolderNotSelected');
+    ui.chooseLocalSyncFolderButton.disabled = !localFolder.supported || sync.running || otherTabSync;
+    ui.syncCompatibilityNote.textContent = t(localMode ? 'localFolderCompatibility' : 'syncCorsNote');
 
     ui.syncStatusCard.dataset.state = status;
     ui.syncSettingsButton.dataset.state = status;
@@ -649,7 +737,7 @@ function renderSyncSettings() {
     ui.syncStatusTitle.textContent = statusContent[0];
     ui.syncStatusDetail.textContent = statusContent[1];
     ui.syncMenuStatus.textContent = statusContent[2];
-    ui.lastSyncValue.textContent = formatBackupTime(sync.lastSyncAt) || t('syncLastNever');
+    ui.lastSyncValue.textContent = formatBackupTime(activeSyncTime()) || t('syncLastNever');
     ui.conflictProtectionValue.textContent = t(
         sync.hasBaseline ? 'conflictBaselineReady' : 'conflictBaselinePending',
     );
@@ -659,7 +747,7 @@ function renderSyncSettings() {
     ui.autoSyncToggle.disabled = !sync.supported || sync.running || otherTabSync;
     ui.rememberSessionCredentialsToggle.checked = sync.rememberSession;
     ui.rememberSessionCredentialsToggle.disabled = !sync.supported || sync.running || otherTabSync;
-    ui.syncNowButton.disabled = !sync.supported || sync.running || otherTabSync;
+    ui.syncNowButton.disabled = (localMode ? !localFolder.supported : !sync.supported) || sync.running || otherTabSync;
     ui.syncNowButton.textContent = t(sync.conflicts.length ? 'reviewConflicts' : 'syncNow');
     ui.syncDialogCancelButton.textContent = t(sync.running ? 'cancelSync' : 'close');
     ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
@@ -668,7 +756,10 @@ function renderSyncSettings() {
     ui.syncUsernameInput.disabled = sync.running || otherTabSync;
     ui.syncPasswordInput.disabled = sync.running || otherTabSync;
     ui.syncPassphraseInput.disabled = sync.running || otherTabSync;
-    ui.disconnectSyncButton.classList.toggle('hidden', !sync.endpoint && !sync.username);
+    ui.disconnectSyncButton.classList.toggle(
+        'hidden',
+        localMode ? !localFolder.handle : (!sync.endpoint && !sync.username),
+    );
     ui.disconnectSyncButton.disabled = sync.running || otherTabSync;
 }
 
@@ -712,15 +803,40 @@ async function handleAutoSyncToggle() {
         window.clearTimeout(state.sync.timer);
         showToast(t('syncAutoPaused'));
     }
+    startLocalFolderPolling();
 }
 
 async function disconnectWebDavSync() {
-    if (!window.confirm(t('confirmDisconnectSync'))) return;
+    const confirmKey = state.sync.mode === 'local-folder'
+        ? 'confirmDisconnectLocalFolder'
+        : 'confirmDisconnectSync';
+    if (!window.confirm(t(confirmKey))) return;
     window.clearTimeout(state.sync.timer);
     clearSessionSyncCredentials();
     const endpointKey = syncEndpointKey();
+    if (state.sync.mode === 'local-folder') {
+        try {
+            await deleteSyncState(endpointKey);
+        } catch (error) {
+            console.warn('Unable to remove local folder sync state:', error);
+        }
+        state.sync.password = '';
+        state.sync.passphrase = '';
+        state.sync.rememberSession = false;
+        state.sync.sessionCredentialsRestored = false;
+        state.sync.automatic = false;
+        state.sync.localFolder.lastSyncAt = '';
+        state.sync.conflicts = [];
+        state.sync.conflictEndpointKey = '';
+        state.sync.conflictIndex = 0;
+        state.sync.conflictSelections = {};
+        ui.syncPasswordInput.value = '';
+        ui.syncPassphraseInput.value = '';
+        await disconnectLocalSyncDirectory();
+        renderConflictBanner();
+        return;
+    }
     try {
-        await deleteSetting(SYNC_PREFERENCES_KEY);
         if (state.sync.endpoint) await deleteSyncState(endpointKey);
     } catch (error) {
         console.warn('Unable to remove WebDAV sync preferences:', error);
@@ -752,6 +868,7 @@ async function disconnectWebDavSync() {
         abortController: null,
         lastNotifiedError: '',
     });
+    await saveSyncPreferences();
     ui.syncEndpointInput.value = '';
     ui.syncUsernameInput.value = '';
     ui.syncPasswordInput.value = '';
@@ -763,7 +880,10 @@ async function disconnectWebDavSync() {
 
 function scheduleWebDavSync(delay = 1800) {
     const sync = state.sync;
-    if (!sync.supported || !sync.automatic || !sync.unlocked || !sync.endpoint || sync.conflicts.length) return;
+    const configured = sync.mode === 'local-folder'
+        ? Boolean(sync.localFolder.handle)
+        : Boolean(sync.endpoint);
+    if (!sync.supported || !sync.automatic || !sync.unlocked || !configured || sync.conflicts.length) return;
     window.clearTimeout(sync.timer);
     sync.timer = window.setTimeout(() => runWebDavSync({ notify: false }), delay);
 }
@@ -781,10 +901,25 @@ function preventMutationDuringSync() {
     return true;
 }
 
-function handleSyncNow() {
+async function handleSyncNow() {
     if (state.sync.conflicts.length) {
         openConflictCenter();
         return;
+    }
+    if (state.sync.mode === 'local-folder') {
+        const local = state.sync.localFolder;
+        if (!local.handle) {
+            await chooseLocalSyncDirectory();
+            return;
+        }
+        if (local.permission !== 'granted') {
+            local.permission = await getBackupPermission(local.handle, true);
+            renderSyncSettings();
+            if (local.permission !== 'granted') {
+                showToast(t('backupPermissionDenied'));
+                return;
+            }
+        }
     }
     runWebDavSync({ notify: true });
 }
@@ -795,11 +930,16 @@ function setSyncPhase(phase) {
 }
 
 async function runWebDavSync(options = {}) {
-    if (state.sync.running) return runWebDavSyncUnlocked(options);
+    if (state.sync.running) {
+        state.sync.pending = true;
+        return state.sync.currentPromise || false;
+    }
     const locked = await tryDataWriteLock(async () => {
         announceSyncStarted();
         try {
-            return await runWebDavSyncUnlocked(options);
+            return state.sync.mode === 'local-folder'
+                ? await runLocalFolderSyncUnlocked(options)
+                : await runWebDavSyncUnlocked(options);
         } finally {
             announceSyncEnded();
         }

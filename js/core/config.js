@@ -12,6 +12,7 @@ const SYNC_CONFLICT_STORE_NAME = 'syncConflicts';
 const BACKUP_HANDLE_KEY = 'backup-directory-handle';
 const BACKUP_PREFERENCES_KEY = 'backup-preferences';
 const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
+const LOCAL_SYNC_HANDLE_KEY = 'local-sync-directory-handle';
 const SYNC_SESSION_CREDENTIALS_KEY = 'bookmark-manager.sync-session-credentials';
 const DEVICE_ID_KEY = 'sync-device-id';
 const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
@@ -21,6 +22,7 @@ const RECYCLE_RETENTION_DAYS = 30;
 const DATA_WRITE_LOCK_NAME = 'bookmark-manager-data-write-v1';
 const COORDINATION_CHANNEL_NAME = 'bookmark-manager-coordination-v1';
 const COORDINATION_STORAGE_KEY = 'bookmark-manager.coordination-event';
+const LOCAL_SYNC_POLL_INTERVAL_MS = 15000;
 const THEME_KEY = 'bookmark-manager.theme';
 const SORT_KEY = 'bookmark-manager.sort';
 const LANGUAGE_KEY = 'bookmark-manager.language';
@@ -49,8 +51,20 @@ const state = {
     sync: {
         supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
         deviceId: '',
+        mode: 'remote',
         endpoint: '',
         provider: '',
+        localFolder: {
+            supported: typeof window.showDirectoryPicker === 'function',
+            handle: null,
+            id: '',
+            name: '',
+            permission: 'unknown',
+            lastSyncAt: '',
+            signature: '',
+            lastLocalHash: '',
+            pollTimer: null,
+        },
         koofrMountId: '',
         koofrMountName: '',
         koofrMountUser: '',

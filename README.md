@@ -50,6 +50,7 @@ BoomarkManager/
 - 稳定 UUID、删除墓碑、ETag 条件写入及冲突重试
 - 基于同步基线的三方字段级合并与内置冲突中心
 - Web Locks 写入互斥与 BroadcastChannel 多标签页自动刷新
+- OneDrive、Google Drive、Dropbox、Syncthing 本地目录双向加密同步
 - 合并导入 JSON 备份
 - 合并导入 Chrome、Edge、Firefox 等浏览器导出的书签 HTML
 - 导出完整 JSON 备份
@@ -125,6 +126,38 @@ BoomarkManager/
 回收站使用同步 payload v2。启用后应将所有参与同步的设备升级到当前版本；旧版客户端会拒绝 v2 文件，避免静默丢失恢复数据。
 
 回收站与自动历史备份相互独立：回收站用于快速撤销删除，历史快照用于更完整的灾难恢复。
+
+## 本地云盘目录双向同步
+
+在“备份/同步 → 加密同步”中选择：
+
+```text
+本地同步目录（OneDrive / Google Drive / Syncthing）
+```
+
+然后选择桌面云盘客户端正在同步的本地文件夹，并在所有设备输入相同的加密口令。应用会创建：
+
+```text
+选择的目录/
+└── devices/
+    ├── {device-a}.enc.json
+    ├── {device-b}.enc.json
+    └── ...
+```
+
+每台设备只写自己的 AES-GCM 加密文件，并读取所有设备文件进行合并，因此不会让多台设备争抢同一个 `bookmarks-sync.enc.json`。支持：
+
+- 变更后延迟自动同步
+- 页面可见时每 15 秒检查云盘客户端带回的变化
+- 页面重新获得焦点时立即检查
+- 文件元数据和本地数据均未变化时跳过写入
+- 使用现有同步基线、删除墓碑和冲突中心
+- 自动识别云盘客户端生成的额外 `.enc.json` 冲突副本
+- 目录权限失效时明确提示重新授权
+
+该功能需要支持 File System Access API 的 Edge 或 Chrome，以及已安装并登录的 OneDrive、Google Drive、Dropbox、Syncthing 等桌面客户端。页面关闭时浏览器不执行合并，但桌面客户端仍会继续传输文件；下次打开页面后完成合并。
+
+本地同步目录与自动历史备份职责不同，可以同时使用。建议备份写入独立的 `backups/{device-name}` 子目录，避免与 `devices` 同步文件混放。
 
 ## 云端加密同步
 
