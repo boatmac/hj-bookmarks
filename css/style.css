@@ -2222,6 +2222,7 @@ svg {
 }
 
 .backup-status-card[data-state="unsupported"],
+.backup-status-card[data-state="encryption-unsupported"],
 .backup-status-card[data-state="local-unsupported"],
 .backup-status-card[data-state="local-not-configured"],
 .backup-status-card[data-state="local-permission"],
@@ -2236,6 +2237,7 @@ svg {
 }
 
 .backup-status-card[data-state="unsupported"] .backup-status-icon,
+.backup-status-card[data-state="encryption-unsupported"] .backup-status-icon,
 .backup-status-card[data-state="local-unsupported"] .backup-status-icon,
 .backup-status-card[data-state="local-not-configured"] .backup-status-icon,
 .backup-status-card[data-state="local-permission"] .backup-status-icon,
@@ -2272,6 +2274,90 @@ svg {
 
 .setting-row:last-child {
     border-bottom: 0;
+}
+
+.backup-encryption-fields {
+    display: grid;
+    gap: 13px;
+    padding: 15px;
+    background: color-mix(in srgb, var(--accent-soft) 42%, var(--panel));
+    border-bottom: 1px solid var(--border);
+}
+
+.backup-encryption-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.backup-encryption-heading > span:first-child {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    color: var(--accent);
+    background: var(--panel);
+    border-radius: 9px;
+    place-items: center;
+}
+
+.backup-encryption-heading svg {
+    width: 17px;
+    height: 17px;
+}
+
+.backup-passphrase-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.backup-passphrase-grid .field {
+    gap: 5px;
+}
+
+.backup-passphrase-grid .field > span {
+    font-size: 9px;
+}
+
+.backup-passphrase-grid .field input {
+    height: 37px;
+    background: var(--panel);
+}
+
+.backup-remember-passphrase strong {
+    font-size: 10px;
+}
+
+.backup-encryption-status,
+.backup-encryption-history-note {
+    margin: 0;
+    font-size: 8px;
+    line-height: 1.55;
+}
+
+.backup-encryption-status {
+    padding: 8px 10px;
+    color: #a56b12;
+    background: color-mix(in srgb, #d69724 11%, var(--panel));
+    border: 1px solid color-mix(in srgb, #d69724 28%, var(--border));
+    border-radius: 8px;
+}
+
+.backup-encryption-status[data-state="ready"] {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.backup-encryption-status[data-state="unsupported"] {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
+}
+
+.backup-encryption-history-note {
+    color: var(--text-faint);
 }
 
 .setting-copy {
@@ -2469,6 +2555,88 @@ svg {
     white-space: nowrap;
 }
 
+.backup-restore-unlock {
+    display: grid;
+    grid-template-columns: 38px minmax(150px, 1fr) minmax(180px, 0.85fr) auto;
+    align-items: center;
+    gap: 9px 12px;
+    padding: 12px 13px;
+    background: color-mix(in srgb, #d69724 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, #d69724 31%, var(--border));
+    border-radius: 12px;
+}
+
+.backup-restore-unlock-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    color: #b77b19;
+    background: var(--panel);
+    border-radius: 10px;
+    place-items: center;
+}
+
+.backup-restore-unlock-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.backup-restore-unlock-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.backup-restore-unlock-copy strong {
+    color: var(--text);
+    font-size: 10px;
+}
+
+.backup-restore-unlock-copy small {
+    color: var(--text-soft);
+    font-size: 8px;
+    line-height: 1.45;
+}
+
+.backup-restore-passphrase input {
+    width: 100%;
+    height: 35px;
+    padding: 0 10px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    outline: 0;
+}
+
+.backup-restore-passphrase input:focus {
+    border-color: color-mix(in srgb, var(--accent) 54%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.backup-restore-remember {
+    display: flex;
+    grid-column: 3 / -1;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-faint);
+    font-size: 8px;
+    cursor: pointer;
+}
+
+.backup-restore-remember input {
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.backup-restore-unlock-error {
+    grid-column: 2 / -1;
+    margin: 0;
+    color: var(--danger);
+    font-size: 8px;
+}
+
 .backup-restore-loading {
     display: flex;
     min-height: 78px;
@@ -2625,6 +2793,10 @@ svg {
 .backup-snapshot-card.invalid {
     cursor: not-allowed;
     opacity: 0.72;
+}
+
+.backup-snapshot-card.encrypted .backup-snapshot-icon {
+    color: #b77b19;
 }
 
 .backup-snapshot-card.invalid .backup-snapshot-icon,
@@ -4232,6 +4404,25 @@ body.syncing .mini-icon-button {
     }
 
     .backup-restore-source .button {
+        width: 100%;
+    }
+
+    .backup-passphrase-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .backup-restore-unlock {
+        grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .backup-restore-passphrase,
+    .backup-restore-unlock > .button,
+    .backup-restore-remember,
+    .backup-restore-unlock-error {
+        grid-column: 1 / -1;
+    }
+
+    .backup-restore-unlock > .button {
         width: 100%;
     }
 

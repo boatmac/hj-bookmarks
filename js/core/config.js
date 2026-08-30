@@ -11,6 +11,8 @@ const SYNC_BASELINE_STORE_NAME = 'syncBaselines';
 const SYNC_CONFLICT_STORE_NAME = 'syncConflicts';
 const BACKUP_HANDLE_KEY = 'backup-directory-handle';
 const BACKUP_PREFERENCES_KEY = 'backup-preferences';
+const BACKUP_SESSION_CREDENTIALS_KEY = 'bookmark-manager.backup-session-credentials';
+const BACKUP_RESTORE_SESSION_CREDENTIALS_KEY = 'bookmark-manager.backup-restore-session-credentials';
 const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
 const LOCAL_SYNC_HANDLE_KEY = 'local-sync-directory-handle';
 const SYNC_SESSION_CREDENTIALS_KEY = 'bookmark-manager.sync-session-credentials';
@@ -101,9 +103,16 @@ const state = {
     },
     backup: {
         supported: typeof window.showDirectoryPicker === 'function',
+        encryptionSupported: Boolean(globalThis.crypto?.subtle),
         handle: null,
         enabled: false,
         retention: 30,
+        encryptionEnabled: false,
+        encryptionProfileId: '',
+        passphrase: '',
+        passphraseConfirmed: false,
+        rememberSession: false,
+        sessionCredentialsRestored: false,
         lastBackupAt: '',
         lastHash: '',
         permission: 'unknown',

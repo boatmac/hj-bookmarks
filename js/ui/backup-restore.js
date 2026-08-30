@@ -5,6 +5,91 @@
 const MAX_RESTORE_BACKUP_BYTES = 50 * 1024 * 1024;
 const EMERGENCY_BACKUP_RETENTION = 10;
 let backupRestoreSession = null;
+let backupRestoreMemoryPassphrase = '';
+let backupRestoreMemoryRememberSession = false;
+let backupRestoreMemoryValidated = false;
+
+function getInitialBackupRestoreCredentials() {
+    if (state.backup.encryptionEnabled && backupEncryptionReady()) {
+        return {
+            passphrase: state.backup.passphrase,
+            rememberSession: state.backup.rememberSession,
+            validated: false,
+        };
+    }
+    if (backupRestoreMemoryPassphrase) {
+        return {
+            passphrase: backupRestoreMemoryPassphrase,
+            rememberSession: backupRestoreMemoryRememberSession,
+            validated: backupRestoreMemoryValidated,
+        };
+    }
+    if (!isPageReload()) {
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+        return { passphrase: '', rememberSession: false, validated: false };
+    }
+    const raw = safeSessionStorageGet(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    if (!raw) return { passphrase: '', rememberSession: false, validated: false };
+    try {
+        const saved = JSON.parse(raw);
+        if (saved?.version !== 1 || typeof saved.passphrase !== 'string' || saved.passphrase.length < 8) {
+            throw new Error('invalid restore credentials');
+        }
+        backupRestoreMemoryPassphrase = saved.passphrase;
+        backupRestoreMemoryRememberSession = true;
+        backupRestoreMemoryValidated = true;
+        return { passphrase: saved.passphrase, rememberSession: true, validated: true };
+    } catch {
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+        return { passphrase: '', rememberSession: false, validated: false };
+    }
+}
+
+function clearBackupRestoreMemoryCredentials() {
+    backupRestoreMemoryPassphrase = '';
+    backupRestoreMemoryRememberSession = false;
+    backupRestoreMemoryValidated = false;
+    safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+}
+
+function clearBackupRestoreCredentialsAfterHistoryRestore() {
+    clearBackupRestoreMemoryCredentials();
+    const session = backupRestoreSession;
+    if (!session || session.applying) return;
+    session.passphrase = '';
+    session.passphraseValidated = false;
+    session.rememberSession = false;
+    ui.backupRestorePassphraseInput.value = '';
+    ui.backupRestoreRememberToggle.checked = false;
+    const snapshot = session.snapshots.find((entry) => entry.id === session.selectedId);
+    if (snapshot?.encrypted) {
+        snapshot.locked = true;
+        session.selectedRecords = null;
+        session.diff = null;
+        session.selectedKeys.clear();
+        session.selectedLoading = false;
+        session.needsUnlock = true;
+        session.unlockError = t('backupRestoreHistoryCredentialsCleared');
+        renderBackupRestoreDialog();
+    }
+}
+
+function saveBackupRestoreSessionCredentials(session) {
+    backupRestoreMemoryPassphrase = session.passphrase;
+    backupRestoreMemoryRememberSession = session.rememberSession;
+    backupRestoreMemoryValidated = session.passphraseValidated;
+    if (!session.rememberSession || session.passphrase.length < 8 || !session.passphraseValidated) {
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+        return !session.rememberSession;
+    }
+    const saved = safeSessionStorageSet(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY, JSON.stringify({
+        version: 1,
+        passphrase: session.passphrase,
+        savedAt: new Date().toISOString(),
+    }));
+    if (!saved) backupRestoreMemoryRememberSession = false;
+    return saved;
+}
 
 async function openBackupRestoreDialog(options = {}) {
     closeExportMenu();
@@ -16,6 +101,7 @@ async function openBackupRestoreDialog(options = {}) {
     }
 
     const returnToBackupDialog = options.returnToBackupDialog === true || ui.backupDialog.open;
+    const credentials = getInitialBackupRestoreCredentials();
     window.clearTimeout(state.backup.timer);
     if (ui.backupDialog.open) ui.backupDialog.close();
     backupRestoreSession = {
@@ -27,6 +113,11 @@ async function openBackupRestoreDialog(options = {}) {
         diff: null,
         selectedKeys: new Set(),
         mode: 'merge',
+        passphrase: credentials.passphrase,
+        passphraseValidated: credentials.validated,
+        rememberSession: credentials.rememberSession,
+        needsUnlock: false,
+        unlockError: '',
         loading: false,
         selectedLoading: false,
         applying: false,
@@ -37,6 +128,8 @@ async function openBackupRestoreDialog(options = {}) {
     document.querySelectorAll('input[name="backup-restore-mode"]').forEach((input) => {
         input.checked = input.value === 'merge';
     });
+    ui.backupRestorePassphraseInput.value = credentials.passphrase;
+    ui.backupRestoreRememberToggle.checked = credentials.rememberSession;
     renderBackupRestoreDialog();
     if (!ui.backupRestoreDialog.open) ui.backupRestoreDialog.showModal();
     if (backupRestoreSession.handle) {
@@ -47,6 +140,7 @@ async function openBackupRestoreDialog(options = {}) {
 function closeBackupRestoreDialog(reopenBackupDialog = true) {
     if (backupRestoreSession?.applying) return;
     const shouldReopen = reopenBackupDialog && backupRestoreSession?.returnToBackupDialog;
+    if (backupRestoreSession) saveBackupRestoreSessionCredentials(backupRestoreSession);
     if (ui.backupRestoreDialog.open) ui.backupRestoreDialog.close();
     backupRestoreSession = null;
     if (state.backup.enabled) scheduleAutoBackup();
@@ -81,6 +175,8 @@ async function scanBackupRestoreDirectory(handle) {
     session.selectedRecords = null;
     session.diff = null;
     session.selectedKeys.clear();
+    session.needsUnlock = false;
+    session.unlockError = '';
     session.loading = true;
     session.selectedLoading = false;
     session.error = '';
@@ -122,6 +218,8 @@ async function scanBackupSnapshotFiles(directory, shouldContinue = () => true) {
             }
             snapshots.push({
                 ...candidate,
+                encrypted: candidate.name.endsWith('.enc.json'),
+                locked: false,
                 invalid: true,
                 error: error?.message || t('backupSnapshotInvalid'),
                 exportedAt: file?.lastModified ? new Date(file.lastModified).toISOString() : '',
@@ -139,31 +237,33 @@ async function scanBackupSnapshotFiles(directory, shouldContinue = () => true) {
 
 async function collectBackupSnapshotCandidates(directory) {
     const candidates = [];
-    try {
-        const latest = await directory.getFileHandle('bookmarks-latest.json');
-        candidates.push({
-            id: 'latest/bookmarks-latest.json',
-            name: 'bookmarks-latest.json',
-            relativeName: 'bookmarks-latest.json',
-            kind: 'latest',
-            fileHandle: latest,
-        });
-    } catch (error) {
-        if (error?.name !== 'NotFoundError') throw error;
+    for (const name of ['bookmarks-latest.enc.json', 'bookmarks-latest.json']) {
+        try {
+            const latest = await directory.getFileHandle(name);
+            candidates.push({
+                id: `latest/${name}`,
+                name,
+                relativeName: name,
+                kind: 'latest',
+                fileHandle: latest,
+            });
+        } catch (error) {
+            if (error?.name !== 'NotFoundError') throw error;
+        }
     }
 
     await collectBackupDirectoryCandidates(
         directory,
         'history',
         'history',
-        /^bookmarks-\d{4}-\d{2}-\d{2}T.*\.json$/,
+        /^bookmarks-\d{4}-\d{2}-\d{2}T.*(?:\.enc)?\.json$/,
         candidates,
     );
     await collectBackupDirectoryCandidates(
         directory,
         'emergency',
         'emergency',
-        /^bookmarks-before-restore-\d{4}-\d{2}-\d{2}T.*\.json$/,
+        /^bookmarks-before-restore-\d{4}-\d{2}-\d{2}T.*(?:\.enc)?\.json$/,
         candidates,
     );
     return candidates;
@@ -193,9 +293,29 @@ async function inspectBackupSnapshot(candidate) {
     const file = await candidate.fileHandle.getFile();
     if (file.size > MAX_RESTORE_BACKUP_BYTES) throw new Error(t('backupSnapshotTooLarge'));
     const content = await file.text();
-    const inspection = inspectBackupPayload(content);
+    const documentObject = parseBackupJsonDocument(content);
+    if (documentObject?.format === 'bookmark-manager-encrypted-backup') {
+        validateEncryptedBackupEnvelope(documentObject);
+        return {
+            ...candidate,
+            encrypted: true,
+            locked: true,
+            invalid: false,
+            error: '',
+            exportedAt: new Date(file.lastModified).toISOString(),
+            size: file.size,
+            bookmarks: 0,
+            folders: 0,
+            items: 0,
+            previewItems: [],
+        };
+    }
+
+    const inspection = inspectBackupPayloadObject(documentObject);
     return {
         ...candidate,
+        encrypted: false,
+        locked: false,
         invalid: false,
         error: '',
         exportedAt: validDate(inspection.payload.exportedAt)
@@ -209,13 +329,19 @@ async function inspectBackupSnapshot(candidate) {
     };
 }
 
-function inspectBackupPayload(content) {
-    let payload;
+function parseBackupJsonDocument(content) {
     try {
-        payload = JSON.parse(content);
+        return JSON.parse(content);
     } catch {
         throw new Error(t('backupSnapshotJsonInvalid'));
     }
+}
+
+function inspectBackupPayload(content) {
+    return inspectBackupPayloadObject(parseBackupJsonDocument(content));
+}
+
+function inspectBackupPayloadObject(payload) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
         throw new Error(t('backupSnapshotInvalid'));
     }
@@ -285,16 +411,37 @@ function inspectBackupPayload(content) {
     return { payload, source: payload.bookmarks, bookmarks, folders, previewItems };
 }
 
-async function readBackupSnapshotRecords(snapshot) {
+async function readBackupSnapshotData(snapshot, passphrase = '') {
     const file = await snapshot.fileHandle.getFile();
     if (file.size > MAX_RESTORE_BACKUP_BYTES) throw new Error(t('backupSnapshotTooLarge'));
     const content = await file.text();
-    const inspection = inspectBackupPayload(content);
-    const parsed = parseJsonImport(content);
+    const documentObject = parseBackupJsonDocument(content);
+    const encrypted = documentObject?.format === 'bookmark-manager-encrypted-backup';
+    let payload = documentObject;
+    if (encrypted) {
+        validateEncryptedBackupEnvelope(documentObject);
+        if (!state.backup.encryptionSupported) {
+            const error = new Error(t('backupEncryptionUnavailable'));
+            error.code = 'BACKUP_ENCRYPTION_UNSUPPORTED';
+            throw error;
+        }
+        if (typeof passphrase !== 'string' || passphrase.length < 8) {
+            const error = new Error(t('backupRestorePassphraseRequired'));
+            error.code = 'BACKUP_PASSPHRASE_REQUIRED';
+            throw error;
+        }
+        payload = await decryptBackupData(content, passphrase);
+    }
+    const inspection = inspectBackupPayloadObject(payload);
+    const parsed = parseJsonImport(JSON.stringify(payload));
     if (parsed.skipped || parsed.records.length !== inspection.source.length) {
         throw new Error(t('backupSnapshotDamagedItems'));
     }
-    return parsed.records;
+    return { records: parsed.records, inspection, encrypted };
+}
+
+async function readBackupSnapshotRecords(snapshot, passphrase = '') {
+    return (await readBackupSnapshotData(snapshot, passphrase)).records;
 }
 
 function compareBackupSnapshots(left, right) {
@@ -316,12 +463,36 @@ async function selectBackupRestoreSnapshot(id) {
     session.selectedRecords = null;
     session.diff = null;
     session.selectedKeys.clear();
-    session.selectedLoading = true;
+    session.needsUnlock = false;
+    session.unlockError = '';
+    session.selectedLoading = false;
     session.error = '';
+    if (snapshot.encrypted && !state.backup.encryptionSupported) {
+        snapshot.locked = true;
+        session.needsUnlock = true;
+        session.unlockError = t('backupEncryptionUnavailable');
+        renderBackupRestoreDialog();
+        return;
+    }
+    if (snapshot.encrypted && session.passphrase.length < 8) {
+        snapshot.locked = true;
+        session.needsUnlock = true;
+        renderBackupRestoreDialog();
+        focusBackupRestorePassphrase();
+        return;
+    }
+    await loadSelectedBackupSnapshot(session, snapshot, token);
+}
+
+async function loadSelectedBackupSnapshot(session, snapshot, token) {
+    session.selectedLoading = true;
+    session.needsUnlock = snapshot.encrypted;
+    session.unlockError = '';
     renderBackupRestoreDialog();
     try {
-        const records = await readBackupSnapshotRecords(snapshot);
+        const data = await readBackupSnapshotData(snapshot, session.passphrase);
         if (backupRestoreSession !== session || session.selectionToken !== token) return;
+        const { records, inspection } = data;
         session.selectedRecords = records;
         session.diff = createBackupRestoreDiff(records, state.items);
         session.selectedKeys = new Set(
@@ -330,16 +501,128 @@ async function selectBackupRestoreSnapshot(id) {
                 .map((entry) => entry.key),
         );
         session.selectedLoading = false;
+        session.needsUnlock = false;
+        session.unlockError = '';
+        snapshot.encrypted = data.encrypted;
+        snapshot.locked = false;
+        snapshot.exportedAt = validDate(inspection.payload.exportedAt)
+            ? inspection.payload.exportedAt
+            : snapshot.exportedAt;
         snapshot.items = records.length;
-        snapshot.bookmarks = records.filter((record) => Boolean(record.url)).length;
-        snapshot.folders = records.length - snapshot.bookmarks;
+        snapshot.bookmarks = inspection.bookmarks;
+        snapshot.folders = inspection.folders;
+        snapshot.previewItems = inspection.previewItems;
+        if (data.encrypted) {
+            session.passphraseValidated = true;
+            if (!saveBackupRestoreSessionCredentials(session) && session.rememberSession) {
+                session.rememberSession = false;
+                ui.backupRestoreRememberToggle.checked = false;
+                saveBackupRestoreSessionCredentials(session);
+                showToast(t('sessionStorageUnavailable'), 'warning');
+            }
+        }
     } catch (error) {
         if (backupRestoreSession !== session || session.selectionToken !== token) return;
         session.selectedLoading = false;
+        session.selectedRecords = null;
+        session.diff = null;
+        session.selectedKeys.clear();
+        if ([
+            'BACKUP_ENCRYPTION_UNSUPPORTED',
+            'BACKUP_PASSPHRASE_REQUIRED',
+            'BACKUP_DECRYPT_FAILED',
+        ].includes(error?.code)) {
+            snapshot.encrypted = true;
+            snapshot.locked = true;
+            session.passphraseValidated = false;
+            saveBackupRestoreSessionCredentials(session);
+            session.needsUnlock = true;
+            session.unlockError = error?.message || t('backupDecryptFailed');
+            renderBackupRestoreDialog();
+            focusBackupRestorePassphrase();
+            return;
+        }
         snapshot.invalid = true;
+        snapshot.locked = false;
         snapshot.error = error?.message || t('backupSnapshotInvalid');
         session.selectedId = '';
+        session.needsUnlock = false;
         session.error = snapshot.error;
+    }
+    renderBackupRestoreDialog();
+}
+
+function focusBackupRestorePassphrase() {
+    window.requestAnimationFrame(() => {
+        if (backupRestoreSession?.needsUnlock) {
+            ui.backupRestorePassphraseInput.focus();
+            ui.backupRestorePassphraseInput.select();
+        }
+    });
+}
+
+async function handleBackupRestoreUnlock(event) {
+    event.preventDefault();
+    const session = backupRestoreSession;
+    if (!session || session.applying || session.selectedLoading) return;
+    if (!state.backup.encryptionSupported) {
+        session.unlockError = t('backupEncryptionUnavailable');
+        renderBackupRestoreDialog();
+        return;
+    }
+    const snapshot = session.snapshots.find((entry) => entry.id === session.selectedId && !entry.invalid);
+    if (!snapshot?.encrypted) return;
+    session.passphrase = ui.backupRestorePassphraseInput.value;
+    session.rememberSession = ui.backupRestoreRememberToggle.checked;
+    if (session.passphrase.length < 8) {
+        session.unlockError = t('backupRestorePassphraseRequired');
+        renderBackupRestoreDialog();
+        focusBackupRestorePassphrase();
+        return;
+    }
+    session.passphraseValidated = false;
+    backupRestoreMemoryPassphrase = session.passphrase;
+    backupRestoreMemoryRememberSession = session.rememberSession;
+    backupRestoreMemoryValidated = false;
+    safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    const token = createUuid();
+    session.selectionToken = token;
+    await loadSelectedBackupSnapshot(session, snapshot, token);
+}
+
+function handleBackupRestorePassphraseInput() {
+    const session = backupRestoreSession;
+    if (!session) return;
+    session.passphrase = ui.backupRestorePassphraseInput.value;
+    session.passphraseValidated = false;
+    session.unlockError = '';
+    backupRestoreMemoryPassphrase = session.passphrase;
+    backupRestoreMemoryRememberSession = session.rememberSession;
+    backupRestoreMemoryValidated = false;
+    safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    ui.backupRestoreUnlockError.classList.add('hidden');
+}
+
+function handleBackupRestoreRememberToggle() {
+    const session = backupRestoreSession;
+    if (!session) return;
+    const remember = ui.backupRestoreRememberToggle.checked;
+    if (remember && session.passphrase.length < 8) {
+        ui.backupRestoreRememberToggle.checked = false;
+        session.rememberSession = false;
+        session.unlockError = t('backupRestorePassphraseRequired');
+        renderBackupRestoreDialog();
+        return;
+    }
+    session.rememberSession = remember;
+    backupRestoreMemoryRememberSession = remember;
+    if (session.passphraseValidated && !saveBackupRestoreSessionCredentials(session)) {
+        session.rememberSession = false;
+        ui.backupRestoreRememberToggle.checked = false;
+        saveBackupRestoreSessionCredentials(session);
+        showToast(t('sessionStorageUnavailable'), 'warning');
+    } else if (!remember) {
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
     }
     renderBackupRestoreDialog();
 }
@@ -412,6 +695,22 @@ function renderBackupRestoreDialog() {
             ? t('backupRestoreFound', { count: validSnapshots.length })
             : t('backupRestoreChooseFolderHint');
     ui.chooseRestoreDirectoryButton.disabled = session.loading || session.applying;
+    ui.backupRestoreUnlockForm.classList.toggle('hidden', !session.needsUnlock || session.applying);
+    ui.backupRestorePassphraseInput.disabled = !state.backup.encryptionSupported
+        || session.selectedLoading
+        || session.applying;
+    ui.backupRestoreUnlockButton.disabled = !state.backup.encryptionSupported
+        || session.selectedLoading
+        || session.applying;
+    ui.backupRestoreUnlockButton.textContent = t(session.selectedLoading
+        ? 'unlockingBackup'
+        : 'unlockBackup');
+    ui.backupRestoreRememberToggle.checked = session.rememberSession;
+    ui.backupRestoreRememberToggle.disabled = !state.backup.encryptionSupported
+        || session.selectedLoading
+        || session.applying;
+    ui.backupRestoreUnlockError.textContent = session.unlockError;
+    ui.backupRestoreUnlockError.classList.toggle('hidden', !session.unlockError);
     ui.backupRestoreLoading.classList.toggle('hidden', !session.loading && !session.applying);
     ui.backupRestoreLoadingText.textContent = session.applying
         ? t('backupRestoreApplying')
@@ -459,7 +758,10 @@ function renderBackupRestoreSnapshotList() {
     const session = backupRestoreSession;
     ui.backupSnapshotList.replaceChildren();
     session.snapshots.forEach((snapshot) => {
-        const label = createElement('label', `backup-snapshot-card${snapshot.invalid ? ' invalid' : ''}`);
+        const label = createElement(
+            'label',
+            `backup-snapshot-card${snapshot.encrypted ? ' encrypted' : ''}${snapshot.invalid ? ' invalid' : ''}`,
+        );
         const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'backup-restore-snapshot';
@@ -467,7 +769,9 @@ function renderBackupRestoreSnapshotList() {
         input.checked = snapshot.id === session.selectedId;
         input.disabled = snapshot.invalid || session.applying;
         const icon = createElement('span', 'backup-snapshot-icon');
-        icon.append(createIcon(snapshot.invalid ? 'alert' : (snapshot.kind === 'latest' ? 'database' : 'upload')));
+        icon.append(createIcon(snapshot.invalid
+            ? 'alert'
+            : snapshot.encrypted ? 'lock' : (snapshot.kind === 'latest' ? 'database' : 'upload')));
         const copy = createElement('span', 'backup-snapshot-copy');
         const heading = createElement('span', 'backup-snapshot-heading');
         heading.append(
@@ -480,7 +784,9 @@ function renderBackupRestoreSnapshotList() {
             heading,
             createElement('small', 'backup-snapshot-summary', snapshot.invalid
                 ? snapshot.error
-                : t('backupRestoreCounts', { bookmarks: snapshot.bookmarks, folders: snapshot.folders })),
+                : snapshot.encrypted && snapshot.locked
+                    ? t('backupRestoreEncryptedLocked')
+                    : t('backupRestoreCounts', { bookmarks: snapshot.bookmarks, folders: snapshot.folders })),
             createElement('small', 'backup-snapshot-file', `${snapshot.relativeName} · ${formatBackupFileSize(snapshot.size)}`),
         );
         label.append(input, icon, copy);
@@ -490,19 +796,24 @@ function renderBackupRestoreSnapshotList() {
 
 function renderBackupRestorePreview(snapshot) {
     const session = backupRestoreSession;
-    const visible = Boolean(snapshot && !snapshot.invalid);
+    const visible = Boolean(snapshot && !snapshot.invalid && !snapshot.locked);
     ui.backupPreviewEmpty.classList.toggle('hidden', visible);
     ui.backupPreview.classList.toggle('hidden', !visible);
     if (!visible) {
         ui.backupPreviewEmpty.textContent = session.selectedLoading
             ? t('backupRestoreLoadingPreview')
-            : t('backupRestoreSelectSnapshot');
+            : snapshot?.encrypted && snapshot.locked
+                ? t('backupRestoreUnlockToPreview')
+                : t('backupRestoreSelectSnapshot');
         return;
     }
 
-    ui.backupPreviewKind.textContent = t(snapshot.kind === 'latest'
+    const kind = t(snapshot.kind === 'latest'
         ? 'backupRestoreLatest'
         : (snapshot.kind === 'emergency' ? 'backupRestoreEmergency' : 'backupRestoreHistory'));
+    ui.backupPreviewKind.textContent = snapshot.encrypted
+        ? `${kind} · ${t('encryptedBackupBadge')}`
+        : kind;
     ui.backupPreviewTitle.textContent = snapshot.name;
     ui.backupPreviewTime.textContent = formatBackupTime(snapshot.exportedAt) || t('backupRestoreUnknownTime');
     ui.backupPreviewBookmarkCount.textContent = String(snapshot.bookmarks);
@@ -1045,7 +1356,11 @@ async function applySelectedBackupRestore() {
                 return { noAction: true };
             }
 
-            const emergencyName = await writeRestoreEmergencyBackup(session.handle);
+            const emergencyEncryption = getRestoreEmergencyEncryptionContext(session, snapshot);
+            const emergencyName = await writeRestoreEmergencyBackup(
+                session.handle,
+                emergencyEncryption,
+            );
             let restoredCount = 0;
             if (session.mode === 'replace') {
                 restoredCount = await replaceItemsFromRestore(
@@ -1066,7 +1381,11 @@ async function applySelectedBackupRestore() {
             ui.clearSearchButton.classList.add('hidden');
             ui.searchShortcut.classList.remove('hidden');
             await refreshData();
-            await adoptBackupRestoreDirectory(session.handle, snapshot.exportedAt);
+            await adoptBackupRestoreDirectory(session.handle, snapshot.exportedAt, {
+                encrypted: snapshot.encrypted,
+                passphrase: snapshot.encrypted ? session.passphrase : '',
+                rememberSession: snapshot.encrypted && session.rememberSession,
+            });
             scheduleDataProtection();
             return {
                 mode: session.mode,
@@ -1107,15 +1426,35 @@ async function applySelectedBackupRestore() {
     }
 }
 
-async function writeRestoreEmergencyBackup(directory) {
+function getRestoreEmergencyEncryptionContext(session, snapshot) {
+    if (snapshot.encrypted) {
+        if (session.passphrase.length < 8) {
+            const error = new Error(t('backupRestorePassphraseRequired'));
+            error.code = 'BACKUP_PASSPHRASE_REQUIRED';
+            throw error;
+        }
+        return { encrypted: true, passphrase: session.passphrase };
+    }
+    return getCurrentBackupEncryptionContext();
+}
+
+async function writeRestoreEmergencyBackup(
+    directory,
+    encryption = getCurrentBackupEncryptionContext(),
+) {
     const permission = await getBackupPermission(directory, true);
     if (permission !== 'granted') throw new Error(t('backupRestoreEmergencyPermission'));
     const emergency = await directory.getDirectoryHandle('emergency', { create: true });
-    const filename = `bookmarks-before-restore-${fileTimestamp(new Date())}.json`;
+    const filename = backupEmergencyFilename(new Date(), encryption.encrypted);
     const payload = { ...createBackupPayload(), reason: 'before-restore' };
-    await writeBackupFile(emergency, filename, `${JSON.stringify(payload, null, 2)}\n`);
+    const content = await createBackupFileContent(payload, encryption);
+    await writeBackupFile(emergency, filename, content);
     try {
-        await pruneNamedBackupFiles(emergency, /^bookmarks-before-restore-.*\.json$/, EMERGENCY_BACKUP_RETENTION);
+        await pruneNamedBackupFiles(
+            emergency,
+            /^bookmarks-before-restore-.*(?:\.enc)?\.json$/,
+            EMERGENCY_BACKUP_RETENTION,
+        );
     } catch (error) {
         console.warn('Unable to prune pre-restore emergency backups:', error);
     }
@@ -1131,11 +1470,24 @@ async function pruneNamedBackupFiles(directory, pattern, retention) {
     await Promise.all(names.slice(retention).map((name) => directory.removeEntry(name)));
 }
 
-async function adoptBackupRestoreDirectory(handle, lastBackupAt) {
+async function adoptBackupRestoreDirectory(handle, lastBackupAt, options = {}) {
     state.backup.handle = handle;
     state.backup.permission = 'granted';
     state.backup.enabled = true;
     state.backup.error = '';
+    if (options.encrypted) {
+        const passphraseChanged = !state.backup.encryptionEnabled
+            || state.backup.passphrase !== options.passphrase;
+        state.backup.encryptionEnabled = true;
+        state.backup.passphrase = options.passphrase;
+        state.backup.passphraseConfirmed = true;
+        state.backup.rememberSession = options.rememberSession === true;
+        if (passphraseChanged || !state.backup.encryptionProfileId) {
+            state.backup.encryptionProfileId = createUuid();
+        }
+        if (state.backup.rememberSession) saveSessionBackupCredentials();
+        else clearSessionBackupCredentials();
+    }
     state.backup.permissionNoticeShown = false;
     state.backup.lastNotifiedError = '';
     state.backup.lastHash = '';
@@ -1152,15 +1504,17 @@ async function adoptBackupRestoreDirectory(handle, lastBackupAt) {
 }
 
 async function backupDirectoryContainsPotentialSnapshots(directory) {
-    try {
-        await directory.getFileHandle('bookmarks-latest.json');
-        return true;
-    } catch (error) {
-        if (error?.name !== 'NotFoundError') throw error;
+    for (const name of ['bookmarks-latest.enc.json', 'bookmarks-latest.json']) {
+        try {
+            await directory.getFileHandle(name);
+            return true;
+        } catch (error) {
+            if (error?.name !== 'NotFoundError') throw error;
+        }
     }
     for (const [directoryName, pattern] of [
-        ['history', /^bookmarks-\d{4}-\d{2}-\d{2}T.*\.json$/],
-        ['emergency', /^bookmarks-before-restore-.*\.json$/],
+        ['history', /^bookmarks-\d{4}-\d{2}-\d{2}T.*(?:\.enc)?\.json$/],
+        ['emergency', /^bookmarks-before-restore-.*(?:\.enc)?\.json$/],
     ]) {
         try {
             const child = await directory.getDirectoryHandle(directoryName);

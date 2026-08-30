@@ -28,11 +28,11 @@ js/
 ├── data/
 │   └── transfer.js      JSON/HTML 导入导出和清空流程
 ├── sync/
-│   ├── backup.js        File System Access 自动备份
+│   ├── backup.js        File System Access 自动备份、加密设置与口令生命周期
 │   ├── local-folder.js  桌面云盘本地目录双向同步
 │   ├── coordinator.js   同步生命周期、凭据和冲突中心
 │   ├── providers.js     标准 WebDAV 与 Koofr Adapter
-│   ├── crypto.js        PBKDF2 + AES-GCM
+│   ├── crypto.js        同步与备份的 PBKDF2 + AES-GCM 信封
 │   └── merge.js         数据集规范化、三方合并与本地应用
 ├── ui/
 │   ├── render.js        导航、文件夹和书签卡片渲染
@@ -67,15 +67,21 @@ js/
 - `state.persistence`：浏览器持久存储状态；
 - `state.coordination`：当前标签页 ID、跨标签页消息、写锁和同步心跳。
 
-长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。
+长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。
+
+## 备份加密边界
+
+`backup.js` 决定新快照使用明文还是加密文件名，并把完整 `bookmark-manager` payload 交给 `crypto.js` 加密。加密信封不包含书签摘要或导出时间；文件名仍携带历史快照时间。切换格式时只在新文件成功写入后删除另一格式的 `bookmarks-latest`，历史文件继续按统一保留数量清理。
+
+备份口令默认只在 `state.backup` 中保留。用户明确选择刷新保留后，口令才写入独立 `sessionStorage` key，并同时绑定随机配置 ID；初始化仅在 Navigation Timing 为 `reload` 时恢复。恢复向导使用另一个 session key，且只有口令成功解密过快照后才允许持久到刷新会话。两者都不会进入 IndexedDB。
 
 ## 备份恢复边界
 
-恢复向导只接受 `format: bookmark-manager` 且版本受支持的 JSON，并在展示前验证结构、URL、重复记录 ID、父项类型和层级循环。目录扫描逐文件让出主线程，快照内容只在选中时转换为恢复记录，避免同时保留所有历史文件的完整对象。
+恢复向导接受受支持的明文 `format: bookmark-manager` JSON，或 `format: bookmark-manager-encrypted-backup` 加密信封。扫描阶段只验证加密信封结构并显示锁定状态；用户选中后才执行 PBKDF2 和内容校验。解密后的 payload 继续验证 URL、重复记录 ID、父项类型和层级循环。目录扫描逐文件让出主线程，快照内容只在选中时转换为恢复记录，避免同时保留所有历史文件的完整对象。
 
 `backup-restore.js` 使用稳定 `syncId` 比较快照与当前数据，并为旧备份提供 URL 与文件夹位置回退匹配，生成“新增 / 有差异 / 相同 / 当前独有”四类结果。安全合并只插入缺少内容并复用同位置同名文件夹；选择恢复将用户勾选的新增或差异项目转换为同步实体，自动补齐缺少的上级文件夹；完整替换通过 `storage.js` 中的单个 IndexedDB 事务重建书签，同时为快照中不存在的当前项目写入删除墓碑。
 
-三种模式在事务前都必须先成功写入 `emergency/` 紧急备份。所有恢复项目都会写入当前时间和当前设备 ID，以便下一次同步把恢复视为明确的本机修改。预览保存当前数据签名；获取 Web Lock 后会重新读取 IndexedDB，如果签名变化则终止本轮并要求用户审阅刷新后的差异。
+三种模式在事务前都必须先成功写入 `emergency/` 紧急备份。自动备份当前已启用加密或所选恢复快照本身已加密时，紧急备份也必须加密；加密或写入失败即终止，不触碰 IndexedDB。所有恢复项目都会写入当前时间和当前设备 ID，以便下一次同步把恢复视为明确的本机修改。预览保存当前数据签名；获取 Web Lock 后会重新读取 IndexedDB，如果签名变化则终止本轮并要求用户审阅刷新后的差异。
 
 恢复操作与普通修改使用同一个 Web Lock，成功后广播数据变化，并分别触发自动备份和已解锁的自动同步。
 

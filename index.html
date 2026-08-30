@@ -11,26 +11,26 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-29">
-    <script src="js/core/translations.js?v=20260829-29" defer></script>
-    <script src="js/core/config.js?v=20260829-29" defer></script>
-    <script src="js/core/coordination.js?v=20260829-29" defer></script>
-    <script src="js/core/storage.js?v=20260829-29" defer></script>
-    <script src="js/sync/backup.js?v=20260829-29" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-29" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-29" defer></script>
-    <script src="js/sync/providers.js?v=20260829-29" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-29" defer></script>
-    <script src="js/sync/merge.js?v=20260829-29" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-29" defer></script>
-    <script src="js/ui/help.js?v=20260829-29" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-29" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-29" defer></script>
-    <script src="js/ui/render.js?v=20260829-29" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-29" defer></script>
-    <script src="js/data/transfer.js?v=20260829-29" defer></script>
-    <script src="js/core/utils.js?v=20260829-29" defer></script>
-    <script src="js/app.js?v=20260829-29" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-30">
+    <script src="js/core/translations.js?v=20260829-30" defer></script>
+    <script src="js/core/config.js?v=20260829-30" defer></script>
+    <script src="js/core/coordination.js?v=20260829-30" defer></script>
+    <script src="js/core/storage.js?v=20260829-30" defer></script>
+    <script src="js/sync/backup.js?v=20260829-30" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-30" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-30" defer></script>
+    <script src="js/sync/providers.js?v=20260829-30" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-30" defer></script>
+    <script src="js/sync/merge.js?v=20260829-30" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-30" defer></script>
+    <script src="js/ui/help.js?v=20260829-30" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-30" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-30" defer></script>
+    <script src="js/ui/render.js?v=20260829-30" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-30" defer></script>
+    <script src="js/data/transfer.js?v=20260829-30" defer></script>
+    <script src="js/core/utils.js?v=20260829-30" defer></script>
+    <script src="js/app.js?v=20260829-30" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -47,6 +47,7 @@
         <symbol id="icon-folder-plus" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm9 4v6m-3-3h6"/></symbol>
         <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
         <symbol id="icon-language" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14.7 14.7 0 0 1 0 18M12 3a14.7 14.7 0 0 0 0 18"/></symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14.5v2"/></symbol>
         <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.5 2.05c-.8.47-1.3.95-1.3 1.95v.25M12 17.5h.01"/></symbol>
         <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
         <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.5 15.1A8.5 8.5 0 0 1 8.9 3.5 8.5 8.5 0 1 0 20.5 15.1Z"/></symbol>
@@ -281,10 +282,10 @@
                     <div>
                         <ul>
                             <li data-i18n="helpBackup1">在“备份/同步”中选择自动本地备份，并授权一个目录。</li>
-                            <li data-i18n="helpBackup2">最新备份和历史快照会自动写入所选目录。</li>
+                            <li data-i18n="helpBackup2">最新备份和历史快照会自动写入所选目录，也可选择使用独立口令加密。</li>
                             <li data-i18n="helpBackup3">“从备份恢复”会先比较快照与当前数据，可安全合并、选择部分项目或完整替换。</li>
                             <li data-i18n="helpBackup4">回收站保留删除项目 30 天，支持单项和批量恢复。</li>
-                            <li data-i18n="helpBackup5">JSON 用于完整备份；浏览器 HTML 用于与浏览器迁移。</li>
+                            <li data-i18n="helpBackup5">手动导出的 JSON 是明文完整备份；浏览器 HTML 用于与浏览器迁移。</li>
                         </ul>
                     </div>
                 </details>
@@ -314,8 +315,8 @@
                     <div>
                         <ul>
                             <li data-i18n="helpPrivacy1">未配置同步时，书签不会离开当前浏览器。</li>
-                            <li data-i18n="helpPrivacy2">远端同步文件会在本机加密后上传。</li>
-                            <li data-i18n="helpPrivacy3">加密口令无法找回；遗失后无法解密同步文件。</li>
+                            <li data-i18n="helpPrivacy2">远端同步始终加密；本地自动备份可选择加密。</li>
+                            <li data-i18n="helpPrivacy3">同步和备份加密口令都无法找回；遗失后无法解密对应文件。</li>
                             <li data-i18n="helpPrivacy4">共享设备上不要开启“刷新时保留凭据”。</li>
                         </ul>
                     </div>
@@ -410,6 +411,38 @@
                         </span>
                     </label>
 
+                    <label class="setting-row settings-switch-row">
+                        <span class="setting-copy"><strong data-i18n="encryptLocalBackups">加密本地备份</strong><small data-i18n="encryptLocalBackupsHint">保护最新、历史和恢复前紧急备份中的内容</small></span>
+                        <span class="switch-control">
+                            <input id="backup-encryption-toggle" type="checkbox">
+                            <span></span>
+                        </span>
+                    </label>
+
+                    <div class="backup-encryption-fields hidden" id="backup-encryption-fields">
+                        <div class="backup-encryption-heading">
+                            <span><svg><use href="#icon-lock"></use></svg></span>
+                            <span class="setting-copy"><strong data-i18n="backupEncryptionPassphrase">备份加密口令</strong><small data-i18n="backupEncryptionPassphraseHint">至少 8 个字符；口令无法找回，请妥善保存</small></span>
+                        </div>
+                        <div class="backup-passphrase-grid">
+                            <label class="field">
+                                <span data-i18n="backupPassphrase">加密口令</span>
+                                <input id="backup-passphrase-input" type="password" minlength="8" autocomplete="new-password">
+                            </label>
+                            <label class="field">
+                                <span data-i18n="confirmBackupPassphrase">确认加密口令</span>
+                                <input id="backup-passphrase-confirm-input" type="password" minlength="8" autocomplete="new-password">
+                            </label>
+                        </div>
+                        <label class="favorite-toggle backup-remember-passphrase">
+                            <input id="backup-remember-session-toggle" type="checkbox">
+                            <span class="toggle-box"><svg><use href="#icon-check"></use></svg></span>
+                            <span><strong data-i18n="rememberBackupPassphrase">刷新本标签页时保留口令</strong><small data-i18n="rememberBackupPassphraseHint">默认只保留在当前页面内存中；共享设备上请勿开启</small></span>
+                        </label>
+                        <p class="backup-encryption-status" id="backup-encryption-status" role="status">请输入并确认至少 8 个字符的口令</p>
+                        <p class="backup-encryption-history-note" data-i18n="backupEncryptionHistoryNote">启用后新备份会加密；已有明文或使用旧口令的历史不会立即转换，之后仍按保留数量清理。</p>
+                    </div>
+
                     <div class="setting-row">
                         <span class="setting-copy"><strong data-i18n="backupDirectory">备份目录</strong><small id="backup-directory-name">尚未选择</small></span>
                         <button class="button button-secondary compact-button" id="choose-backup-directory-button" type="button" data-i18n="chooseFolder">选择目录</button>
@@ -464,9 +497,24 @@
                     <button class="button button-secondary compact-button" id="choose-restore-directory-button" type="button" data-i18n="chooseBackupFolder">选择备份目录</button>
                 </section>
 
+                <form class="backup-restore-unlock hidden" id="backup-restore-unlock-form" novalidate>
+                    <span class="backup-restore-unlock-icon"><svg><use href="#icon-lock"></use></svg></span>
+                    <span class="backup-restore-unlock-copy"><strong data-i18n="encryptedBackupLocked">这份备份已加密</strong><small data-i18n="encryptedBackupLockedHint">输入创建该快照时使用的备份口令，验证后才能预览。</small></span>
+                    <label class="backup-restore-passphrase">
+                        <span class="sr-only" data-i18n="backupPassphrase">加密口令</span>
+                        <input id="backup-restore-passphrase-input" type="password" minlength="8" autocomplete="off" placeholder="输入备份口令" data-i18n-placeholder="backupRestorePassphrasePlaceholder">
+                    </label>
+                    <button class="button button-primary compact-button" id="backup-restore-unlock-button" type="submit" data-i18n="unlockBackup">解锁备份</button>
+                    <label class="backup-restore-remember">
+                        <input id="backup-restore-remember-toggle" type="checkbox">
+                        <span data-i18n="rememberBackupPassphraseShort">仅在刷新本标签页时保留</span>
+                    </label>
+                    <p class="backup-restore-unlock-error hidden" id="backup-restore-unlock-error" role="alert"></p>
+                </form>
+
                 <section class="backup-restore-loading hidden" id="backup-restore-loading" aria-live="polite">
                     <span class="backup-restore-spinner"><svg><use href="#icon-sync"></use></svg></span>
-                    <span><strong id="backup-restore-loading-text">正在检查备份…</strong><small data-i18n="backupRestoreLoadingHint">备份文件会逐个验证，窗口会保持响应。</small></span>
+                    <span><strong id="backup-restore-loading-text">正在检查备份…</strong><small data-i18n="backupRestoreLoadingHint">文件结构会逐个检查；加密内容在解锁后验证。</small></span>
                 </section>
 
                 <section class="backup-restore-empty" id="backup-restore-empty">

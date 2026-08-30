@@ -371,6 +371,71 @@ test('备份恢复会发现快照、预览内容并拒绝不兼容版本', async
     assertEqual(records[1].parentKey, records[0].sourceKey);
 });
 
+test('加密备份隐藏明文并可与旧版明文快照混合恢复', async () => {
+    const passphrase = 'encrypted backup passphrase';
+    const payload = {
+        format: 'bookmark-manager',
+        version: 2,
+        exportedAt: '2026-01-04T00:00:00.000Z',
+        bookmarks: [{
+            id: 1,
+            syncId: 'encrypted-item',
+            title: 'Private bookmark title',
+            url: 'https://private.example/',
+            parentId: null,
+        }],
+    };
+    const encrypted = await createBackupFileContent(payload, { encrypted: true, passphrase });
+    assert(!encrypted.includes('Private bookmark title'), 'Encrypted backup leaked a title');
+    assert(!encrypted.includes('private.example'), 'Encrypted backup leaked a URL');
+    assert(!encrypted.includes(payload.exportedAt), 'Encrypted backup leaked its payload timestamp');
+    validateEncryptedBackupEnvelope(JSON.parse(encrypted));
+    assertDeepEqual(await decryptBackupData(encrypted, passphrase), payload);
+
+    let rejected = false;
+    try {
+        await decryptBackupData(encrypted, 'incorrect backup passphrase');
+    } catch (error) {
+        rejected = error?.code === 'BACKUP_DECRYPT_FAILED';
+    }
+    assert(rejected, 'Wrong backup passphrase should be rejected');
+
+    const root = createMemoryDirectory('Mixed backup');
+    await writeBackupFile(root, 'bookmarks-latest.enc.json', encrypted);
+    await writeBackupFile(root, 'bookmarks-latest.json', JSON.stringify({
+        ...payload,
+        exportedAt: '2026-01-03T00:00:00.000Z',
+        bookmarks: [{ ...payload.bookmarks[0], syncId: 'plain-item', title: 'Plain legacy item' }],
+    }));
+    const history = await root.getDirectoryHandle('history', { create: true });
+    const damagedEnvelope = JSON.parse(encrypted);
+    damagedEnvelope.cipher.data = 'not-base64';
+    await writeBackupFile(
+        history,
+        'bookmarks-2026-01-02T00-00-00-000Z.enc.json',
+        JSON.stringify(damagedEnvelope),
+    );
+    const snapshots = await scanBackupSnapshotFiles(root);
+    assertEqual(snapshots.length, 3);
+    assertEqual(snapshots.filter((snapshot) => snapshot.invalid).length, 1);
+    const encryptedSnapshot = snapshots.find((snapshot) => snapshot.encrypted && !snapshot.invalid);
+    const plaintextSnapshot = snapshots.find((snapshot) => !snapshot.encrypted && !snapshot.invalid);
+    assert(encryptedSnapshot.locked);
+    assertEqual(plaintextSnapshot.bookmarks, 1);
+    const unlocked = await readBackupSnapshotData(encryptedSnapshot, passphrase);
+    assertEqual(unlocked.records[0].title, 'Private bookmark title');
+    assertEqual(unlocked.inspection.bookmarks, 1);
+
+    await writeLatestBackupFile(root, encrypted, true);
+    let plaintextLatestRemoved = false;
+    try {
+        await root.getFileHandle('bookmarks-latest.json');
+    } catch (error) {
+        plaintextLatestRemoved = error?.name === 'NotFoundError';
+    }
+    assert(plaintextLatestRemoved, 'Encrypted latest backup should replace the plaintext latest file');
+});
+
 test('恢复前紧急备份会保存当前状态', async () => {
     const previousItems = state.items;
     const previousDeviceId = state.sync.deviceId;
@@ -398,6 +463,21 @@ test('恢复前紧急备份会保存当前状态', async () => {
         const payload = JSON.parse(await (await file.getFile()).text());
         assertEqual(payload.reason, 'before-restore');
         assertEqual(payload.bookmarks[0].title, 'Before restore');
+
+        const encryptedName = await writeRestoreEmergencyBackup(root, {
+            encrypted: true,
+            passphrase: 'emergency backup passphrase',
+        });
+        assert(encryptedName.endsWith('.enc.json'));
+        const encryptedFile = await emergency.getFileHandle(encryptedName);
+        const encryptedContent = await (await encryptedFile.getFile()).text();
+        assert(!encryptedContent.includes('Before restore'));
+        const encryptedPayload = await decryptBackupData(
+            encryptedContent,
+            'emergency backup passphrase',
+        );
+        assertEqual(encryptedPayload.reason, 'before-restore');
+        assertEqual(encryptedPayload.bookmarks[0].title, 'Before restore');
     } finally {
         state.items = previousItems;
         state.sync.deviceId = previousDeviceId;
@@ -690,6 +770,29 @@ test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
     assert(state.db.objectStoreNames.contains(SYNC_CONFLICT_STORE_NAME));
 
     await initializeSyncIdentity();
+    const previousBackupState = {
+        enabled: state.backup.enabled,
+        retention: state.backup.retention,
+        encryptionEnabled: state.backup.encryptionEnabled,
+        encryptionProfileId: state.backup.encryptionProfileId,
+        passphrase: state.backup.passphrase,
+        passphraseConfirmed: state.backup.passphraseConfirmed,
+    };
+    Object.assign(state.backup, {
+        enabled: true,
+        retention: 30,
+        encryptionEnabled: true,
+        encryptionProfileId: 'test-backup-profile',
+        passphrase: 'must not enter indexeddb',
+        passphraseConfirmed: true,
+    });
+    assert(await saveBackupPreferences());
+    const storedBackupPreferences = await getSetting(BACKUP_PREFERENCES_KEY);
+    assertEqual(storedBackupPreferences.encryptionEnabled, true);
+    assertEqual(storedBackupPreferences.encryptionProfileId, 'test-backup-profile');
+    assert(!Object.hasOwn(storedBackupPreferences, 'passphrase'));
+    Object.assign(state.backup, previousBackupState);
+
     const record = {
         syncId: 'db-item',
         title: 'Database test',

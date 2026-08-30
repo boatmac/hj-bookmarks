@@ -41,10 +41,198 @@ async function requestPersistentStorage(notify = false) {
     return state.persistence === 'granted';
 }
 
+function backupEncryptionReady() {
+    return !state.backup.encryptionEnabled || (
+        state.backup.encryptionSupported
+        && state.backup.passphrase.length >= 8
+        && state.backup.passphraseConfirmed
+    );
+}
+
+function getCurrentBackupEncryptionContext() {
+    if (!state.backup.encryptionEnabled) return { encrypted: false, passphrase: '' };
+    if (!state.backup.encryptionSupported) {
+        const error = new Error(t('backupEncryptionUnavailable'));
+        error.code = 'BACKUP_ENCRYPTION_UNSUPPORTED';
+        throw error;
+    }
+    if (!backupEncryptionReady()) {
+        const error = new Error(t('backupPassphraseRequired'));
+        error.code = 'BACKUP_PASSPHRASE_REQUIRED';
+        throw error;
+    }
+    return { encrypted: true, passphrase: state.backup.passphrase };
+}
+
+function populateBackupEncryptionInputs() {
+    if (!ui.backupPassphraseInput) return;
+    ui.backupPassphraseInput.value = state.backup.passphrase;
+    ui.backupPassphraseConfirmInput.value = state.backup.passphraseConfirmed
+        ? state.backup.passphrase
+        : '';
+    ui.backupRememberSessionToggle.checked = state.backup.rememberSession;
+}
+
+function restoreSessionBackupCredentials() {
+    if (!state.backup.encryptionEnabled || !state.backup.encryptionSupported || !isPageReload()) {
+        clearSessionBackupCredentials();
+        return false;
+    }
+    const raw = safeSessionStorageGet(BACKUP_SESSION_CREDENTIALS_KEY);
+    if (!raw) return false;
+    try {
+        const saved = JSON.parse(raw);
+        if (
+            saved?.version !== 1
+            || saved.profileId !== state.backup.encryptionProfileId
+            || typeof saved.passphrase !== 'string'
+            || saved.passphrase.length < 8
+        ) {
+            clearSessionBackupCredentials();
+            return false;
+        }
+        state.backup.passphrase = saved.passphrase;
+        state.backup.passphraseConfirmed = true;
+        state.backup.rememberSession = true;
+        state.backup.sessionCredentialsRestored = true;
+        return true;
+    } catch {
+        clearSessionBackupCredentials();
+        return false;
+    }
+}
+
+function saveSessionBackupCredentials() {
+    if (!state.backup.rememberSession || !backupEncryptionReady()) return false;
+    const saved = safeSessionStorageSet(BACKUP_SESSION_CREDENTIALS_KEY, JSON.stringify({
+        version: 1,
+        profileId: state.backup.encryptionProfileId,
+        passphrase: state.backup.passphrase,
+        savedAt: new Date().toISOString(),
+    }));
+    state.backup.sessionCredentialsRestored = saved;
+    return saved;
+}
+
+function clearSessionBackupCredentials() {
+    safeSessionStorageRemove(BACKUP_SESSION_CREDENTIALS_KEY);
+    state.backup.sessionCredentialsRestored = false;
+}
+
+function handleBackupHistoryRestore(event) {
+    if (!event.persisted) return;
+    window.clearTimeout(state.backup.timer);
+    state.backup.passphrase = '';
+    state.backup.passphraseConfirmed = false;
+    state.backup.rememberSession = false;
+    clearSessionBackupCredentials();
+    safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    if (typeof clearBackupRestoreCredentialsAfterHistoryRestore === 'function') {
+        clearBackupRestoreCredentialsAfterHistoryRestore();
+    }
+    populateBackupEncryptionInputs();
+    renderBackupSettings();
+}
+
+async function handleBackupEncryptionToggle() {
+    const backup = state.backup;
+    const enable = ui.backupEncryptionToggle.checked;
+    if (enable && !backup.encryptionSupported) {
+        ui.backupEncryptionToggle.checked = false;
+        showToast(t('backupEncryptionUnavailable'), 'warning');
+        return;
+    }
+    if (!enable && backup.encryptionEnabled && !window.confirm(t('confirmDisableBackupEncryption'))) {
+        ui.backupEncryptionToggle.checked = true;
+        return;
+    }
+
+    window.clearTimeout(backup.timer);
+    backup.encryptionEnabled = enable;
+    backup.encryptionProfileId = enable ? createUuid() : '';
+    backup.passphrase = '';
+    backup.passphraseConfirmed = false;
+    backup.rememberSession = false;
+    backup.lastHash = '';
+    backup.error = '';
+    clearSessionBackupCredentials();
+    if (!enable) {
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+        if (typeof clearBackupRestoreMemoryCredentials === 'function') {
+            clearBackupRestoreMemoryCredentials();
+        }
+    }
+    await saveBackupPreferences();
+    populateBackupEncryptionInputs();
+    renderBackupSettings();
+    if (enable) {
+        showToast(t('backupEncryptionEnabled'));
+        window.requestAnimationFrame(() => ui.backupPassphraseInput.focus());
+    } else {
+        showToast(t('backupEncryptionDisabled'), 'warning');
+        if (backup.enabled && backup.handle) scheduleAutoBackup(150);
+    }
+}
+
+async function handleBackupEncryptionInput() {
+    const backup = state.backup;
+    const wasReady = backupEncryptionReady();
+    const previousPassphrase = backup.passphrase;
+    backup.passphrase = ui.backupPassphraseInput.value;
+    backup.passphraseConfirmed = backup.passphrase.length >= 8
+        && ui.backupPassphraseConfirmInput.value === backup.passphrase;
+    const changed = previousPassphrase !== backup.passphrase;
+    if (changed || (wasReady && !backup.passphraseConfirmed)) {
+        clearSessionBackupCredentials();
+        backup.lastHash = '';
+    }
+    const ready = backupEncryptionReady();
+    const credentialsChangedAndReady = ready && (!wasReady || changed);
+    if (credentialsChangedAndReady) {
+        backup.encryptionProfileId = createUuid();
+        backup.lastHash = '';
+        await saveBackupPreferences();
+    }
+    if (backup.rememberSession && ready) saveSessionBackupCredentials();
+    backup.error = '';
+    renderBackupSettings();
+    if (credentialsChangedAndReady && backup.enabled && backup.handle) scheduleAutoBackup(900);
+}
+
+function handleBackupRememberSession() {
+    const backup = state.backup;
+    const remember = ui.backupRememberSessionToggle.checked;
+    if (remember && !backupEncryptionReady()) {
+        ui.backupRememberSessionToggle.checked = false;
+        showToast(t('backupPassphraseRequired'), 'warning');
+        return;
+    }
+    backup.rememberSession = remember;
+    if (remember) {
+        if (!saveSessionBackupCredentials()) {
+            backup.rememberSession = false;
+            ui.backupRememberSessionToggle.checked = false;
+            showToast(t('sessionStorageUnavailable'), 'warning');
+            renderBackupSettings();
+            return;
+        }
+        showToast(t('backupSessionPassphraseRemembered'));
+    } else {
+        clearSessionBackupCredentials();
+        showToast(t('backupSessionPassphraseCleared'));
+    }
+    renderBackupSettings();
+}
+
 async function initializeBackup() {
+    if (!isPageReload()) {
+        clearSessionBackupCredentials();
+        safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    }
     renderBackupSettings();
     if (!state.backup.supported) return;
 
+    let preferencesChanged = false;
     try {
         const [handle, preferences] = await Promise.all([
             getSetting(BACKUP_HANDLE_KEY),
@@ -56,19 +244,37 @@ async function initializeBackup() {
             state.backup.retention = [7, 30, 90].includes(Number(preferences.retention))
                 ? Number(preferences.retention)
                 : 30;
+            state.backup.encryptionEnabled = preferences.encryptionEnabled === true;
+            state.backup.encryptionProfileId = typeof preferences.encryptionProfileId === 'string'
+                ? preferences.encryptionProfileId
+                : '';
             state.backup.lastBackupAt = validDate(preferences.lastBackupAt) ? preferences.lastBackupAt : '';
             state.backup.lastHash = typeof preferences.lastHash === 'string' ? preferences.lastHash : '';
         }
+        if (
+            state.backup.encryptionEnabled
+            && state.backup.encryptionSupported
+            && !state.backup.encryptionProfileId
+        ) {
+            state.backup.encryptionProfileId = createUuid();
+            preferencesChanged = true;
+        }
+        restoreSessionBackupCredentials();
         if (state.backup.handle) {
             state.backup.permission = await getBackupPermission(state.backup.handle, false);
         }
+        if (preferencesChanged) await saveBackupPreferences();
     } catch (error) {
         console.error('Unable to restore automatic backup settings:', error);
         state.backup.error = error?.message || String(error);
     }
 
     renderBackupSettings();
-    if (state.backup.enabled && state.backup.permission === 'granted') scheduleAutoBackup(250);
+    if (
+        state.backup.enabled
+        && state.backup.permission === 'granted'
+        && backupEncryptionReady()
+    ) scheduleAutoBackup(250);
 }
 
 async function saveBackupPreferences() {
@@ -76,6 +282,8 @@ async function saveBackupPreferences() {
         await saveSetting(BACKUP_PREFERENCES_KEY, {
             enabled: state.backup.enabled,
             retention: state.backup.retention,
+            encryptionEnabled: state.backup.encryptionEnabled,
+            encryptionProfileId: state.backup.encryptionProfileId,
             lastBackupAt: state.backup.lastBackupAt,
             lastHash: state.backup.lastHash,
         });
@@ -88,6 +296,7 @@ async function saveBackupPreferences() {
 
 function openBackupDialog() {
     closeExportMenu();
+    populateBackupEncryptionInputs();
     renderBackupSettings();
     ui.backupDialog.showModal();
 }
@@ -104,21 +313,35 @@ function renderBackupSettings() {
     else if (backup.running) status = 'running';
     else if (backup.error) status = 'error';
     else if (!backup.handle) status = 'not-configured';
-    else if (!backup.enabled) status = 'paused';
     else if (backup.permission !== 'granted') status = 'permission';
+    else if (backup.encryptionEnabled && !backup.encryptionSupported) status = 'encryption-unsupported';
+    else if (backup.encryptionEnabled && !backupEncryptionReady()) status = 'locked';
+    else if (!backup.enabled) status = 'paused';
 
     const statusContent = {
         unsupported: [t('backupUnsupportedTitle'), t('backupUnsupportedDetail'), t('backupMenuUnsupported')],
-        running: [t('backupRunningTitle'), t('backupRunningDetail'), t('backupMenuRunning')],
+        'encryption-unsupported': [
+            t('backupEncryptionUnsupportedTitle'),
+            t('backupEncryptionUnsupportedDetail'),
+            t('backupMenuEncryptionUnsupported'),
+        ],
+        running: [
+            t('backupRunningTitle'),
+            t(backup.encryptionEnabled ? 'backupRunningEncryptedDetail' : 'backupRunningDetail'),
+            t('backupMenuRunning'),
+        ],
         error: [t('backupErrorTitle'), t('backupErrorDetail', { message: backup.error }), t('backupMenuError')],
         'not-configured': [t('backupNotConfiguredTitle'), t('backupNotConfiguredDetail'), t('backupMenuNotConfigured')],
         paused: [t('backupPausedTitle'), t('backupPausedDetail'), t('backupMenuPaused')],
         permission: [t('backupPermissionTitle'), t('backupPermissionDetail'), t('backupMenuPermission')],
+        locked: [t('backupEncryptionLockedTitle'), t('backupEncryptionLockedDetail'), t('backupMenuLocked')],
         ready: [
             t('backupReadyTitle'),
             backup.handleRemembered === false
                 ? t('backupHandleNotRemembered')
-                : t('backupReadyDetail', { name: backup.handle?.name || t('backupNotSelected') }),
+                : t(backup.encryptionEnabled ? 'backupReadyEncryptedDetail' : 'backupReadyDetail', {
+                    name: backup.handle?.name || t('backupNotSelected'),
+                }),
             t('backupMenuReady', { time: formatBackupTime(backup.lastBackupAt, true) }),
         ],
     }[status];
@@ -133,6 +356,33 @@ function renderBackupSettings() {
     ui.lastBackupValue.textContent = formatBackupTime(backup.lastBackupAt) || t('lastBackupNever');
     ui.autoBackupToggle.checked = backup.enabled;
     ui.autoBackupToggle.disabled = !backup.supported || backup.running;
+    ui.backupEncryptionToggle.checked = backup.encryptionEnabled;
+    ui.backupEncryptionToggle.disabled = !backup.supported
+        || backup.running
+        || (!backup.encryptionSupported && !backup.encryptionEnabled);
+    ui.backupEncryptionFields.classList.toggle('hidden', !backup.encryptionEnabled);
+    ui.backupPassphraseInput.disabled = !backup.supported || backup.running || !backup.encryptionSupported;
+    ui.backupPassphraseConfirmInput.disabled = !backup.supported || backup.running || !backup.encryptionSupported;
+    ui.backupRememberSessionToggle.checked = backup.rememberSession;
+    ui.backupRememberSessionToggle.disabled = !backup.supported
+        || backup.running
+        || !backup.encryptionSupported
+        || !backupEncryptionReady();
+    const encryptionState = !backup.encryptionEnabled
+        ? 'off'
+        : !backup.encryptionSupported
+            ? 'unsupported'
+            : backupEncryptionReady()
+                ? 'ready'
+                : backup.passphrase.length < 8 ? 'required' : 'mismatch';
+    ui.backupEncryptionStatus.dataset.state = encryptionState;
+    ui.backupEncryptionStatus.textContent = t({
+        off: 'backupEncryptionOff',
+        unsupported: 'backupEncryptionUnavailable',
+        ready: 'backupEncryptionReady',
+        required: 'backupPassphraseRequired',
+        mismatch: 'backupPassphraseMismatch',
+    }[encryptionState]);
     ui.backupRetentionSelect.value = String(backup.retention);
     ui.backupRetentionSelect.disabled = !backup.supported || !backup.handle || backup.running;
     ui.chooseBackupDirectoryButton.disabled = !backup.supported || backup.running;
@@ -266,7 +516,18 @@ async function disconnectBackupDirectory() {
     state.backup.lastNotifiedError = '';
     state.backup.lastHash = '';
     state.backup.lastBackupAt = '';
+    state.backup.encryptionEnabled = false;
+    state.backup.encryptionProfileId = '';
+    state.backup.passphrase = '';
+    state.backup.passphraseConfirmed = false;
+    state.backup.rememberSession = false;
     state.backup.handleRemembered = true;
+    clearSessionBackupCredentials();
+    safeSessionStorageRemove(BACKUP_RESTORE_SESSION_CREDENTIALS_KEY);
+    if (typeof clearBackupRestoreMemoryCredentials === 'function') {
+        clearBackupRestoreMemoryCredentials();
+    }
+    populateBackupEncryptionInputs();
     await saveBackupPreferences();
     renderBackupSettings();
     showToast(t('backupDisconnected'));
@@ -306,7 +567,12 @@ async function getBackupPermission(handle, requestPermission) {
 }
 
 function scheduleAutoBackup(delay = 900) {
-    if (!state.backup.supported || !state.backup.enabled || !state.backup.handle) return;
+    if (
+        !state.backup.supported
+        || !state.backup.enabled
+        || !state.backup.handle
+        || !backupEncryptionReady()
+    ) return;
     window.clearTimeout(state.backup.timer);
     state.backup.timer = window.setTimeout(() => {
         runAutomaticBackup({ force: false, notify: false });
@@ -322,6 +588,18 @@ async function flushBackupBeforeDestructiveChange() {
 async function runAutomaticBackup({ force = false, notify = false, allowWhenPaused = false } = {}) {
     const backup = state.backup;
     if (!backup.supported || (!backup.enabled && !allowWhenPaused) || !backup.handle) return false;
+    if (backup.encryptionEnabled && !backupEncryptionReady()) {
+        if (notify) {
+            showToast(t(backup.encryptionSupported
+                ? 'backupPassphraseRequired'
+                : 'backupEncryptionUnavailable'), 'warning');
+            if (ui.backupDialog?.open && backup.encryptionSupported) {
+                window.requestAnimationFrame(() => ui.backupPassphraseInput.focus());
+            }
+        }
+        renderBackupSettings();
+        return false;
+    }
     if (backup.running) {
         backup.pending = true;
         return backup.currentPromise || false;
@@ -342,18 +620,24 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
         backup.permissionNoticeShown = false;
 
         const stableContent = JSON.stringify(state.items.map(toStorageRecord));
-        const contentHash = `${hashString(stableContent)}-${stableContent.length}`;
+        const protectionFingerprint = backup.encryptionEnabled
+            ? `encrypted:${backup.encryptionProfileId}`
+            : 'plaintext';
+        const hashInput = `${protectionFingerprint}\u0000${stableContent}`;
+        const contentHash = `${hashString(hashInput)}-${hashInput.length}`;
         if (!force && contentHash === backup.lastHash) {
             if (notify) showToast(t('backupUpToDate'));
             return true;
         }
 
         const payload = createBackupPayload();
-        const content = `${JSON.stringify(payload, null, 2)}\n`;
-        await writeBackupFile(backup.handle, 'bookmarks-latest.json', content);
+        const encryption = getCurrentBackupEncryptionContext();
+        const content = await createBackupFileContent(payload, encryption);
+        await writeLatestBackupFile(backup.handle, content, encryption.encrypted, false);
         const history = await backup.handle.getDirectoryHandle('history', { create: true });
-        const snapshotName = `bookmarks-${fileTimestamp(new Date())}.json`;
+        const snapshotName = backupSnapshotFilename(new Date(), encryption.encrypted);
         await writeBackupFile(history, snapshotName, content);
+        await removeBackupFileIfExists(backup.handle, backupLatestFilename(!encryption.encrypted));
         try {
             await pruneBackupHistory(history, backup.retention);
         } catch (error) {
@@ -368,7 +652,9 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
         } catch (error) {
             console.warn('Unable to save backup metadata:', error);
         }
-        if (notify) showToast(t('backupComplete', { count: state.items.length }));
+        if (notify) showToast(t(backup.encryptionEnabled ? 'encryptedBackupComplete' : 'backupComplete', {
+            count: state.items.length,
+        }));
         return true;
     })();
 
@@ -394,6 +680,46 @@ async function runAutomaticBackup({ force = false, notify = false, allowWhenPaus
     }
 }
 
+async function createBackupFileContent(payload, encryption = getCurrentBackupEncryptionContext()) {
+    if (!encryption.encrypted) return `${JSON.stringify(payload, null, 2)}\n`;
+    if (!state.backup.encryptionSupported || typeof encryptBackupData !== 'function') {
+        throw new Error(t('backupEncryptionUnavailable'));
+    }
+    if (typeof encryption.passphrase !== 'string' || encryption.passphrase.length < 8) {
+        throw new Error(t('backupPassphraseRequired'));
+    }
+    return encryptBackupData(payload, encryption.passphrase);
+}
+
+function backupLatestFilename(encrypted) {
+    return encrypted ? 'bookmarks-latest.enc.json' : 'bookmarks-latest.json';
+}
+
+function backupSnapshotFilename(date, encrypted) {
+    return `bookmarks-${fileTimestamp(date)}${encrypted ? '.enc' : ''}.json`;
+}
+
+function backupEmergencyFilename(date, encrypted) {
+    return `bookmarks-before-restore-${fileTimestamp(date)}${encrypted ? '.enc' : ''}.json`;
+}
+
+async function writeLatestBackupFile(directory, content, encrypted, removeAlternative = true) {
+    const filename = backupLatestFilename(encrypted);
+    await writeBackupFile(directory, filename, content);
+    if (removeAlternative) {
+        await removeBackupFileIfExists(directory, backupLatestFilename(!encrypted));
+    }
+    return filename;
+}
+
+async function removeBackupFileIfExists(directory, filename) {
+    try {
+        await directory.removeEntry(filename);
+    } catch (error) {
+        if (error?.name !== 'NotFoundError') throw error;
+    }
+}
+
 async function writeBackupFile(directory, filename, content) {
     const fileHandle = await directory.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();
@@ -413,7 +739,7 @@ async function writeBackupFile(directory, filename, content) {
 async function pruneBackupHistory(directory, retention) {
     const snapshots = [];
     for await (const [name, handle] of directory.entries()) {
-        if (handle.kind === 'file' && /^bookmarks-\d{4}-\d{2}-\d{2}T.*\.json$/.test(name)) snapshots.push(name);
+        if (handle.kind === 'file' && /^bookmarks-\d{4}-\d{2}-\d{2}T.*(?:\.enc)?\.json$/.test(name)) snapshots.push(name);
     }
     snapshots.sort().reverse();
     await Promise.all(snapshots.slice(retention).map((name) => directory.removeEntry(name)));

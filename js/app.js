@@ -62,14 +62,19 @@ function cacheElements() {
         'help-dialog-done-button', 'backup-dialog', 'backup-dialog-title',
         'backup-dialog-close-button', 'backup-dialog-cancel-button',
         'backup-status-card', 'backup-status-title', 'backup-status-detail',
-        'auto-backup-toggle', 'backup-directory-name',
-        'choose-backup-directory-button', 'backup-retention-select',
+        'auto-backup-toggle', 'backup-encryption-toggle', 'backup-encryption-fields',
+        'backup-passphrase-input', 'backup-passphrase-confirm-input',
+        'backup-remember-session-toggle', 'backup-encryption-status',
+        'backup-directory-name', 'choose-backup-directory-button', 'backup-retention-select',
         'last-backup-value', 'persistence-status-value',
         'request-persistence-button', 'restore-backup-button',
         'disconnect-backup-button', 'backup-now-button',
         'backup-restore-dialog', 'backup-restore-title',
         'backup-restore-close-button', 'backup-restore-source-name',
         'backup-restore-source-detail', 'choose-restore-directory-button',
+        'backup-restore-unlock-form', 'backup-restore-passphrase-input',
+        'backup-restore-unlock-button', 'backup-restore-remember-toggle',
+        'backup-restore-unlock-error',
         'backup-restore-loading', 'backup-restore-loading-text',
         'backup-restore-empty', 'backup-restore-empty-title',
         'backup-restore-empty-detail', 'backup-snapshot-workspace',
@@ -223,6 +228,7 @@ function bindStaticEvents() {
     });
     ui.themeButton.addEventListener('click', toggleTheme);
     window.addEventListener('online', retryScheduledSyncWhenOnline);
+    window.addEventListener('pageshow', handleBackupHistoryRestore);
     ui.mobileMenuButton.addEventListener('click', openSidebar);
     ui.sidebarBackdrop.addEventListener('click', closeSidebar);
 
@@ -247,6 +253,10 @@ function bindStaticEvents() {
         if (event.target === ui.backupDialog) closeBackupDialog();
     });
     ui.autoBackupToggle.addEventListener('change', handleAutoBackupToggle);
+    ui.backupEncryptionToggle.addEventListener('change', handleBackupEncryptionToggle);
+    ui.backupPassphraseInput.addEventListener('input', handleBackupEncryptionInput);
+    ui.backupPassphraseConfirmInput.addEventListener('input', handleBackupEncryptionInput);
+    ui.backupRememberSessionToggle.addEventListener('change', handleBackupRememberSession);
     ui.chooseBackupDirectoryButton.addEventListener('click', chooseBackupDirectory);
     ui.backupRetentionSelect.addEventListener('change', handleBackupRetentionChange);
     ui.requestPersistenceButton.addEventListener('click', () => requestPersistentStorage(true));
@@ -257,6 +267,9 @@ function bindStaticEvents() {
     ui.backupRestoreCloseButton.addEventListener('click', () => closeBackupRestoreDialog());
     ui.backupRestoreCancelButton.addEventListener('click', () => closeBackupRestoreDialog());
     ui.chooseRestoreDirectoryButton.addEventListener('click', chooseBackupRestoreDirectory);
+    ui.backupRestoreUnlockForm.addEventListener('submit', handleBackupRestoreUnlock);
+    ui.backupRestorePassphraseInput.addEventListener('input', handleBackupRestorePassphraseInput);
+    ui.backupRestoreRememberToggle.addEventListener('change', handleBackupRestoreRememberToggle);
     ui.backupSnapshotList.addEventListener('change', handleBackupRestoreSnapshotChange);
     ui.backupRestoreModeSection.addEventListener('change', handleBackupRestoreModeChange);
     ui.backupSelectiveList.addEventListener('change', handleBackupRestoreSelectionChange);

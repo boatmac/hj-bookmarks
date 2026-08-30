@@ -6,8 +6,8 @@
 
 - 保持零构建、零 Node.js 运行依赖。
 - 支持从 `file://` 直接运行。
-- 所有远端内容在上传前完成客户端加密。
-- 凭据不写入源码或远端文件。
+- 所有远端内容在上传前完成客户端加密，本地目录备份可选择加密。
+- 凭据不写入源码、长期设置、远端文件或备份文件。
 - 网络失败不得冻结书签浏览界面。
 - 检测到语义冲突时不静默覆盖任何一侧。
 - 本地备份与远端同步相互独立。
@@ -17,7 +17,7 @@
 ```text
 UI
 ├── IndexedDB 本地书签
-├── 自动本地目录备份
+├── 可选 AES-GCM 加密的本地目录备份
 ├── 同步设置向导（只选择远端同步或本地目录）
 ├── 同步协调器
 │   ├── LocalFolder Adapter
@@ -84,6 +84,28 @@ UI
 
 加密口令使用 NFKC 规范化后进入 PBKDF2。每次上传生成新的随机 salt 和 96-bit GCM IV。
 
+可选加密备份使用独立信封：
+
+```json
+{
+  "format": "bookmark-manager-encrypted-backup",
+  "version": 1,
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 250000,
+    "salt": "base64"
+  },
+  "cipher": {
+    "name": "AES-GCM",
+    "iv": "base64",
+    "data": "base64"
+  }
+}
+```
+
+`cipher.data` 解密后是完整的 `bookmark-manager` v2 备份 payload。信封不保存标题、URL、标签、项目数或导出时间；历史文件名仍会暴露快照时间。每个文件使用独立随机 salt 和 96-bit GCM IV。
+
 ## 凭据边界
 
 长期保存在 IndexedDB：
@@ -97,16 +119,18 @@ UI
 默认只保存在 JavaScript 内存：
 
 - WebDAV/Koofr 密码或应用密码
-- 加密口令
+- 同步加密口令
+- 可选的本地备份加密口令
+- 恢复加密快照时临时输入的口令
 
-用户明确开启“刷新本标签页时保留凭据”后，上述两个敏感值写入 `sessionStorage`。恢复时同时检查 Navigation Timing：
+同步与备份使用相互独立的口令和 `sessionStorage` key。用户明确开启“刷新本标签页时保留”后，对应敏感值才写入当前标签页会话；恢复向导还要求口令至少成功解密一份快照后才可写入。恢复时同时检查 Navigation Timing：
 
 - `reload`：允许恢复；
 - `navigate`：先删除再保持锁定；
 - `back_forward`：先删除再保持锁定；
 - 无法识别导航类型：按非刷新处理。
 
-取消选项或移除同步配置时立即删除；不写入 IndexedDB 或 localStorage。这样即使浏览器复用了 sessionStorage，普通重新打开和会话恢复也不会自动解锁。
+取消选项、关闭备份加密或移除对应配置时立即删除；不写入 IndexedDB 或 localStorage。备份长期设置仅包含 `encryptionEnabled` 与随机 `encryptionProfileId`，会话口令必须与该 ID 匹配。这样即使浏览器复用了 sessionStorage，普通重新打开和会话恢复也不会自动解锁。
 
 ## 本地云盘目录 Adapter
 
@@ -234,24 +258,24 @@ Remote = 当前解密后的远端状态
 
 ```text
 backup-directory/
-├── bookmarks-latest.json
+├── bookmarks-latest.json | bookmarks-latest.enc.json
 ├── history/
-│   └── bookmarks-{timestamp}.json
+│   └── bookmarks-{timestamp}[.enc].json
 └── emergency/
-    └── bookmarks-before-restore-{timestamp}.json
+    └── bookmarks-before-restore-{timestamp}[.enc].json
 ```
 
-支持 7、30、90 份历史快照。删除或清空前会先尝试刷新备份。该备份是恢复机制，不替代同步协议。
+支持 7、30、90 份历史快照，明文与加密文件统一计入保留数量。默认写明文；启用加密后，完整 payload 使用 PBKDF2-SHA-256（250,000 次）与 AES-256-GCM 加密。格式切换时先成功写入新的 latest，再删除另一格式的旧 latest；历史快照不立即迁移，之后按保留策略逐步清理。删除或清空前会先尝试刷新备份。该备份是恢复机制，不替代同步协议。
 
-恢复向导扫描并校验最新、历史和紧急快照，然后按稳定 `syncId` 计算新增、有差异、相同及当前独有项目。它支持安全合并、逐项选择恢复和完整替换：安全合并不覆盖当前修改；选择恢复只覆盖用户明确勾选的项目并自动补齐必要父文件夹；完整替换才会为当前独有项目写入墓碑。
+恢复向导扫描并校验最新、历史和紧急快照。明文文件立即完成内容校验；加密文件扫描时只校验信封并保持锁定，输入正确口令后才验证明文 payload。两种格式可以混合浏览，然后按稳定 `syncId` 计算新增、有差异、相同及当前独有项目。它支持安全合并、逐项选择恢复和完整替换：安全合并不覆盖当前修改；选择恢复只覆盖用户明确勾选的项目并自动补齐必要父文件夹；完整替换才会为当前独有项目写入墓碑。
 
-任何模式开始写入 IndexedDB 前都必须先成功创建紧急备份，最多保留 10 份。获取数据写锁后还会重新核对预览时的本地签名，避免其他标签页的最新修改被过期恢复计划覆盖。恢复项目统一更新 `updatedAt` 和 `modifiedBy`，因此之后的三方同步会将恢复识别为明确的本机修改，而不是让较新的远端状态静默覆盖恢复结果。
+任何模式开始写入 IndexedDB 前都必须先成功创建紧急备份，最多保留 10 份。当前自动备份设置为加密，或所选快照本身为加密时，紧急备份也使用对应口令加密。错误口令、损坏密文或紧急备份失败都在 IndexedDB 事务前终止。获取数据写锁后还会重新核对预览时的本地签名，避免其他标签页的最新修改被过期恢复计划覆盖。恢复项目统一更新 `updatedAt` 和 `modifiedBy`，因此之后的三方同步会将恢复识别为明确的本机修改，而不是让较新的远端状态静默覆盖恢复结果。
 
 ## 安全约束
 
 - 不使用用户数据构造 `innerHTML`。
 - 拒绝 `javascript:`、`data:` 等链接协议。
-- 远端明文只存在于当前页面内存。
+- 远端及加密备份的明文只存在于当前页面内存。
 - Client Secret、永久云 Access Key 不得加入前端。
 - HTTP Basic 只建议配合 HTTPS。
 - 日志和错误信息不得输出 Authorization、密码、加密口令或完整令牌。
