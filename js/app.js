@@ -214,6 +214,7 @@ function bindStaticEvents() {
         if (event.target === ui.helpDialog) closeHelpDialog();
     });
     ui.themeButton.addEventListener('click', toggleTheme);
+    window.addEventListener('online', retryScheduledSyncWhenOnline);
     ui.mobileMenuButton.addEventListener('click', openSidebar);
     ui.sidebarBackdrop.addEventListener('click', closeSidebar);
 

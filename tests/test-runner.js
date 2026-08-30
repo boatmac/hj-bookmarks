@@ -168,6 +168,70 @@ test('同步地址会规范化并识别 Koofr', () => {
     assert(!isKoofrSyncEndpoint('https://dav.example.com/Koofr/Bookmarks/'));
 });
 
+test('自动同步超时会隐藏内部路径并安排渐进重试', async () => {
+    const originalFetch = window.fetch;
+    const sync = state.sync;
+    const previous = {
+        supported: sync.supported,
+        mode: sync.mode,
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+        automatic: sync.automatic,
+        unlocked: sync.unlocked,
+        conflicts: sync.conflicts,
+        abortController: sync.abortController,
+        timer: sync.timer,
+        error: sync.error,
+        retryScheduled: sync.retryScheduled,
+        retryCount: sync.retryCount,
+        retryAt: sync.retryAt,
+        lastNotifiedError: sync.lastNotifiedError,
+    };
+    let timeoutError = null;
+    window.fetch = (_url, options) => new Promise((_, reject) => {
+        options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    });
+    try {
+        try {
+            await fetchWebDav('https://app.koofr.net/api/v2/mounts/private/files/info', { method: 'GET' });
+        } catch (error) {
+            timeoutError = error;
+        }
+        assertEqual(timeoutError?.code, 'SYNC_TIMEOUT');
+        assert(!timeoutError.message.includes('koofr.net'));
+        assert(!timeoutError.message.includes('/api/'));
+
+        Object.assign(sync, {
+            supported: true,
+            mode: 'remote',
+            endpoint: 'https://app.koofr.net/dav/Koofr/Bookmarks/',
+            username: '',
+            password: '',
+            passphrase: 'test passphrase',
+            automatic: true,
+            unlocked: false,
+            conflicts: [],
+            abortController: null,
+            error: timeoutError.message,
+            retryScheduled: false,
+            retryCount: 0,
+            retryAt: 0,
+            lastNotifiedError: timeoutError.message,
+        });
+        assertEqual(scheduleTransientSyncRetry(timeoutError), 5000);
+        assert(sync.retryScheduled);
+        assertEqual(sync.retryCount, 1);
+        assert(sync.retryAt > Date.now());
+        assertEqual(sync.error, '');
+    } finally {
+        window.clearTimeout(sync.timer);
+        Object.assign(sync, previous);
+        window.fetch = originalFetch;
+    }
+});
+
 test('JSON 导入保留父子层级与同步标识', () => {
     state.sync.deviceId = 'test-device';
     const parsed = parseJsonImport(JSON.stringify([

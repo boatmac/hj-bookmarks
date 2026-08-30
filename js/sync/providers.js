@@ -41,6 +41,26 @@ function createWebDavHeaders(includeContentType = false) {
     return headers;
 }
 
+function createSyncRequestError(code, method, target, cause = null) {
+    const error = new Error(t(code === 'SYNC_TIMEOUT' ? 'syncTimeout' : 'syncNetworkError'));
+    error.code = code;
+    error.requestMethod = method;
+    error.requestTarget = target;
+    if (cause) error.cause = cause;
+    return error;
+}
+
+function createSyncResponseError(translationKey, status) {
+    const error = new Error(t(translationKey, { status }));
+    error.status = status;
+    if ([408, 425, 429, 500, 502, 503, 504].includes(status)) error.code = 'SYNC_TRANSIENT_HTTP';
+    return error;
+}
+
+function isTransientSyncError(error) {
+    return ['SYNC_TIMEOUT', 'SYNC_NETWORK', 'SYNC_TRANSIENT_HTTP'].includes(error?.code);
+}
+
 async function fetchWebDav(url, options) {
     const requestController = new AbortController();
     const method = String(options?.method || 'GET').toUpperCase();
@@ -63,10 +83,10 @@ async function fetchWebDav(url, options) {
 
     try {
         return await fetch(url, { ...options, signal: requestController.signal });
-    } catch {
+    } catch (cause) {
         if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
-        if (timedOut) throw new Error(t('syncTimeout', { method, target }));
-        throw new Error(t('syncNetworkError', { method, target }));
+        if (timedOut) throw createSyncRequestError('SYNC_TIMEOUT', method, target, cause);
+        throw createSyncRequestError('SYNC_NETWORK', method, target, cause);
     } finally {
         window.clearTimeout(timeout);
         sessionSignal?.removeEventListener('abort', cancelRequest);
@@ -117,7 +137,7 @@ async function createSyncRemoteContext(endpoint) {
         redirect: 'follow',
     });
     if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
-    if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
+    if (!response.ok) throw createSyncResponseError('syncReadFailed', response.status);
 
     let payload;
     try {
@@ -176,7 +196,7 @@ async function readRemoteSyncFile(endpoint, context) {
 
     if (response.status === 404) return { exists: false, etag: '', data: emptySyncDataset() };
     if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
-    if (!response.ok) throw new Error(t('syncReadFailed', { status: response.status }));
+    if (!response.ok) throw createSyncResponseError('syncReadFailed', response.status);
     const text = await response.text();
     const data = text.trim()
         ? parseRemoteSyncDataset(await decryptSyncData(text, state.sync.passphrase))
@@ -198,7 +218,7 @@ async function readKoofrSyncFile(context) {
     });
     if (infoResponse.status === 404) return { exists: false, token: null, data: emptySyncDataset() };
     if (infoResponse.status === 401 || infoResponse.status === 403) throw new Error(t('syncAuthFailed'));
-    if (!infoResponse.ok) throw new Error(t('syncReadFailed', { status: infoResponse.status }));
+    if (!infoResponse.ok) throw createSyncResponseError('syncReadFailed', infoResponse.status);
 
     let info;
     try {
@@ -220,7 +240,7 @@ async function readKoofrSyncFile(context) {
     });
     if (contentResponse.status === 404) return { exists: false, token: null, data: emptySyncDataset() };
     if (contentResponse.status === 401 || contentResponse.status === 403) throw new Error(t('syncAuthFailed'));
-    if (!contentResponse.ok) throw new Error(t('syncReadFailed', { status: contentResponse.status }));
+    if (!contentResponse.ok) throw createSyncResponseError('syncReadFailed', contentResponse.status);
     const text = await contentResponse.text();
     const data = text.trim()
         ? parseRemoteSyncDataset(await decryptSyncData(text, state.sync.passphrase))
@@ -252,7 +272,7 @@ async function ensureRemoteParentDirectory(endpoint, context) {
     if ([200, 201, 204, 405].includes(response.status)) return response.status === 201;
     if (response.status === 401) throw new Error(t('syncAuthFailed'));
     if (response.status === 404 || response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
-    throw new Error(t('syncCreateDirectoryFailed', { status: response.status }));
+    throw createSyncResponseError('syncCreateDirectoryFailed', response.status);
 }
 
 async function ensureKoofrParentDirectory(context) {
@@ -272,11 +292,11 @@ async function ensureKoofrParentDirectory(context) {
         } catch {
             throw new Error(t('koofrApiInvalid'));
         }
-        if (info?.type !== 'dir') throw new Error(t('syncCreateDirectoryFailed', { status: 409 }));
+        if (info?.type !== 'dir') throw createSyncResponseError('syncCreateDirectoryFailed', 409);
         return false;
     }
     if (infoResponse.status === 401 || infoResponse.status === 403) throw new Error(t('syncAuthFailed'));
-    if (infoResponse.status !== 404) throw new Error(t('syncCreateDirectoryFailed', { status: infoResponse.status }));
+    if (infoResponse.status !== 404) throw createSyncResponseError('syncCreateDirectoryFailed', infoResponse.status);
 
     const parts = context.directoryPath.split('/').filter(Boolean);
     const name = parts.pop();
@@ -303,7 +323,7 @@ async function ensureKoofrParentDirectory(context) {
         if (retryInfo.ok) return false;
         throw new Error(t('syncParentDirectoryMissing'));
     }
-    throw new Error(t('syncCreateDirectoryFailed', { status: createResponse.status }));
+    throw createSyncResponseError('syncCreateDirectoryFailed', createResponse.status);
 }
 
 async function writeRemoteSyncFile(endpoint, content, remote, context) {
@@ -323,7 +343,7 @@ async function writeRemoteSyncFile(endpoint, content, remote, context) {
     if (response.status === 412) return 'conflict';
     if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
     if (response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
-    if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
+    if (!response.ok) throw createSyncResponseError('syncWriteFailed', response.status);
     return 'written';
 }
 
@@ -353,6 +373,6 @@ async function writeKoofrSyncFile(content, remote, context) {
     if (response.status === 409 && remote.exists) return 'conflict';
     if (response.status === 401 || response.status === 403) throw new Error(t('syncAuthFailed'));
     if (response.status === 404 || response.status === 409) throw new Error(t('syncParentDirectoryMissing'));
-    if (!response.ok) throw new Error(t('syncWriteFailed', { status: response.status }));
+    if (!response.ok) throw createSyncResponseError('syncWriteFailed', response.status);
     return 'written';
 }

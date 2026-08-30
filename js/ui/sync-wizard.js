@@ -11,6 +11,7 @@ let syncWizardErrorMessage = '';
 
 function openSyncWizard() {
     if (state.sync.running) return;
+    resetSyncRetryState(true);
     if (ui.syncDialog.open) ui.syncDialog.close();
     syncWizardDraft = {
         mode: state.sync.mode,

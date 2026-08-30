@@ -818,7 +818,8 @@ svg {
 .export-menu[data-sync-state="error"] summary::after,
 .export-menu[data-sync-state="conflict"] summary::after,
 .export-menu[data-sync-state="local-permission"] summary::after,
-.export-menu[data-sync-state="other-tab"] summary::after {
+.export-menu[data-sync-state="other-tab"] summary::after,
+.export-menu[data-sync-state="retry"] summary::after {
     display: block;
 }
 
@@ -836,7 +837,8 @@ svg {
 .export-menu[data-backup-state="permission"] summary::after,
 .export-menu[data-sync-state="conflict"] summary::after,
 .export-menu[data-sync-state="local-permission"] summary::after,
-.export-menu[data-sync-state="other-tab"] summary::after {
+.export-menu[data-sync-state="other-tab"] summary::after,
+.export-menu[data-sync-state="retry"] summary::after {
     background: #d69724;
 }
 
@@ -971,14 +973,16 @@ svg {
 .export-popover .backup-menu-item[data-state="permission"],
 .export-popover .sync-menu-item[data-state="conflict"],
 .export-popover .sync-menu-item[data-state="local-permission"],
-.export-popover .sync-menu-item[data-state="other-tab"] {
+.export-popover .sync-menu-item[data-state="other-tab"],
+.export-popover .sync-menu-item[data-state="retry"] {
     background: color-mix(in srgb, #d69724 12%, var(--panel));
 }
 
 .export-popover .backup-menu-item[data-state="permission"] strong,
 .export-popover .sync-menu-item[data-state="conflict"] strong,
 .export-popover .sync-menu-item[data-state="local-permission"] strong,
-.export-popover .sync-menu-item[data-state="other-tab"] strong {
+.export-popover .sync-menu-item[data-state="other-tab"] strong,
+.export-popover .sync-menu-item[data-state="retry"] strong {
     color: #b97a12;
 }
 
@@ -2164,13 +2168,16 @@ svg {
     color: var(--danger);
 }
 
-.backup-status-card[data-state="conflict"] {
+.backup-status-card[data-state="conflict"],
+.backup-status-card[data-state="retry"] {
     background: color-mix(in srgb, #d69724 12%, var(--panel));
     border-color: color-mix(in srgb, #d69724 32%, var(--border));
 }
 
 .backup-status-card[data-state="conflict"] .backup-status-icon,
-.backup-status-card[data-state="conflict"] strong {
+.backup-status-card[data-state="conflict"] strong,
+.backup-status-card[data-state="retry"] .backup-status-icon,
+.backup-status-card[data-state="retry"] strong {
     color: #c3861d;
 }
 

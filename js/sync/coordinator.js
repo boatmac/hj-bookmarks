@@ -56,7 +56,10 @@ async function initializeWebDavSync() {
         && (state.sync.mode !== 'local-folder' || state.sync.localFolder.permission === 'granted')
         && (state.sync.mode === 'local-folder' || !state.sync.username || state.sync.password)
     ) {
-        window.setTimeout(() => runWebDavSync({ notify: false }), 180);
+        state.sync.timer = window.setTimeout(
+            () => runWebDavSync({ notify: false, automatic: true }),
+            SYNC_INITIAL_AUTO_DELAY_MS,
+        );
     }
 }
 
@@ -602,7 +605,7 @@ function cancelWebDavSync() {
     state.sync.cancelRequested = true;
     state.sync.pending = false;
     state.sync.phase = 'syncPhaseCanceling';
-    window.clearTimeout(state.sync.timer);
+    resetSyncRetryState(true);
     state.sync.abortController?.abort();
     renderSyncSettings();
 }
@@ -618,6 +621,7 @@ async function handleSyncModeChange() {
     state.sync.provider = state.sync.mode === 'local-folder' ? 'local-folder' : '';
     state.sync.unlocked = false;
     state.sync.error = '';
+    resetSyncRetryState(true);
     const nextKey = syncEndpointKey();
     if (previousKey !== nextKey) {
         state.sync.conflicts = [];
@@ -636,7 +640,7 @@ async function handleSyncModeChange() {
     renderSyncSettings();
 }
 
-function updateSyncSecretsFromForm() {
+function updateSyncSecretsFromForm(resetRetry = true) {
     const previousFingerprint = syncSessionFingerprint();
     const previousEndpoint = state.sync.endpoint;
     const previousEndpointKey = syncEndpointKey();
@@ -659,6 +663,7 @@ function updateSyncSecretsFromForm() {
         renderConflictBanner();
     }
     const credentialsChanged = previousFingerprint !== syncSessionFingerprint();
+    if (credentialsChanged && resetRetry !== false) resetSyncRetryState(true);
     if (credentialsChanged) state.sync.sessionCredentialsRestored = false;
     if (state.sync.unlocked && credentialsChanged) state.sync.unlocked = false;
     if (state.sync.rememberSession) saveSessionSyncCredentials();
@@ -695,6 +700,7 @@ function renderSyncSettings() {
     else if (sync.running) status = 'running';
     else if (sync.conflicts.length) status = 'conflict';
     else if (otherTabSync) status = 'other-tab';
+    else if (sync.retryScheduled) status = 'retry';
     else if (sync.error) status = 'error';
     else if (localMode && !localFolder.handle) status = 'local-not-configured';
     else if (localMode && localFolder.permission !== 'granted') status = 'local-permission';
@@ -706,6 +712,7 @@ function renderSyncSettings() {
         unsupported: [t('syncUnsupportedTitle'), t('syncUnsupportedDetail'), t('syncMenuUnsupported')],
         'local-unsupported': [t('localFolderUnsupportedTitle'), t('localFolderUnsupportedDetail'), t('syncMenuUnsupported')],
         running: [t('syncRunningTitle'), sync.phase ? t(sync.phase) : t('syncRunningDetail'), t('syncMenuRunning')],
+        retry: [t('syncRetryTitle'), t('syncRetryDetail'), t('syncMenuRetry')],
         error: [t('syncErrorTitle'), t('syncErrorDetail', { message: sync.error }), t('syncMenuError')],
         conflict: [
             t('syncConflictStatusTitle'),
@@ -808,6 +815,7 @@ async function handleAutoCreateDirectoryToggle() {
 
 async function handleAutoSyncToggle() {
     const enabled = ui.autoSyncToggle.checked;
+    resetSyncRetryState(true);
     updateSyncSecretsFromForm();
     state.sync.automatic = enabled;
     await saveSyncPreferences();
@@ -827,7 +835,7 @@ async function disconnectWebDavSync() {
         ? 'confirmDisconnectLocalFolder'
         : 'confirmDisconnectSync';
     if (!window.confirm(t(confirmKey))) return;
-    window.clearTimeout(state.sync.timer);
+    resetSyncRetryState(true);
     clearSessionSyncCredentials();
     const endpointKey = syncEndpointKey();
     if (state.sync.mode === 'local-folder') {
@@ -884,6 +892,9 @@ async function disconnectWebDavSync() {
         pending: false,
         cancelRequested: false,
         abortController: null,
+        retryScheduled: false,
+        retryCount: 0,
+        retryAt: 0,
         lastNotifiedError: '',
     });
     await saveSyncPreferences();
@@ -896,14 +907,67 @@ async function disconnectWebDavSync() {
     showToast(t('syncDisconnected'));
 }
 
+function resetSyncRetryState(clearTimer = false) {
+    const sync = state.sync;
+    if (clearTimer) window.clearTimeout(sync.timer);
+    sync.retryScheduled = false;
+    sync.retryCount = 0;
+    sync.retryAt = 0;
+}
+
+function canRetryAutomaticRemoteSync() {
+    const sync = state.sync;
+    return sync.mode === 'remote'
+        && sync.supported
+        && sync.automatic
+        && Boolean(sync.endpoint)
+        && sync.passphrase.length >= 8
+        && (!sync.username || Boolean(sync.password))
+        && !sync.conflicts.length;
+}
+
+function scheduleTransientSyncRetry(error) {
+    if (!isTransientSyncError(error) || !canRetryAutomaticRemoteSync()) return 0;
+    const sync = state.sync;
+    const delayIndex = Math.min(sync.retryCount, SYNC_RETRY_DELAYS_MS.length - 1);
+    const delay = SYNC_RETRY_DELAYS_MS[delayIndex];
+    sync.retryCount += 1;
+    sync.retryScheduled = true;
+    sync.retryAt = Date.now() + delay;
+    sync.error = '';
+    sync.lastNotifiedError = '';
+    window.clearTimeout(sync.timer);
+    sync.timer = window.setTimeout(() => {
+        sync.retryScheduled = false;
+        sync.retryAt = 0;
+        renderSyncSettings();
+        runWebDavSync({ notify: false, automatic: true });
+    }, delay);
+    return delay;
+}
+
+function retryScheduledSyncWhenOnline() {
+    const sync = state.sync;
+    if (!sync.retryScheduled || sync.running || !canRetryAutomaticRemoteSync()) return;
+    window.clearTimeout(sync.timer);
+    sync.retryScheduled = false;
+    sync.retryAt = 0;
+    sync.timer = window.setTimeout(
+        () => runWebDavSync({ notify: false, automatic: true }),
+        250,
+    );
+    renderSyncSettings();
+}
+
 function scheduleWebDavSync(delay = 1800) {
     const sync = state.sync;
     const configured = sync.mode === 'local-folder'
         ? Boolean(sync.localFolder.handle)
         : Boolean(sync.endpoint);
     if (!sync.supported || !sync.automatic || !sync.unlocked || !configured || sync.conflicts.length) return;
+    resetSyncRetryState();
     window.clearTimeout(sync.timer);
-    sync.timer = window.setTimeout(() => runWebDavSync({ notify: false }), delay);
+    sync.timer = window.setTimeout(() => runWebDavSync({ notify: false, automatic: true }), delay);
 }
 
 function scheduleDataProtection() {
@@ -924,6 +988,7 @@ async function handleSyncNow() {
         openConflictCenter();
         return;
     }
+    resetSyncRetryState(true);
     if (state.sync.mode === 'local-folder') {
         const local = state.sync.localFolder;
         if (!local.handle) {
@@ -971,11 +1036,11 @@ async function runWebDavSync(options = {}) {
     return locked.value;
 }
 
-async function runWebDavSyncUnlocked({ notify = false } = {}) {
-    updateSyncSecretsFromForm();
+async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {}) {
+    updateSyncSecretsFromForm(false);
     const sync = state.sync;
     if (!sync.supported) {
-        if (notify) showToast(t('syncFailed', { message: t('syncUnsupportedDetail') }));
+        if (notify) showToast(t('syncFailed', { message: t('syncUnsupportedDetail') }), 'error');
         return false;
     }
     if (sync.running) {
@@ -991,7 +1056,7 @@ async function runWebDavSyncUnlocked({ notify = false } = {}) {
     } catch (error) {
         sync.error = error.message;
         renderSyncSettings();
-        if (notify) showToast(t('syncFailed', { message: sync.error }));
+        if (notify) showToast(t('syncFailed', { message: sync.error }), 'error');
         return false;
     }
 
@@ -1005,6 +1070,8 @@ async function runWebDavSyncUnlocked({ notify = false } = {}) {
     }
     sync.running = true;
     sync.error = '';
+    sync.retryScheduled = false;
+    sync.retryAt = 0;
     sync.phase = 'syncPhasePreparing';
     sync.cancelRequested = false;
     sync.abortController = new AbortController();
@@ -1050,7 +1117,7 @@ async function runWebDavSyncUnlocked({ notify = false } = {}) {
                 sync.unlocked = true;
                 renderConflictBanner();
                 renderSyncSettings();
-                showToast(t('conflictDetectedToast', { count: sync.conflicts.length }));
+                showToast(t('conflictDetectedToast', { count: sync.conflicts.length }), 'warning');
                 return 'conflicts';
             }
             merged = mergeResult.dataset;
@@ -1084,6 +1151,7 @@ async function runWebDavSyncUnlocked({ notify = false } = {}) {
         if (sync.rememberSession) saveSessionSyncCredentials();
         sync.lastSyncAt = new Date().toISOString();
         sync.lastNotifiedError = '';
+        resetSyncRetryState();
         sync.conflicts = [];
         sync.conflictEndpointKey = endpointKey;
         await saveSyncBaseline(endpointKey, merged);
@@ -1109,10 +1177,15 @@ async function runWebDavSyncUnlocked({ notify = false } = {}) {
             showToast(t('syncCanceled'));
             return false;
         }
+        if (automatic && scheduleTransientSyncRetry(error)) {
+            console.warn('Automatic synchronization was delayed by a transient network error:', error);
+            return false;
+        }
         console.error('WebDAV synchronization failed:', error);
+        resetSyncRetryState();
         sync.error = error?.message || String(error);
         if (notify || sync.lastNotifiedError !== sync.error) {
-            showToast(t('syncFailed', { message: sync.error }));
+            showToast(t('syncFailed', { message: sync.error }), 'error');
             sync.lastNotifiedError = sync.error;
         }
         return false;
