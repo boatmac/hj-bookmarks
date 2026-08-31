@@ -472,6 +472,8 @@ test('自动同步超时会隐藏内部路径并安排渐进重试', async () =>
         assertEqual(timeoutError?.code, 'SYNC_TIMEOUT');
         assert(!timeoutError.message.includes('koofr.net'));
         assert(!timeoutError.message.includes('/api/'));
+        assert(!Object.hasOwn(timeoutError, 'requestTarget'));
+        assert(!Object.hasOwn(timeoutError, 'cause'));
 
         Object.assign(sync, {
             supported: true,
@@ -500,6 +502,46 @@ test('自动同步超时会隐藏内部路径并安排渐进重试', async () =>
         Object.assign(sync, previous);
         window.fetch = originalFetch;
     }
+});
+
+test('诊断日志会移除远端地址、本机路径、凭据和错误堆栈', () => {
+    const genericRoot = 'https://app.koofr.net/dav/Koofr';
+    const privateSegment = ['Private', 'Team'].join('-');
+    const endpoint = `${genericRoot}/${privateSegment}/bookmarks-sync.enc.json`;
+    const localPath = ['C:', 'Users', 'Example Person', 'Cloud Drive', 'bookmarks'].join('\\');
+    const authorizationType = ['Bas', 'ic'].join('');
+    const encodedCredential = ['dGVzdC11c2Vy', 'OnRlc3QtcGFzc3dvcmQ='].join('');
+    const error = new Error(
+        `Request to ${endpoint} failed at ${localPath}; ${authorizationType} ${encodedCredential}`,
+    );
+    error.name = 'NetworkError';
+    error.code = 'SYNC_NETWORK';
+    error.status = 503;
+    error.requestTarget = endpoint;
+    error.cause = new Error(`Underlying request failed for ${endpoint}`);
+    error.stack = `NetworkError: ${endpoint}\n at ${localPath}`;
+
+    const safe = safeErrorForLog(error);
+    const originalConsoleError = console.error;
+    let logged = [];
+    try {
+        console.error = (...values) => { logged = values; };
+        logErrorSafely('error', 'Synthetic diagnostic failure.', error);
+    } finally {
+        console.error = originalConsoleError;
+    }
+    const serialized = JSON.stringify({ safe, logged });
+    assertEqual(safe.code, 'SYNC_NETWORK');
+    assertEqual(safe.status, 503);
+    assert(!serialized.includes(privateSegment));
+    assert(!serialized.includes('Example Person'));
+    assert(!serialized.includes(encodedCredential));
+    assert(!serialized.includes('requestTarget'));
+    assert(!serialized.includes('cause'));
+    assert(!serialized.includes('stack'));
+    assert(serialized.includes('[redacted URL]'));
+    assert(serialized.includes('[redacted local path]'));
+    assert(serialized.includes('[redacted credential]'));
 });
 
 test('顶部同步快捷按钮会随状态切换操作', () => {
@@ -1179,6 +1221,115 @@ test('备份差异预览和选择恢复计划会保护当前内容', () => {
     );
 });
 
+test('备份导出和同步密文不会包含连接配置或凭据', async () => {
+    const previousItems = state.items;
+    const sync = state.sync;
+    const previousSync = {
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+    };
+    const endpoint = 'https://dav.example.com/Example-Bookmarks/';
+    const username = 'example-member@example.com';
+    const password = 'test remote password';
+    const passphrase = 'test encryption passphrase';
+    const item = makeSyncItem({ title: 'Exported bookmark' });
+    try {
+        state.items = [{ ...item, parentId: null, collapsed: false }];
+        Object.assign(sync, { endpoint, username, password, passphrase });
+        const backup = createBackupPayload();
+        const serializedBackup = JSON.stringify(backup);
+        assert(serializedBackup.includes('Exported bookmark'));
+        assert(!Object.hasOwn(backup, 'sync'));
+        for (const value of [endpoint, username, password, passphrase]) {
+            assert(!serializedBackup.includes(value), 'Backup leaked a connection setting');
+        }
+
+        const envelope = await encryptSyncData(makeDataset(item), passphrase);
+        for (const value of [endpoint, username, password, passphrase, item.title]) {
+            assert(!envelope.includes(value), 'Encrypted envelope leaked plaintext metadata');
+        }
+    } finally {
+        state.items = previousItems;
+        Object.assign(sync, previousSync);
+    }
+});
+
+test('远端检查协调记录不会保存原始地址或用户名', () => {
+    const previousSharedState = safeStorageGet(REMOTE_WATCH_STORAGE_KEY);
+    const previousInitialized = state.coordination.initialized;
+    const endpoint = 'https://dav.example.com/Example-Bookmarks/';
+    const username = 'example-member@example.com';
+    try {
+        state.coordination.initialized = false;
+        const endpointHash = remoteWatchEndpointHash(syncEndpointKey(endpoint, username));
+        writeSharedRemoteWatchState(endpointHash, {
+            provider: 'webdav',
+            exists: true,
+            etag: '"example-version"',
+            lastModified: '',
+            size: 100,
+            contentHash: '',
+        }, false, Date.now());
+        const stored = safeStorageGet(REMOTE_WATCH_STORAGE_KEY) || '';
+        assert(stored.includes(endpointHash));
+        assert(!stored.includes(endpoint));
+        assert(!stored.includes(username));
+    } finally {
+        state.coordination.initialized = previousInitialized;
+        try {
+            if (previousSharedState === null) localStorage.removeItem(REMOTE_WATCH_STORAGE_KEY);
+            else localStorage.setItem(REMOTE_WATCH_STORAGE_KEY, previousSharedState);
+        } catch {
+            // Storage is optional in restricted test environments.
+        }
+    }
+});
+
+test('同步凭据仅在明确选择后写入标签页存储', () => {
+    const sync = state.sync;
+    const previous = {
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+        mode: sync.mode,
+        rememberSession: sync.rememberSession,
+        sessionCredentialsRestored: sync.sessionCredentialsRestored,
+    };
+    const previousStored = safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY);
+    try {
+        Object.assign(sync, {
+            mode: 'remote',
+            endpoint: 'https://dav.example.com/Example-Bookmarks/',
+            username: 'example-member@example.com',
+            password: 'test remote password',
+            passphrase: 'test encryption passphrase',
+            rememberSession: false,
+        });
+        clearSessionSyncCredentials();
+        assertEqual(saveSessionSyncCredentials(), false);
+        assertEqual(safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY), null);
+
+        sync.rememberSession = true;
+        assertEqual(saveSessionSyncCredentials(), true);
+        const explicitlyStored = safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY) || '';
+        assert(explicitlyStored.includes(sync.password));
+        assert(explicitlyStored.includes(sync.passphrase));
+        clearSessionSyncCredentials();
+        assertEqual(safeSessionStorageGet(SYNC_SESSION_CREDENTIALS_KEY), null);
+    } finally {
+        Object.assign(sync, previous);
+        try {
+            if (previousStored === null) sessionStorage.removeItem(SYNC_SESSION_CREDENTIALS_KEY);
+            else sessionStorage.setItem(SYNC_SESSION_CREDENTIALS_KEY, previousStored);
+        } catch {
+            // Session storage is optional in restricted test environments.
+        }
+    }
+});
+
 test('同步数据和回收站快照加密后不包含书签明文', async () => {
     const deletedAt = '2026-01-02T00:00:00.000Z';
     const dataset = makeDataset(makeSyncItem({ title: 'Secret bookmark' }), [{
@@ -1362,6 +1513,65 @@ test('Web Locks 会串行执行同一标签页的并发写入', async () => {
         }),
     ]);
     assertDeepEqual(order, ['first-start', 'first-end', 'second-start', 'second-end']);
+});
+
+test('长期设置只保存必要连接信息而不保存密码或加密口令', async () => {
+    state.db = await openDatabase();
+    const previousSyncPreferences = await getSetting(SYNC_PREFERENCES_KEY);
+    const previousBackupPreferences = await getSetting(BACKUP_PREFERENCES_KEY);
+    const sync = state.sync;
+    const backup = state.backup;
+    const previousSync = {
+        mode: sync.mode,
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+        setupComplete: sync.setupComplete,
+    };
+    const previousRemoteWatchEndpointKey = sync.remoteWatch.endpointKey;
+    const previousBackupPassphrase = backup.passphrase;
+    const endpoint = 'https://dav.example.com/Example-Bookmarks/';
+    const username = 'example-member@example.com';
+    const password = 'test remote password';
+    const syncPassphrase = 'test sync passphrase';
+    const backupPassphrase = 'test backup passphrase';
+    try {
+        Object.assign(sync, {
+            mode: 'remote',
+            endpoint,
+            username,
+            password,
+            passphrase: syncPassphrase,
+            setupComplete: true,
+        });
+        sync.remoteWatch.endpointKey = syncEndpointKey(endpoint, username);
+        backup.passphrase = backupPassphrase;
+        assert(await saveSyncPreferences());
+        assert(await saveBackupPreferences());
+
+        const storedSync = await getSetting(SYNC_PREFERENCES_KEY);
+        const storedBackup = await getSetting(BACKUP_PREFERENCES_KEY);
+        const serialized = JSON.stringify({ storedSync, storedBackup });
+        assertEqual(storedSync.endpoint, endpoint);
+        assertEqual(storedSync.username, username);
+        assert(!Object.hasOwn(storedSync, 'password'));
+        assert(!Object.hasOwn(storedSync, 'passphrase'));
+        assert(!Object.hasOwn(storedBackup, 'passphrase'));
+        assert(!serialized.includes(password));
+        assert(!serialized.includes(syncPassphrase));
+        assert(!serialized.includes(backupPassphrase));
+    } finally {
+        if (previousSyncPreferences === null) await deleteSetting(SYNC_PREFERENCES_KEY);
+        else await saveSetting(SYNC_PREFERENCES_KEY, previousSyncPreferences);
+        if (previousBackupPreferences === null) await deleteSetting(BACKUP_PREFERENCES_KEY);
+        else await saveSetting(BACKUP_PREFERENCES_KEY, previousBackupPreferences);
+        Object.assign(sync, previousSync);
+        sync.remoteWatch.endpointKey = previousRemoteWatchEndpointKey;
+        backup.passphrase = previousBackupPassphrase;
+        state.db.close();
+        state.db = null;
+    }
 });
 
 test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {

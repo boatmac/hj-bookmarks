@@ -152,7 +152,7 @@ async function handleBackupPassphraseChange(event) {
             ? 'warning'
             : 'success');
     } catch (error) {
-        console.error('Backup passphrase change failed:', error);
+        logErrorSafely('error', 'Backup passphrase change failed.', error);
         if (backupPassphraseChangeSession !== session) return;
         session.applying = false;
         session.error = t('backupPassphraseChangeFailed', {
@@ -277,7 +277,7 @@ async function cleanupPassphraseChangeTargets(targets) {
             await removePassphraseChangeTarget(target);
         } catch (error) {
             failures += 1;
-            console.warn('Unable to remove a staged passphrase-change file:', error);
+            logErrorSafely('warn', 'Unable to remove a staged passphrase-change file.', error);
         }
     }
     return failures;
@@ -476,14 +476,14 @@ async function changeBackupPassphraseSafely(options) {
             await removeBackupFileIfExists(target.sourceDirectory, target.sourceName);
         } catch (error) {
             cleanupFailed += 1;
-            console.warn('Unable to remove an old passphrase backup after migration:', error);
+            logErrorSafely('warn', 'Unable to remove an old passphrase backup after migration.', error);
         }
     }
     try {
         backup.health.snapshotCount = await countBackupHistoryFiles(backup.handle);
     } catch (error) {
         cleanupFailed += 1;
-        console.warn('Unable to recount history after changing the backup passphrase:', error);
+        logErrorSafely('warn', 'Unable to recount history after changing the backup passphrase.', error);
     }
     await saveBackupPreferences();
     populateBackupEncryptionInputs();

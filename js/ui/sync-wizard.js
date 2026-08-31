@@ -396,7 +396,7 @@ async function finishSyncWizard() {
         try {
             await saveSetting(LOCAL_SYNC_HANDLE_KEY, local.handle);
         } catch (error) {
-            console.warn('Unable to persist wizard local folder handle:', error);
+            logErrorSafely('warn', 'Unable to persist the wizard local folder handle.', error);
         }
     }
 
@@ -524,7 +524,7 @@ async function restoreSyncWizardConfiguration(previous) {
         if (localFolder.handle) await saveSetting(LOCAL_SYNC_HANDLE_KEY, localFolder.handle);
         else await deleteSetting(LOCAL_SYNC_HANDLE_KEY);
     } catch (error) {
-        console.warn('Unable to restore the previous local sync handle:', error);
+        logErrorSafely('warn', 'Unable to restore the previous local sync handle.', error);
     }
     if (state.sync.rememberSession) saveSessionSyncCredentials();
     else clearSessionSyncCredentials();

@@ -53,6 +53,10 @@ HJ Bookmarks 是本地优先的纯静态应用，没有由项目维护者运营�
 
 第三方浏览器、WebDAV 服务、桌面云盘客户端和静态托管平台自身的漏洞，应同时报告给对应供应商。
 
+## Publishing safeguards / 发布保护
+
+仓库提供 `scripts/audit-public-content.mjs`，用于在提交、推送、CI、Pages 和 Release 打包前扫描当前文件、可达历史及最终产物。它会阻止常见凭据、私人路径、非示例远端地址和未经脱敏的生产错误日志，但不能替代提交者人工检查暂存差异。审计命中只显示规则与文件位置，不回显匹配值。详细数据边界见 [`docs/PRIVACY.md`](docs/PRIVACY.md)。
+
 ## Cryptography notice / 加密说明
 
 远端同步和可选本地备份使用浏览器 Web Crypto API 提供的 PBKDF2-SHA-256 与 AES-256-GCM。加密能保护文件内容，但不能替代可信设备、强口令、WebDAV 访问控制和可靠备份。本项目尚未经过独立密码学安全审计。

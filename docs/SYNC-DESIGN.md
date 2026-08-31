@@ -312,5 +312,7 @@ backup-directory/
 - 远端及加密备份的明文只存在于当前页面内存。
 - Client Secret、永久云 Access Key 不得加入前端。
 - HTTP Basic 只建议配合 HTTPS。
-- 日志和错误信息不得输出 Authorization、密码、加密口令或完整令牌。
+- 日志和错误信息不得输出 Authorization、密码、加密口令、完整令牌、同步 URL、本机用户目录、堆栈或底层 `cause`。
+- 生产模块通过 `logErrorSafely()` 输出错误摘要，不得直接记录原始 `Error` 对象。
 - 最终用户错误不得显示内部 API 路径、Mount ID 或条件写入参数。
+- 浏览器、备份、远端和公开发布的数据边界见 [`PRIVACY.md`](PRIVACY.md)。

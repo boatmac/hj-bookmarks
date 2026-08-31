@@ -61,7 +61,7 @@ async function ensureBackupProtectionProfileCurrent() {
     try {
         preferences = await getSetting(BACKUP_PREFERENCES_KEY);
     } catch (error) {
-        console.warn('Unable to verify backup settings before accessing the backup folder:', error);
+        logErrorSafely('warn', 'Unable to verify backup settings before accessing the backup folder.', error);
         throw createBackupHealthError('backupSettingsReadFailed', 'BACKUP_SETTINGS_UNAVAILABLE');
     }
     if (!preferences || typeof preferences !== 'object') return true;
@@ -604,7 +604,7 @@ async function runBackupHealthCheck({ notify = false } = {}) {
     try {
         return await operation;
     } catch (error) {
-        console.warn('Backup health check failed:', error);
+        logErrorSafely('warn', 'Backup health check failed.', error);
         const settingsChanged = error?.code === 'BACKUP_SETTINGS_CHANGED';
         health.status = settingsChanged
             ? (backup.encryptionEnabled ? 'locked' : 'unknown')
@@ -726,7 +726,7 @@ async function initializeBackup() {
         }
         if (preferencesChanged) await saveBackupPreferences();
     } catch (error) {
-        console.error('Unable to restore automatic backup settings:', error);
+        logErrorSafely('error', 'Unable to restore automatic backup settings.', error);
         state.backup.error = error?.message || String(error);
     }
 
@@ -758,7 +758,7 @@ async function saveBackupPreferences() {
         });
         return true;
     } catch (error) {
-        console.warn('Unable to save automatic backup preferences:', error);
+        logErrorSafely('warn', 'Unable to save automatic backup preferences.', error);
         return false;
     }
 }
@@ -995,7 +995,7 @@ async function chooseBackupDirectory() {
         try {
             await saveSetting(BACKUP_HANDLE_KEY, handle);
         } catch (error) {
-            console.warn('The browser could not persist the directory handle:', error);
+            logErrorSafely('warn', 'The browser could not persist the directory handle.', error);
             state.backup.handleRemembered = false;
         }
         await saveBackupPreferences();
@@ -1003,7 +1003,7 @@ async function chooseBackupDirectory() {
         await runAutomaticBackup({ force: true, notify: true });
     } catch (error) {
         if (error?.name === 'AbortError') return;
-        console.error('Unable to select backup directory:', error);
+        logErrorSafely('error', 'Unable to select a backup directory.', error);
         state.backup.error = error?.message || String(error);
         renderBackupSettings();
         showToast(t('backupFailed', { message: state.backup.error }));
@@ -1023,7 +1023,7 @@ async function handleBackupRetentionChange() {
             });
             await saveBackupPreferences();
         } catch (error) {
-            console.warn('Unable to prune backup history:', error);
+            logErrorSafely('warn', 'Unable to prune backup history.', error);
         }
     }
     renderBackupSettings();
@@ -1036,7 +1036,7 @@ async function disconnectBackupDirectory() {
     try {
         await deleteSetting(BACKUP_HANDLE_KEY);
     } catch (error) {
-        console.warn('Unable to remove stored directory handle:', error);
+        logErrorSafely('warn', 'Unable to remove the stored directory handle.', error);
     }
     state.backup.handle = null;
     state.backup.enabled = false;
@@ -1213,7 +1213,7 @@ async function runAutomaticBackup({
                 if (notify) showToast(t('backupUpToDate'));
                 return true;
             } catch (error) {
-                console.warn('Existing latest backup failed verification; rewriting it:', error);
+                logErrorSafely('warn', 'An existing latest backup failed verification and will be rewritten.', error);
             }
         }
 
@@ -1247,7 +1247,7 @@ async function runAutomaticBackup({
             try {
                 await pruneBackupHistory(history, backup.retention);
             } catch (error) {
-                console.warn('Unable to prune backup history:', error);
+                logErrorSafely('warn', 'Unable to prune backup history.', error);
             }
         }
 
@@ -1259,7 +1259,7 @@ async function runAutomaticBackup({
         try {
             await saveBackupPreferences();
         } catch (error) {
-            console.warn('Unable to save backup metadata:', error);
+            logErrorSafely('warn', 'Unable to save backup metadata.', error);
         }
         if (notify) showToast(t(backup.encryptionEnabled ? 'encryptedBackupComplete' : 'backupComplete', {
             count: state.items.length,
@@ -1274,7 +1274,7 @@ async function runAutomaticBackup({
     try {
         return await operation;
     } catch (error) {
-        console.error('Automatic backup failed:', error);
+        logErrorSafely('error', 'Automatic backup failed.', error);
         backup.error = error?.message || String(error);
         backup.health.status = error?.code === 'BACKUP_HEALTH_STALE' ? 'stale' : 'failed';
         backup.health.error = backup.error;

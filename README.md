@@ -19,6 +19,7 @@ hj-bookmarks/
 │   ├── ISSUE_TEMPLATE/
 │   ├── workflows/browser-tests.yml
 │   └── dependabot.yml
+├── .githooks/       # 可选的提交与推送前公开内容审计
 ├── CHANGELOG.md
 ├── index.html
 ├── LICENSE
@@ -35,8 +36,10 @@ hj-bookmarks/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DEPLOYMENT.md
+│   ├── PRIVACY.md
 │   └── SYNC-DESIGN.md
 ├── scripts/
+│   ├── audit-public-content.mjs
 │   └── prepare-static-package.mjs
 └── tests/
     ├── index.html
@@ -61,6 +64,7 @@ hj-bookmarks/
 - [`SECURITY.md`](SECURITY.md)：支持范围、私密漏洞报告入口和脱敏要求
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)：模块边界、加载顺序和测试架构
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)：GitHub Pages、便携包、Release 和其他静态平台
+- [`docs/PRIVACY.md`](docs/PRIVACY.md)：浏览器、备份、远端、日志和公开发布的数据边界
 - [`docs/SYNC-DESIGN.md`](docs/SYNC-DESIGN.md)：同步、加密、凭据和冲突协议
 
 最终用户不需要阅读设计文档。应用侧边栏底部提供 `?` 帮助按钮，页面内说明：
@@ -375,7 +379,7 @@ Koofr 地址会自动使用适合浏览器访问的连接方式。其他标准 W
 
 ## 数据与隐私
 
-默认情况下，所有书签只保存在当前浏览器的 IndexedDB 中，没有遥测或第三方网络请求。自动备份只会写入用户明确选择的本地目录；只有用户配置并主动解锁 WebDAV 后，应用才会访问对应的同步地址。
+默认情况下，所有书签只保存在当前浏览器的 IndexedDB 中，没有遥测或第三方网络请求。自动备份只会写入用户明确选择的本地目录；只有用户配置并主动解锁 WebDAV 后，应用才会访问对应的同步地址。同步地址和用户名作为必要连接信息保存在本机 IndexedDB，密码和加密口令不进入长期设置。完整数据流见 [`docs/PRIVACY.md`](docs/PRIVACY.md)。
 
 需要注意：
 
@@ -407,6 +411,8 @@ Koofr 地址会自动使用适合浏览器访问的连接方式。其他标准 W
 - 文件夹不能移动到自身或子文件夹
 - 导入及恢复文件会先完成解析、解密和校验，再写入 IndexedDB
 - 加密备份使用独立随机 salt、96-bit IV 和 AES-256-GCM 完整性校验
+- 生产日志只输出经过过滤的错误摘要，不输出 URL、认证头、本机用户路径、堆栈或底层 `cause`
+- 公开内容审计会检查当前文件、可达 Git 历史、Pages 和便携包
 - 一次导入或恢复使用原子 IndexedDB 事务，失败时不会留下半套数据
 
 ## 浏览器存储兼容
@@ -436,6 +442,7 @@ tests/index.html
 - 备份口令更换、latest 安全归档、历史重加密和旧口令快照保留
 - 快照差异分类、安全合并和选择恢复计划
 - 同步及备份的 AES-GCM 加密、解密、明文泄漏检查和错误口令
+- 长期设置、标签页存储、远端协调摘要、导出文件和脱敏诊断的数据边界
 - 同步 payload v1 → v2 兼容
 - 回收站快照、恢复、永久清除和过期清理
 - Web Locks 并发写入串行化
@@ -453,11 +460,12 @@ tests/index.html
 
 1. 使用 `node --check` 检查所有 JavaScript 语法；
 2. 检查 HTML ID、DOM 缓存、中英文词典、本地资源引用和缓存版本；
-3. 使用 Headless Chrome 直接打开 `tests/index.html`；
-4. 读取 `window.__TEST_RESULTS__`，任何测试失败都会让工作流失败；
-5. 生成 `{repository-name}-portable.zip` 和 SHA-256 校验文件；
-6. `main` 分支通过后部署到 GitHub Pages；
-7. 推送 `v*` 标签时创建 GitHub Release 并附加便携包。
+3. 扫描当前文件与全部可达 Git 历史，且不在日志中回显匹配值；
+4. 使用 Headless Chrome 直接打开 `tests/index.html`；
+5. 读取 `window.__TEST_RESULTS__`，任何测试失败都会让工作流失败；
+6. 生成并再次审计 `{repository-name}-portable.zip` 和 SHA-256 校验文件；
+7. `main` 分支通过后审计并部署到 GitHub Pages；
+8. 推送 `v*` 标签时创建 GitHub Release 并附加便携包。
 
 每次测试生成的 Actions Artifact 保留 14 天，适合开发验证；Release 附件适合最终用户长期下载。包名从 GitHub 当前仓库名动态生成，因此未来重命名仓库不需要修改工作流。用户解压 ZIP 后直接双击 `index.html` 即可使用。
 
@@ -465,8 +473,16 @@ CI 脚本不安装 npm 包，也不参与应用运行或代码转译。最终用
 
 ```bash
 node tests/static-checks.mjs
+node scripts/audit-public-content.mjs --history
 node tests/run-browser-tests.mjs
 node scripts/prepare-static-package.mjs dist/site
+node scripts/audit-public-content.mjs dist/site
+```
+
+维护者还可以启用仓库内置的提交和推送前审计：
+
+```bash
+git config core.hooksPath .githooks
 ```
 
 浏览器测试页本身仍可直接双击运行。首次启用 Pages、创建版本标签、校验下载包以及 Cloudflare、Netlify、Azure 的部署说明详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。

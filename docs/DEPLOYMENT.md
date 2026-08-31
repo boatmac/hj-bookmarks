@@ -34,20 +34,23 @@
 本地维护者如安装了 Node.js 22，可选择生成同样的目录：
 
 ```bash
+node scripts/audit-public-content.mjs --history
 node scripts/prepare-static-package.mjs dist/site
+node scripts/audit-public-content.mjs dist/site
 ```
 
-这只是文件筛选与复制，不转译、不压缩应用代码，也不产生运行时依赖。
+第一个命令检查当前仓库和全部可达历史，第三个命令检查最终产物。审计失败时只报告规则与文件位置，不在终端或 CI 日志中回显匹配值。打包本身只是文件筛选与复制，不转译、不压缩应用代码，也不产生运行时依赖。
 
 ## GitHub Actions 行为
 
 `.github/workflows/browser-tests.yml` 在测试通过后执行以下动作：
 
-1. 为每次 push、Pull Request 或手动运行生成 `{repository-name}-portable.zip`；
-2. 生成对应的 `.zip.sha256`；
-3. 将两者上传为保留 14 天的 Actions Artifact；
-4. `main` 分支成功时发布同一套静态文件到 GitHub Pages；
-5. 推送 `v*` 标签时创建或更新 GitHub Release，并附加 ZIP 和校验文件。
+1. 完整检出可达历史并执行静态、隐私和浏览器测试；
+2. 为每次 push、Pull Request 或手动运行生成 `{repository-name}-portable.zip`；
+3. 在压缩前再次扫描便携目录并生成 `.zip.sha256`；
+4. 将 ZIP 和校验文件上传为保留 14 天的 Actions Artifact；
+5. `main` 分支成功时重新扫描并发布同一套静态文件到 GitHub Pages；
+6. 推送 `v*` 标签时创建或更新 GitHub Release，并附加已经审计的 ZIP 和校验文件。
 
 包名使用 GitHub 当前仓库名动态生成，未来重命名仓库后不需要修改工作流。
 

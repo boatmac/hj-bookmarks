@@ -25,7 +25,7 @@ async function initialize() {
         await refreshData();
         await Promise.all([initializePersistentStorage(), initializeBackup(), initializeWebDavSync()]);
     } catch (error) {
-        console.error('Unable to initialize HJ Bookmarks:', error);
+        logErrorSafely('error', 'Unable to initialize HJ Bookmarks.', error);
         showFatalError(error);
     }
 }

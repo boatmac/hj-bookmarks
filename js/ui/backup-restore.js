@@ -1417,7 +1417,7 @@ async function applySelectedBackupRestore() {
             automatic: result.autoIncludedCount,
         }));
     } catch (error) {
-        console.error('Backup restore failed:', error);
+        logErrorSafely('error', 'Backup restore failed.', error);
         if (backupRestoreSession !== session) return;
         session.applying = false;
         session.error = t('backupRestoreFailed', { message: error?.message || String(error) });
@@ -1467,7 +1467,7 @@ async function writeRestoreEmergencyBackup(
             EMERGENCY_BACKUP_RETENTION,
         );
     } catch (error) {
-        console.warn('Unable to prune pre-restore emergency backups:', error);
+        logErrorSafely('warn', 'Unable to prune pre-restore emergency backups.', error);
     }
     return filename;
 }
@@ -1512,7 +1512,7 @@ async function adoptBackupRestoreDirectory(handle, lastBackupAt, options = {}) {
     try {
         await saveSetting(BACKUP_HANDLE_KEY, handle);
     } catch (error) {
-        console.warn('The browser could not persist the restored backup directory handle:', error);
+        logErrorSafely('warn', 'The browser could not persist the restored backup directory handle.', error);
         state.backup.handleRemembered = false;
     }
     await saveBackupPreferences();

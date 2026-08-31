@@ -41,12 +41,10 @@ function createWebDavHeaders(includeContentType = false) {
     return headers;
 }
 
-function createSyncRequestError(code, method, target, cause = null) {
+function createSyncRequestError(code, method) {
     const error = new Error(t(code === 'SYNC_TIMEOUT' ? 'syncTimeout' : 'syncNetworkError'));
     error.code = code;
     error.requestMethod = method;
-    error.requestTarget = target;
-    if (cause) error.cause = cause;
     return error;
 }
 
@@ -64,13 +62,6 @@ function isTransientSyncError(error) {
 async function fetchWebDav(url, options) {
     const requestController = new AbortController();
     const method = String(options?.method || 'GET').toUpperCase();
-    let target = 'remote';
-    try {
-        const parsedUrl = new URL(url);
-        target = `${parsedUrl.host}${parsedUrl.pathname}`;
-    } catch {
-        // Keep the generic target for malformed URLs.
-    }
     const sessionSignal = state.sync.abortController?.signal;
     if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
     let timedOut = false;
@@ -83,10 +74,10 @@ async function fetchWebDav(url, options) {
 
     try {
         return await fetch(url, { ...options, signal: requestController.signal });
-    } catch (cause) {
+    } catch {
         if (sessionSignal?.aborted) throw new Error(t('syncCanceled'));
-        if (timedOut) throw createSyncRequestError('SYNC_TIMEOUT', method, target, cause);
-        throw createSyncRequestError('SYNC_NETWORK', method, target, cause);
+        if (timedOut) throw createSyncRequestError('SYNC_TIMEOUT', method);
+        throw createSyncRequestError('SYNC_NETWORK', method);
     } finally {
         window.clearTimeout(timeout);
         sessionSignal?.removeEventListener('abort', cancelRequest);
@@ -475,7 +466,7 @@ async function writeKoofrSyncFile(content, remote, context) {
     try {
         version = (await probeKoofrSyncVersion(context)).version;
     } catch (error) {
-        console.warn('Unable to read Koofr metadata after a successful sync write:', error);
+        logErrorSafely('warn', 'Unable to read remote metadata after a successful sync write.', error);
     }
     return { status: 'written', version };
 }

@@ -60,7 +60,7 @@ async function initializeWebDavSync() {
         }
         await loadSyncConflicts();
     } catch (error) {
-        console.error('Unable to restore WebDAV sync settings:', error);
+        logErrorSafely('error', 'Unable to restore remote sync settings.', error);
         state.sync.error = error?.message || String(error);
     }
     state.sync.initialized = true;
@@ -681,7 +681,7 @@ async function saveSyncPreferences() {
         });
         return true;
     } catch (error) {
-        console.warn('Unable to save WebDAV sync preferences:', error);
+        logErrorSafely('warn', 'Unable to save remote sync preferences.', error);
         return false;
     }
 }
@@ -1045,7 +1045,7 @@ async function disconnectWebDavSync() {
         try {
             await deleteSyncState(endpointKey);
         } catch (error) {
-            console.warn('Unable to remove local folder sync state:', error);
+            logErrorSafely('warn', 'Unable to remove local folder sync state.', error);
         }
         state.sync.password = '';
         state.sync.passphrase = '';
@@ -1070,7 +1070,7 @@ async function disconnectWebDavSync() {
     try {
         if (state.sync.endpoint) await deleteSyncState(endpointKey);
     } catch (error) {
-        console.warn('Unable to remove WebDAV sync preferences:', error);
+        logErrorSafely('warn', 'Unable to remove remote sync preferences.', error);
     }
     Object.assign(state.sync, {
         endpoint: '',
@@ -1445,10 +1445,10 @@ async function runWebDavSyncUnlocked({
             return false;
         }
         if (automatic && scheduleTransientSyncRetry(error)) {
-            console.warn('Automatic synchronization was delayed by a transient network error:', error);
+            logErrorSafely('warn', 'Automatic synchronization was delayed by a transient network error.', error);
             return false;
         }
-        console.error('WebDAV synchronization failed:', error);
+        logErrorSafely('error', 'Remote synchronization failed.', error);
         resetSyncRetryState();
         sync.error = error?.message || String(error);
         if (notify || sync.lastNotifiedError !== sync.error) {

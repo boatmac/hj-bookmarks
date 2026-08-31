@@ -156,7 +156,7 @@ function scheduleExternalDataRefresh() {
             await refreshData();
             showTabCoordinationMessage('externalChangesApplied');
         } catch (error) {
-            console.error('Unable to refresh changes from another tab:', error);
+            logErrorSafely('error', 'Unable to refresh changes from another tab.', error);
         }
     }, 120);
 }

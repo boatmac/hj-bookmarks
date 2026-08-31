@@ -174,7 +174,7 @@ async function handleItemSubmit(event) {
             showToast(existing ? t('saved') : t(kind === 'folder' ? 'folderAdded' : 'bookmarkAdded'));
         });
     } catch (error) {
-        console.error(error);
+        logErrorSafely('error', 'Unable to save the bookmark item.', error);
         showFormError(t('saveFailed'));
     }
 }

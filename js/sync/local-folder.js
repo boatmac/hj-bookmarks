@@ -17,7 +17,7 @@ async function initializeLocalFolderSync() {
             local.permission = await getBackupPermission(handle, false);
         }
     } catch (error) {
-        console.warn('Unable to restore local sync directory:', error);
+        logErrorSafely('warn', 'Unable to restore the local sync directory.', error);
     }
     startLocalFolderPolling();
 }
@@ -67,7 +67,7 @@ async function chooseLocalSyncDirectory() {
         try {
             await saveSetting(LOCAL_SYNC_HANDLE_KEY, handle);
         } catch (error) {
-            console.warn('The browser could not persist the local sync directory handle:', error);
+            logErrorSafely('warn', 'The browser could not persist the local sync directory handle.', error);
         }
         await saveSyncPreferences();
         if (state.sync.rememberSession) saveSessionSyncCredentials();
@@ -80,7 +80,7 @@ async function chooseLocalSyncDirectory() {
         return true;
     } catch (error) {
         if (error?.name === 'AbortError') return false;
-        console.error('Unable to select local sync directory:', error);
+        logErrorSafely('error', 'Unable to select a local sync directory.', error);
         state.sync.error = error?.message || String(error);
         renderSyncSettings();
         return false;
@@ -93,7 +93,7 @@ async function disconnectLocalSyncDirectory() {
     try {
         await deleteSetting(LOCAL_SYNC_HANDLE_KEY);
     } catch (error) {
-        console.warn('Unable to remove local sync directory handle:', error);
+        logErrorSafely('warn', 'Unable to remove the local sync directory handle.', error);
     }
     local.handle = null;
     local.id = '';
@@ -280,7 +280,7 @@ async function runLocalFolderSyncUnlocked({ notify = false } = {}) {
             showToast(t('syncCanceled'));
             return false;
         }
-        console.error('Local folder synchronization failed:', error);
+        logErrorSafely('error', 'Local folder synchronization failed.', error);
         sync.error = error?.message || String(error);
         if (notify || sync.lastNotifiedError !== sync.error) {
             showToast(t('syncFailed', { message: sync.error }));
@@ -333,7 +333,7 @@ async function readLocalSyncDeviceFiles(files, passphrase) {
             const dataset = parseRemoteSyncDataset(decrypted);
             aggregate = mergeSyncDatasets(aggregate, dataset);
         } catch (error) {
-            console.error(`Unable to read local sync file ${entry.name}:`, error);
+            logErrorSafely('error', 'Unable to read a local sync file.', error);
             throw new Error(t('localFolderReadFailed', { name: entry.name }));
         }
     }
@@ -346,7 +346,7 @@ async function writeLocalSyncDeviceFile(rootHandle, dataset, passphrase) {
         const content = await encryptSyncData(dataset, passphrase);
         await writeBackupFile(devices, `${state.sync.deviceId}.enc.json`, content);
     } catch (error) {
-        console.error('Unable to write local sync device file:', error);
+        logErrorSafely('error', 'Unable to write the local sync device file.', error);
         throw new Error(t('localFolderWriteFailed'));
     }
 }

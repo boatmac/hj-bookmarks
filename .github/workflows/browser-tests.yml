@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js for the CI harness
         uses: actions/setup-node@v7
@@ -46,6 +48,9 @@ jobs:
       - name: Run static checks
         run: node tests/static-checks.mjs
 
+      - name: Audit repository and reachable history
+        run: node scripts/audit-public-content.mjs --history
+
       - name: Run browser tests
         run: node tests/run-browser-tests.mjs
 
@@ -55,6 +60,7 @@ jobs:
         run: |
           PACKAGE_NAME="${GITHUB_REPOSITORY#*/}-portable"
           node scripts/prepare-static-package.mjs "dist/${PACKAGE_NAME}"
+          node scripts/audit-public-content.mjs "dist/${PACKAGE_NAME}"
           node tests/run-browser-tests.mjs "dist/${PACKAGE_NAME}/tests/index.html"
           (
             cd dist
@@ -98,6 +104,9 @@ jobs:
 
       - name: Prepare static site
         run: node scripts/prepare-static-package.mjs dist/site
+
+      - name: Audit static site
+        run: node scripts/audit-public-content.mjs dist/site
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6

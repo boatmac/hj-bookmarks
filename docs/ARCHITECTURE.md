@@ -69,7 +69,11 @@ js/
 - `state.persistence`：浏览器持久存储状态；
 - `state.coordination`：当前标签页 ID、跨标签页消息、写锁和同步心跳。
 
-长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。设备 ID 与本机自定义名称分别持久化，名称注册表作为同步 payload v2 的可选加密元数据参与合并；它不得被当作账号或权限身份。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。
+长期数据必须通过 `storage.js` 写入 IndexedDB。同步地址和用户名是本机重连所需设置；密码和加密口令不得进入长期设置。设备 ID 与本机自定义名称分别持久化，名称注册表作为同步 payload v2 的可选加密元数据参与合并；它不得被当作账号或权限身份。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。完整数据流见 [`PRIVACY.md`](PRIVACY.md)。
+
+## 诊断信息边界
+
+生产模块不得把原始 `Error`、`cause`、堆栈、请求目标或动态文件名直接交给控制台。`utils.js` 中的 `safeErrorForLog()` 只保留过滤后的错误名称、消息、内部错误码和数字 HTTP 状态；`logErrorSafely()` 是生产错误日志的唯一入口。远端请求错误本身不附加 URL 或底层 `fetch` 异常。公开内容审计会拒绝其他生产模块直接调用 `console.error()` 或 `console.warn()`。
 
 ## 备份加密边界
 
@@ -142,6 +146,7 @@ js/
 
 - `tests/static-checks.mjs`：执行 JavaScript 语法、HTML ID、DOM 缓存、双语词典、本地资源和缓存版本检查；
 - `tests/run-browser-tests.mjs`：查找本机 Edge/Chrome/Chromium，通过 DevTools Protocol 打开测试页并读取结果；
+- `scripts/audit-public-content.mjs`：扫描当前文件、可达 Git 历史或指定发布目录中的凭据、私人路径、非示例远端地址和未脱敏生产日志；
 - `scripts/prepare-static-package.mjs`：把运行文件、帮助文档和浏览器测试复制到干净的静态发布目录。
 
 `.github/workflows/browser-tests.yml` 在 push、pull request 和手动触发时使用 Node.js 22 与 GitHub Ubuntu runner 自带的 Chrome 执行检查。测试通过后上传便携 ZIP；`main` 分支部署 GitHub Pages，`v*` 标签创建 GitHub Release。Node.js 只属于可选 CI/打包 harness，不转译应用代码，不进入应用加载链，也不引入 npm 包或最终用户运行要求。发布目录包含 `.nojekyll`，并排除工作流、Git 元数据和 CI Node 脚本。具体发布边界见 `docs/DEPLOYMENT.md`。

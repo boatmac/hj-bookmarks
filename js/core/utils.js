@@ -351,6 +351,33 @@ function restoreToastPopoverMode() {
     delete ui.toast.dataset.popoverFallback;
 }
 
+function sanitizeDiagnosticText(value) {
+    return String(value || '')
+        .replace(/\b(?:https?|ftp|file):\/\/[^\s"'<>]+/gi, '[redacted URL]')
+        .replace(/\b(?:Basic|Bearer)\s+[A-Za-z0-9._~+/=-]+/gi, '[redacted credential]')
+        .replace(/\b[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/][^\s"'<>]+/gi, '[redacted local path]')
+        .replace(/\/(?:Users|home)\/[^\s"'<>]+/gi, '[redacted local path]')
+        .replace(/\/dav\/[^\s"'<>]+/gi, '/dav/[redacted path]')
+        .slice(0, 500);
+}
+
+function safeErrorForLog(error) {
+    const details = {
+        name: sanitizeDiagnosticText(error?.name || 'Error') || 'Error',
+        message: sanitizeDiagnosticText(error?.message || error || 'Operation failed') || 'Operation failed',
+    };
+    if (typeof error?.code === 'string' && error.code) {
+        details.code = sanitizeDiagnosticText(error.code).slice(0, 80);
+    }
+    if (Number.isFinite(Number(error?.status))) details.status = Number(error.status);
+    return details;
+}
+
+function logErrorSafely(level, label, error) {
+    const logger = level === 'warn' ? console.warn : console.error;
+    logger.call(console, label, safeErrorForLog(error));
+}
+
 function showFatalError(error) {
     ui.storageStatus.textContent = t('dbConnectionFailed');
     ui.bookmarkGrid.replaceChildren();
@@ -359,7 +386,7 @@ function showFatalError(error) {
     panel.append(
         createIcon('database', 30),
         createElement('h2', '', t('fatalTitle')),
-        createElement('p', '', error?.message || t('fatalHint')),
+        createElement('p', '', sanitizeDiagnosticText(error?.message) || t('fatalHint')),
     );
     ui.bookmarkGrid.append(panel);
 }

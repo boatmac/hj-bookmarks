@@ -34,7 +34,7 @@ async function handleImport(event) {
             showToast(t('imported', { count: importedCount, details }));
         }
     } catch (error) {
-        console.error('Import failed:', error);
+        logErrorSafely('error', 'Import failed.', error);
         showToast(t('importFailed', { message: error.message }));
     } finally {
         event.target.value = '';

@@ -326,13 +326,13 @@ async function checkRemoteSyncVersion({ trigger = 'manual' } = {}) {
             nextDelay = SYNC_RETRY_DELAYS_MS[delayIndex];
             watch.retryCount += 1;
             watch.error = t('remoteWatchRetrying', { seconds: Math.ceil(nextDelay / 1000) });
-            console.warn(`Remote sync check (${trigger}) will retry after a transient error:`, error);
+            logErrorSafely('warn', `Remote sync check (${trigger}) will retry after a transient error.`, error);
             return false;
         }
         shouldSchedule = false;
         watch.error = error?.message || t('remoteWatchFailed');
         state.sync.error = watch.error;
-        console.error(`Remote sync check (${trigger}) failed:`, error);
+        logErrorSafely('error', `Remote sync check (${trigger}) failed.`, error);
         if (state.sync.lastNotifiedError !== watch.error) {
             showToast(t('remoteWatchFailedToast', { message: watch.error }), 'warning');
             state.sync.lastNotifiedError = watch.error;
