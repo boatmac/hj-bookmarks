@@ -1272,7 +1272,15 @@ async function runWebDavSync(options = {}) {
     return locked.value;
 }
 
-async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {}) {
+function assertRemoteSyncJoinTarget(remote, requireExistingRemote) {
+    if (requireExistingRemote && !remote.exists) throw new Error(t('sharedLibraryNotFound'));
+}
+
+async function runWebDavSyncUnlocked({
+    notify = false,
+    automatic = false,
+    requireExistingRemote = false,
+} = {}) {
     updateSyncSecretsFromForm(false);
     const sync = state.sync;
     if (!sync.supported) {
@@ -1327,6 +1335,7 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         for (let attempt = 0; attempt < 3; attempt += 1) {
             setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
             const remote = await readRemoteSyncFile(endpoint, remoteContext);
+            assertRemoteSyncJoinTarget(remote, requireExistingRemote);
             if (!remote.exists && sync.createDirectory) {
                 setSyncPhase('syncPhaseCreatingFolder');
                 await ensureRemoteParentDirectory(endpoint, remoteContext);

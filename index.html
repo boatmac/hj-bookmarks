@@ -11,28 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-34">
-    <script src="js/core/translations.js?v=20260829-34" defer></script>
-    <script src="js/core/config.js?v=20260829-34" defer></script>
-    <script src="js/core/coordination.js?v=20260829-34" defer></script>
-    <script src="js/core/storage.js?v=20260829-34" defer></script>
-    <script src="js/sync/backup.js?v=20260829-34" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-34" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-34" defer></script>
-    <script src="js/sync/providers.js?v=20260829-34" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-34" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-34" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-34" defer></script>
-    <script src="js/sync/merge.js?v=20260829-34" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-34" defer></script>
-    <script src="js/ui/help.js?v=20260829-34" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-34" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-34" defer></script>
-    <script src="js/ui/render.js?v=20260829-34" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-34" defer></script>
-    <script src="js/data/transfer.js?v=20260829-34" defer></script>
-    <script src="js/core/utils.js?v=20260829-34" defer></script>
-    <script src="js/app.js?v=20260829-34" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-35">
+    <script src="js/core/translations.js?v=20260829-35" defer></script>
+    <script src="js/core/config.js?v=20260829-35" defer></script>
+    <script src="js/core/coordination.js?v=20260829-35" defer></script>
+    <script src="js/core/storage.js?v=20260829-35" defer></script>
+    <script src="js/sync/backup.js?v=20260829-35" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-35" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-35" defer></script>
+    <script src="js/sync/providers.js?v=20260829-35" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-35" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-35" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-35" defer></script>
+    <script src="js/sync/merge.js?v=20260829-35" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-35" defer></script>
+    <script src="js/ui/help.js?v=20260829-35" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-35" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-35" defer></script>
+    <script src="js/ui/render.js?v=20260829-35" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-35" defer></script>
+    <script src="js/data/transfer.js?v=20260829-35" defer></script>
+    <script src="js/core/utils.js?v=20260829-35" defer></script>
+    <script src="js/app.js?v=20260829-35" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -154,6 +154,7 @@
                         </summary>
                         <div class="export-popover">
                             <p class="export-section-label" data-i18n="syncSection">同步与冲突</p>
+                            <button class="shared-library-menu-item" id="join-shared-library-menu-button" type="button"><strong data-i18n="joinSharedLibrary">加入共享书签库</strong><small data-i18n="joinSharedLibraryMenuHint">使用共享地址、成员凭据和统一加密口令加入</small></button>
                             <button class="wizard-menu-item" id="sync-wizard-menu-button" type="button"><strong data-i18n="openSetupWizard">设置向导</strong><small data-i18n="syncWizardMenuHint">分步选择位置、账号、加密和自动同步</small></button>
                             <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
                             <button class="conflict-menu-item" id="conflict-center-menu-button" type="button"><strong data-i18n="conflictCenter">冲突中心</strong><small id="conflict-menu-status">暂无待处理冲突</small></button>
@@ -193,7 +194,10 @@
                         <strong id="sync-onboarding-title" data-i18n="syncOnboardingTitle">在多个设备间保持书签一致</strong>
                         <small data-i18n="syncOnboardingDetail">书签会先在本机加密，再同步到你选择的位置。</small>
                     </span>
-                    <button class="button button-primary" id="sync-entry-button" type="button" title="打开同步向导" data-i18n="syncEntry" data-i18n-title="syncEntryTitle">设置同步</button>
+                    <span class="sync-onboarding-actions">
+                        <button class="button button-secondary" id="join-shared-library-button" type="button" data-i18n="joinSharedLibrary">加入共享书签库</button>
+                        <button class="button button-primary" id="sync-entry-button" type="button" title="打开同步向导" data-i18n="syncEntry" data-i18n-title="syncEntryTitle">设置同步</button>
+                    </span>
                 </section>
 
                 <nav class="breadcrumbs hidden" id="breadcrumbs" aria-label="文件夹路径" data-i18n-aria-label="folderPathLabel"></nav>
@@ -305,6 +309,7 @@
                             <li data-i18n="helpSync5">顶部快捷按钮可立即同步、重试、解锁或进入冲突中心。</li>
                             <li data-i18n="helpSync6">远端自动同步解锁后会定期检查共享库更新，切回页面或恢复联网时也会立即检查。</li>
                             <li data-i18n="helpSync7">为每台设备设置易识别的名称，冲突中心和回收站会显示对应修改来源。</li>
+                            <li data-i18n="helpSync8">组织者先用设置向导创建共享库，其他成员再用“加入共享书签库”连接现有远端。</li>
                         </ul>
                     </div>
                 </details>
@@ -679,7 +684,7 @@
     <dialog class="item-dialog sync-wizard-dialog" id="sync-wizard-dialog" aria-labelledby="sync-wizard-title">
         <div class="dialog-panel">
             <header class="dialog-header">
-                <div><p class="eyebrow" data-i18n="syncWizardEyebrow">同步设置</p><h2 id="sync-wizard-title" data-i18n="syncWizardTitle">设置加密同步</h2></div>
+                <div><p class="eyebrow" id="sync-wizard-eyebrow" data-i18n="syncWizardEyebrow">同步设置</p><h2 id="sync-wizard-title" data-i18n="syncWizardTitle">设置加密同步</h2></div>
                 <button class="icon-button dialog-close" id="sync-wizard-close-button" type="button" aria-label="关闭" data-i18n-aria-label="close">
                     <svg><use href="#icon-x"></use></svg>
                 </button>
@@ -714,6 +719,7 @@
 
                 <section class="sync-wizard-step hidden" data-wizard-step="2">
                     <div class="wizard-step-heading"><h3 data-i18n="configureConnection">配置连接</h3><p id="wizard-connection-hint"></p></div>
+                    <p class="wizard-shared-library-note hidden" id="wizard-shared-library-note" data-i18n="sharedLibraryTrustNote">共享库中的所有成员都可以查看和修改全部书签；请使用成员自己的 WebDAV 应用密码。</p>
                     <div class="sync-fields" id="wizard-remote-fields">
                         <label class="settings-field">
                             <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="wizardAddressHint">填写服务提供的 WebDAV 或同步地址</small></span>
@@ -778,6 +784,11 @@
                 <section class="sync-wizard-step hidden" data-wizard-step="5">
                     <div class="wizard-step-heading"><h3 data-i18n="verifyAndEnableSync">验证并启用同步</h3><p data-i18n="verifyAndEnableSyncHint">应用将验证访问权限、读取已有数据并写入本设备的加密状态。</p></div>
                     <div class="wizard-review" id="wizard-review"></div>
+                    <label class="wizard-shared-local-confirm hidden" id="wizard-shared-local-confirm-row">
+                        <input id="wizard-shared-local-confirm" type="checkbox">
+                        <span><strong id="wizard-shared-local-confirm-title">确认共享本机书签</strong><small id="wizard-shared-local-confirm-detail"></small></span>
+                    </label>
+                    <p class="wizard-error hidden" id="wizard-shared-error" role="alert"></p>
                     <div class="wizard-test-status" id="wizard-test-status">
                         <span class="wizard-test-icon"><svg><use href="#icon-database"></use></svg></span>
                         <span><strong id="wizard-test-title" data-i18n="readyToVerify">准备验证</strong><small id="wizard-test-detail" data-i18n="readyToVerifyHint">点击“测试并完成”开始。</small></span>

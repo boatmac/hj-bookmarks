@@ -9,27 +9,34 @@ let syncWizardTesting = false;
 let syncWizardOutcome = 'ready';
 let syncWizardErrorMessage = '';
 
-function openSyncWizard() {
+function openSharedLibraryWizard() {
+    closeExportMenu();
+    openSyncWizard({ intent: 'shared' });
+}
+
+function openSyncWizard(options = {}) {
     if (state.sync.running) return;
+    const sharedIntent = options?.intent === 'shared';
     resetSyncRetryState(true);
     stopRemoteSyncWatcher();
     if (ui.syncDialog.open) ui.syncDialog.close();
     syncWizardDraft = {
-        mode: state.sync.mode,
-        endpoint: state.sync.endpoint,
-        username: state.sync.username,
-        password: state.sync.password,
-        localHandle: state.sync.localFolder.handle,
-        localFolderId: state.sync.localFolder.id,
-        localFolderName: state.sync.localFolder.name,
-        passphrase: state.sync.passphrase,
-        passphraseConfirm: state.sync.passphrase,
+        intent: sharedIntent ? 'shared' : 'standard',
+        mode: sharedIntent ? 'remote' : state.sync.mode,
+        endpoint: sharedIntent ? '' : state.sync.endpoint,
+        username: sharedIntent ? '' : state.sync.username,
+        password: sharedIntent ? '' : state.sync.password,
+        localHandle: sharedIntent ? null : state.sync.localFolder.handle,
+        localFolderId: sharedIntent ? '' : state.sync.localFolder.id,
+        localFolderName: sharedIntent ? '' : state.sync.localFolder.name,
+        passphrase: sharedIntent ? '' : state.sync.passphrase,
+        passphraseConfirm: sharedIntent ? '' : state.sync.passphrase,
         deviceName: state.sync.deviceName,
-        automatic: state.sync.automatic,
-        rememberSession: state.sync.rememberSession,
-        createDirectory: state.sync.createDirectory,
+        automatic: sharedIntent ? true : state.sync.automatic,
+        rememberSession: sharedIntent ? false : state.sync.rememberSession,
+        createDirectory: sharedIntent ? false : state.sync.createDirectory,
     };
-    syncWizardStep = 1;
+    syncWizardStep = sharedIntent ? 2 : 1;
     syncWizardFinished = false;
     syncWizardTesting = false;
     syncWizardOutcome = 'ready';
@@ -71,13 +78,16 @@ function populateSyncWizardInputs() {
     ui.wizardAutoSync.checked = syncWizardDraft.automatic;
     ui.wizardRememberSession.checked = syncWizardDraft.rememberSession;
     ui.wizardCreateDirectory.checked = syncWizardDraft.createDirectory;
+    ui.wizardSharedLocalConfirm.checked = false;
     ui.wizardShowPasswords.checked = false;
     setSyncWizardPasswordVisibility(false);
 }
 
 function collectSyncWizardInputs() {
     const selectedMode = document.querySelector('input[name="wizard-sync-mode"]:checked');
-    syncWizardDraft.mode = selectedMode?.value === 'local-folder' ? 'local-folder' : 'remote';
+    syncWizardDraft.mode = syncWizardDraft.intent === 'shared'
+        ? 'remote'
+        : selectedMode?.value === 'local-folder' ? 'local-folder' : 'remote';
     syncWizardDraft.endpoint = ui.wizardEndpointInput.value.trim();
     syncWizardDraft.username = ui.wizardUsernameInput.value.trim();
     syncWizardDraft.password = ui.wizardPasswordInput.value;
@@ -90,7 +100,7 @@ function collectSyncWizardInputs() {
 }
 
 function clearSyncWizardErrors() {
-    [ui.wizardConnectionError, ui.wizardPassphraseError].forEach((element) => {
+    [ui.wizardConnectionError, ui.wizardPassphraseError, ui.wizardSharedError].forEach((element) => {
         element.textContent = '';
         element.classList.add('hidden');
     });
@@ -145,16 +155,27 @@ function goToNextSyncWizardStep() {
 function goToPreviousSyncWizardStep() {
     collectSyncWizardInputs();
     clearSyncWizardErrors();
-    syncWizardStep = Math.max(1, syncWizardStep - 1);
+    syncWizardStep = Math.max(syncWizardDraft.intent === 'shared' ? 2 : 1, syncWizardStep - 1);
     renderSyncWizard();
 }
 
 function renderSyncWizard() {
     if (!syncWizardDraft) return;
+    const sharedIntent = syncWizardDraft.intent === 'shared';
+    ui.syncWizardEyebrow.textContent = t(sharedIntent
+        ? 'sharedLibraryWizardEyebrow'
+        : 'syncWizardEyebrow');
+    ui.syncWizardTitle.textContent = t(sharedIntent
+        ? 'joinSharedLibrary'
+        : 'syncWizardTitle');
     document.querySelectorAll('.sync-wizard-step').forEach((section) => {
         section.classList.toggle('hidden', Number(section.dataset.wizardStep) !== syncWizardStep);
     });
     const progressSteps = [...ui.syncWizardProgress.querySelectorAll('span')];
+    const firstProgressLabel = progressSteps[0]?.querySelector('small');
+    if (firstProgressLabel) firstProgressLabel.textContent = t(sharedIntent
+        ? 'wizardSharedLibrary'
+        : 'wizardLocation');
     progressSteps.forEach((element, index) => {
         element.classList.toggle('active', index + 1 === syncWizardStep);
         element.classList.toggle('complete', index + 1 < syncWizardStep || syncWizardFinished);
@@ -163,15 +184,19 @@ function renderSyncWizard() {
     const localMode = syncWizardDraft.mode === 'local-folder';
     ui.wizardRemoteFields.classList.toggle('hidden', localMode);
     ui.wizardLocalFolderFields.classList.toggle('hidden', !localMode);
-    ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode);
-    ui.wizardConnectionHint.textContent = t(
-        localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint',
-    );
+    ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode || sharedIntent);
+    ui.wizardSharedLibraryNote.classList.toggle('hidden', !sharedIntent || syncWizardStep !== 2);
+    ui.wizardConnectionHint.textContent = t(sharedIntent
+        ? 'sharedLibraryConnectionHint'
+        : localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint');
     ui.wizardLocalFolderName.textContent = syncWizardDraft.localHandle
         ? t('localSyncFolderSelected', { name: syncWizardDraft.localFolderName })
         : t('localSyncFolderNotSelected');
 
-    ui.syncWizardBackButton.classList.toggle('hidden', syncWizardStep === 1 || syncWizardFinished);
+    ui.syncWizardBackButton.classList.toggle(
+        'hidden',
+        syncWizardStep === 1 || (sharedIntent && syncWizardStep === 2) || syncWizardFinished,
+    );
     ui.syncWizardNextButton.classList.toggle('hidden', syncWizardStep === 5 || syncWizardFinished);
     ui.syncWizardFinishButton.classList.toggle('hidden', syncWizardStep !== 5 || syncWizardFinished);
     ui.syncWizardCancelButton.textContent = t(syncWizardFinished ? 'gotIt' : 'cancel');
@@ -179,6 +204,14 @@ function renderSyncWizard() {
     ui.syncWizardBackButton.disabled = syncWizardTesting;
     ui.syncWizardNextButton.disabled = syncWizardTesting;
     ui.syncWizardFinishButton.disabled = syncWizardTesting;
+    ui.syncWizardFinishButton.textContent = t(sharedIntent ? 'joinSharedLibraryAction' : 'testAndFinish');
+
+    const needsLocalConfirmation = sharedIntent && syncWizardStep === 5 && state.items.length > 0;
+    ui.wizardSharedLocalConfirmRow.classList.toggle('hidden', !needsLocalConfirmation);
+    ui.wizardSharedLocalConfirmTitle.textContent = t('confirmSharingLocalBookmarks');
+    ui.wizardSharedLocalConfirmDetail.textContent = t('confirmSharingLocalBookmarksDetail', {
+        count: state.items.length,
+    });
 
     if (syncWizardStep === 5) {
         renderSyncWizardReview();
@@ -188,37 +221,48 @@ function renderSyncWizard() {
 
 function renderSyncWizardTestStatus() {
     const stateName = syncWizardTesting ? 'running' : syncWizardOutcome;
+    const sharedIntent = syncWizardDraft.intent === 'shared';
     ui.wizardTestStatus.dataset.state = stateName === 'ready'
         ? ''
         : (stateName === 'conflicts' ? 'success' : stateName);
     if (stateName === 'running') {
-        ui.wizardTestTitle.textContent = t('verifyingSync');
+        ui.wizardTestTitle.textContent = t(sharedIntent ? 'joiningSharedLibrary' : 'verifyingSync');
         renderSyncWizardProgress();
     } else if (stateName === 'success' || stateName === 'conflicts') {
         const needsReview = stateName === 'conflicts';
-        ui.wizardTestTitle.textContent = t(needsReview ? 'syncSetupNeedsReview' : 'syncSetupComplete');
+        ui.wizardTestTitle.textContent = t(needsReview
+            ? 'syncSetupNeedsReview'
+            : sharedIntent ? 'sharedLibraryJoined' : 'syncSetupComplete');
         ui.wizardTestDetail.textContent = needsReview
             ? t('syncSetupNeedsReviewHint', { count: state.sync.conflicts.length })
-            : t('syncSetupCompleteHint');
+            : t(sharedIntent ? 'sharedLibraryJoinedHint' : 'syncSetupCompleteHint');
     } else if (stateName === 'error') {
         ui.wizardTestTitle.textContent = t('syncSetupFailed');
         ui.wizardTestDetail.textContent = syncWizardErrorMessage || t('syncErrorDetail', { message: '' });
     } else {
-        ui.wizardTestTitle.textContent = t('readyToVerify');
-        ui.wizardTestDetail.textContent = t('readyToVerifyHint');
+        ui.wizardTestTitle.textContent = t(sharedIntent ? 'readyToJoinSharedLibrary' : 'readyToVerify');
+        ui.wizardTestDetail.textContent = t(sharedIntent
+            ? 'readyToJoinSharedLibraryHint'
+            : 'readyToVerifyHint');
     }
 }
 
 function renderSyncWizardReview() {
     ui.wizardReview.replaceChildren();
     const localMode = syncWizardDraft.mode === 'local-folder';
+    const sharedIntent = syncWizardDraft.intent === 'shared';
     const rows = [
-        [t('reviewMethod'), t(localMode ? 'localFolderMode' : 'remoteServiceMode')],
+        [t('reviewMethod'), t(sharedIntent
+            ? 'sharedLibraryMethod'
+            : localMode ? 'localFolderMode' : 'remoteServiceMode')],
         [t('reviewLocation'), localMode ? syncWizardDraft.localFolderName : syncWizardDraft.endpoint],
         [t('reviewDeviceName'), syncWizardDraft.deviceName || state.sync.deviceName],
         [t('reviewAutoSync'), t(syncWizardDraft.automatic ? 'enabledLabel' : 'disabledLabel')],
         [t('reviewCredentialPolicy'), t(syncWizardDraft.rememberSession ? 'enabledLabel' : 'disabledLabel')],
     ];
+    if (sharedIntent) {
+        rows.push([t('reviewLocalBookmarks'), t('reviewLocalBookmarksCount', { count: state.items.length })]);
+    }
     rows.forEach(([label, value]) => {
         const row = createElement('div', 'wizard-review-row');
         row.append(createElement('span', '', label), createElement('strong', '', value || t('conflictValueEmpty')));
@@ -281,6 +325,16 @@ async function finishSyncWizard() {
         }
     }
     collectSyncWizardInputs();
+    if (
+        syncWizardDraft.intent === 'shared'
+        && state.items.length > 0
+        && !ui.wizardSharedLocalConfirm.checked
+    ) {
+        syncWizardStep = 5;
+        showSyncWizardError(ui.wizardSharedError, t('sharingLocalBookmarksConfirmationRequired'));
+        renderSyncWizard();
+        return;
+    }
     const previousConfiguration = snapshotSyncWizardConfiguration();
     syncWizardTesting = true;
     syncWizardOutcome = 'running';
@@ -291,6 +345,14 @@ async function finishSyncWizard() {
     state.sync.mode = syncWizardDraft.mode;
     state.sync.endpoint = syncWizardDraft.endpoint;
     state.sync.username = syncWizardDraft.username;
+    if (
+        previousConfiguration.endpoint !== state.sync.endpoint
+        || previousConfiguration.username !== state.sync.username
+    ) {
+        state.sync.koofrMountId = '';
+        state.sync.koofrMountName = '';
+        state.sync.koofrMountUser = '';
+    }
     state.sync.password = syncWizardDraft.mode === 'remote' ? syncWizardDraft.password : '';
     state.sync.passphrase = syncWizardDraft.passphrase;
     const nextDeviceName = syncWizardDraft.deviceName
@@ -344,7 +406,10 @@ async function finishSyncWizard() {
         : false;
     await loadSyncConflicts();
 
-    const result = await runWebDavSync({ notify: false });
+    const result = await runWebDavSync({
+        notify: false,
+        requireExistingRemote: syncWizardDraft.intent === 'shared',
+    });
     syncWizardTesting = false;
     if (result) {
         state.sync.setupComplete = true;

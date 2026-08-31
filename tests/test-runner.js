@@ -559,6 +559,18 @@ test('顶部同步快捷按钮会随状态切换操作', () => {
     }
 });
 
+test('加入共享书签库时不会在错误地址静默创建新库', () => {
+    let rejected = false;
+    try {
+        assertRemoteSyncJoinTarget({ exists: false }, true);
+    } catch (error) {
+        rejected = error.message === t('sharedLibraryNotFound');
+    }
+    assert(rejected, 'Joining should reject a missing shared library');
+    assertRemoteSyncJoinTarget({ exists: false }, false);
+    assertRemoteSyncJoinTarget({ exists: true }, true);
+});
+
 test('设备名称元数据会按更新时间合并并兼容旧同步文件', () => {
     const older = {
         deviceId: 'shared-device',

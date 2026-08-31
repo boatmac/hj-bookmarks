@@ -39,10 +39,12 @@ function cacheElements() {
         'storage-status', 'language-select', 'help-button', 'theme-button',
         'search-input', 'clear-search-button',
         'tab-status', 'tab-status-text',
-        'search-shortcut', 'import-file-input', 'sync-entry-button', 'export-menu',
+        'search-shortcut', 'import-file-input', 'sync-entry-button',
+        'join-shared-library-button', 'export-menu',
         'quick-sync-button', 'quick-sync-icon-use', 'quick-sync-label',
         'backup-settings-button', 'backup-menu-status', 'restore-backup-menu-button',
-        'sync-wizard-menu-button', 'sync-settings-button', 'sync-menu-status',
+        'join-shared-library-menu-button', 'sync-wizard-menu-button',
+        'sync-settings-button', 'sync-menu-status',
         'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
@@ -100,9 +102,9 @@ function cacheElements() {
         'backup-selective-list', 'backup-selective-empty',
         'backup-restore-error', 'backup-restore-cancel-button',
         'backup-restore-apply-button',
-        'sync-wizard-dialog', 'sync-wizard-title',
+        'sync-wizard-dialog', 'sync-wizard-title', 'sync-wizard-eyebrow',
         'sync-wizard-close-button', 'sync-wizard-progress',
-        'wizard-connection-hint', 'wizard-remote-fields',
+        'wizard-connection-hint', 'wizard-shared-library-note', 'wizard-remote-fields',
         'wizard-local-folder-fields', 'wizard-local-folder-name',
         'wizard-choose-folder-button', 'wizard-connection-error',
         'wizard-endpoint-input', 'wizard-username-input', 'wizard-password-input',
@@ -110,8 +112,10 @@ function cacheElements() {
         'wizard-show-passwords', 'wizard-passphrase-error', 'wizard-device-name-input',
         'wizard-auto-sync',
         'wizard-remember-session', 'wizard-create-directory-row',
-        'wizard-create-directory', 'wizard-review', 'wizard-test-status',
-        'wizard-test-title', 'wizard-test-detail', 'sync-wizard-cancel-button',
+        'wizard-create-directory', 'wizard-review',
+        'wizard-shared-local-confirm-row', 'wizard-shared-local-confirm',
+        'wizard-shared-local-confirm-title', 'wizard-shared-local-confirm-detail',
+        'wizard-shared-error', 'wizard-test-status', 'wizard-test-title', 'wizard-test-detail', 'sync-wizard-cancel-button',
         'sync-wizard-back-button', 'sync-wizard-next-button',
         'sync-wizard-finish-button', 'sync-dialog', 'sync-dialog-title',
         'sync-dialog-close-button', 'sync-dialog-cancel-button',
@@ -216,6 +220,8 @@ function bindStaticEvents() {
     ui.restoreBackupMenuButton.addEventListener('click', () => openBackupRestoreDialog());
     ui.quickSyncButton.addEventListener('click', handleQuickSync);
     ui.syncEntryButton.addEventListener('click', openSyncDialog);
+    ui.joinSharedLibraryButton.addEventListener('click', openSharedLibraryWizard);
+    ui.joinSharedLibraryMenuButton.addEventListener('click', openSharedLibraryWizard);
     ui.syncWizardMenuButton.addEventListener('click', () => {
         closeExportMenu();
         openSyncWizard();
@@ -317,6 +323,12 @@ function bindStaticEvents() {
     ui.syncWizardFinishButton.addEventListener('click', finishSyncWizard);
     ui.wizardChooseFolderButton.addEventListener('click', chooseSyncWizardLocalFolder);
     ui.wizardShowPasswords.addEventListener('change', toggleSyncWizardPasswordVisibility);
+    ui.wizardSharedLocalConfirm.addEventListener('change', () => {
+        if (ui.wizardSharedLocalConfirm.checked) {
+            ui.wizardSharedError.textContent = '';
+            ui.wizardSharedError.classList.add('hidden');
+        }
+    });
     document.querySelectorAll('input[name="wizard-sync-mode"]').forEach((input) => {
         input.addEventListener('change', () => {
             collectSyncWizardInputs();
