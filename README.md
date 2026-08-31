@@ -1,16 +1,17 @@
-# Bookmark Manager（临时项目名）
+# HJ Bookmarks
 
-一个零构建、零 Node.js 依赖、本地优先的书签管理器。项目只使用浏览器原生 HTML、CSS、JavaScript 和 IndexedDB。
+一个零构建、零 Node.js 依赖、本地优先的书签管理器，支持加密备份、多设备同步和可信小组共享。项目只使用浏览器原生 HTML、CSS、JavaScript 和 IndexedDB；名称中的 **HJ** 代表 **HTML + JavaScript**。
 
 ## 直接运行
 
 双击项目根目录的 `index.html`，使用最新版 Edge、Chrome、Firefox 或 Safari 打开即可。
 
 ```text
-BoomarkManager/
+hj-bookmarks/
 ├── .github/workflows/
 │   └── browser-tests.yml
 ├── index.html
+├── LICENSE
 ├── css/
 │   └── style.css
 ├── js/
@@ -60,7 +61,7 @@ BoomarkManager/
 - 冲突处理
 - 隐私与加密口令安全
 
-帮助窗口还提供“查看项目 README”和“运行浏览器测试”入口，并跟随中文/English 界面语言。
+帮助窗口还提供“查看项目 README”“查看部署指南”和“运行浏览器测试”入口，并跟随中文/English 界面语言。
 
 ## 功能
 
@@ -459,4 +460,8 @@ node scripts/prepare-static-package.mjs dist/site
 
 ## 项目状态
 
-早期版本。项目名称和许可证待定。
+HJ Bookmarks 正在进行首次公开版本的发布准备。内部数据库名称、Storage Key、备份格式和同步协议继续保留原有兼容标识，品牌更新不会影响已有数据。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)，版权所有 © 2026 [boatmac](https://github.com/boatmac)。

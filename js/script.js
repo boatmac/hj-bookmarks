@@ -2,7 +2,7 @@
 'use strict';
 
 (() => {
-    const version = '20260829-39';
+    const version = '20260829-40';
     const modules = [
         'core/translations.js',
         'core/config.js',
@@ -35,7 +35,7 @@
         script.async = false;
         script.addEventListener('load', () => loadNext(index + 1), { once: true });
         script.addEventListener('error', () => {
-            console.error(`Unable to load bookmark manager module: ${modules[index]}`);
+            console.error(`Unable to load HJ Bookmarks module: ${modules[index]}`);
         }, { once: true });
         document.head.append(script);
     }

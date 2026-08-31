@@ -1,4 +1,4 @@
-name: Test, package, and publish
+name: HJ Bookmarks CI and release
 
 on:
   push:

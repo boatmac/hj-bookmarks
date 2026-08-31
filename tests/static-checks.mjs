@@ -54,14 +54,31 @@ function duplicateValues(values) {
 }
 
 async function checkDocumentStructure() {
-    const [html, appSource, translations, css, testHtml, loaderSource] = await Promise.all([
+    const [html, appSource, translations, css, testHtml, loaderSource, readme, license] = await Promise.all([
         readFile(resolve(repositoryRoot, 'index.html'), 'utf8'),
         readFile(resolve(repositoryRoot, 'js/app.js'), 'utf8'),
         readFile(resolve(repositoryRoot, 'js/core/translations.js'), 'utf8'),
         readFile(resolve(repositoryRoot, 'css/style.css'), 'utf8'),
         readFile(resolve(repositoryRoot, 'tests/index.html'), 'utf8'),
         readFile(resolve(repositoryRoot, 'js/script.js'), 'utf8'),
+        readFile(resolve(repositoryRoot, 'README.md'), 'utf8'),
+        readFile(resolve(repositoryRoot, 'LICENSE'), 'utf8'),
     ]);
+
+    check(
+        html.includes('<title>HJ Bookmarks')
+        && translations.includes("brandName: 'HJ Bookmarks'")
+        && testHtml.includes('<title>HJ Bookmarks'),
+        'HJ Bookmarks branding is missing from a primary application surface.',
+    );
+    check(
+        readme.startsWith('# HJ Bookmarks\n') && !readme.includes('临时项目名'),
+        'README project branding is outdated.',
+    );
+    check(
+        license.startsWith('MIT License\n') && license.includes('Copyright (c) 2026 boatmac'),
+        'The MIT license or copyright attribution is missing.',
+    );
 
     const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
     const duplicateIds = duplicateValues(htmlIds);

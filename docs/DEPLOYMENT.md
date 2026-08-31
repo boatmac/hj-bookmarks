@@ -1,4 +1,4 @@
-# 部署与便携包
+# HJ Bookmarks 部署与便携包
 
 本文说明如何在不改变零构建运行方式的前提下发布线上版本，并通过 GitHub Actions 生成可下载的本地便携包。
 
@@ -12,6 +12,7 @@
 ├── css/
 ├── js/
 ├── README.md
+├── LICENSE
 ├── docs/
 ├── tests/
 │   ├── index.html

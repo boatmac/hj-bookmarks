@@ -23,13 +23,13 @@ const requiredEntries = [
     ['css', 'css'],
     ['js', 'js'],
     ['README.md', 'README.md'],
+    ['LICENSE', 'LICENSE'],
     ['docs', 'docs'],
     ['tests/index.html', 'tests/index.html'],
     ['tests/styles.css', 'tests/styles.css'],
     ['tests/test-runner.js', 'tests/test-runner.js'],
 ];
 const optionalEntries = [
-    ['LICENSE', 'LICENSE'],
     ['LICENSE.md', 'LICENSE.md'],
 ];
 
@@ -59,7 +59,7 @@ const sourceUrl = process.env.GITHUB_REPOSITORY
 const revision = process.env.GITHUB_REF_TYPE === 'tag'
     ? process.env.GITHUB_REF_NAME
     : (process.env.GITHUB_SHA || '').slice(0, 12);
-const packageTitle = process.env.GITHUB_REPOSITORY?.split('/').pop() || 'Bookmark Manager';
+const packageTitle = process.env.GITHUB_REPOSITORY?.split('/').pop() || 'HJ Bookmarks';
 const metadata = [
     revision ? `Revision: ${revision}` : '',
     sourceUrl ? `Source: ${sourceUrl}` : '',

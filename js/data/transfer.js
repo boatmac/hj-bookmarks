@@ -277,8 +277,8 @@ function exportHtml() {
     const lines = [
         '<!DOCTYPE NETSCAPE-Bookmark-file-1>',
         '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
-        '<TITLE>Bookmarks</TITLE>',
-        '<H1>Bookmarks</H1>',
+        '<TITLE>HJ Bookmarks</TITLE>',
+        '<H1>HJ Bookmarks</H1>',
         '<DL><p>',
     ];
     const visited = new Set();

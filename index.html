@@ -7,32 +7,32 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="无需安装、数据留在本地的纯前端书签管理器。" data-i18n-content="metaDescription">
+    <meta name="description" content="HJ Bookmarks 是无需安装、数据本地优先并支持加密备份与同步的纯前端书签管理器。" data-i18n-content="metaDescription">
     <meta name="theme-color" content="#eef0e9">
-    <title>书签库 · 本地书签管理器</title>
+    <title>HJ Bookmarks · 本地优先书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-39">
-    <script src="js/core/translations.js?v=20260829-39" defer></script>
-    <script src="js/core/config.js?v=20260829-39" defer></script>
-    <script src="js/core/coordination.js?v=20260829-39" defer></script>
-    <script src="js/core/storage.js?v=20260829-39" defer></script>
-    <script src="js/sync/backup.js?v=20260829-39" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-39" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-39" defer></script>
-    <script src="js/sync/providers.js?v=20260829-39" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-39" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-39" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-39" defer></script>
-    <script src="js/sync/merge.js?v=20260829-39" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-39" defer></script>
-    <script src="js/ui/help.js?v=20260829-39" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-39" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-39" defer></script>
-    <script src="js/ui/render.js?v=20260829-39" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-39" defer></script>
-    <script src="js/data/transfer.js?v=20260829-39" defer></script>
-    <script src="js/core/utils.js?v=20260829-39" defer></script>
-    <script src="js/app.js?v=20260829-39" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-40">
+    <script src="js/core/translations.js?v=20260829-40" defer></script>
+    <script src="js/core/config.js?v=20260829-40" defer></script>
+    <script src="js/core/coordination.js?v=20260829-40" defer></script>
+    <script src="js/core/storage.js?v=20260829-40" defer></script>
+    <script src="js/sync/backup.js?v=20260829-40" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-40" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-40" defer></script>
+    <script src="js/sync/providers.js?v=20260829-40" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-40" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-40" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-40" defer></script>
+    <script src="js/sync/merge.js?v=20260829-40" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-40" defer></script>
+    <script src="js/ui/help.js?v=20260829-40" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-40" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-40" defer></script>
+    <script src="js/ui/render.js?v=20260829-40" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-40" defer></script>
+    <script src="js/data/transfer.js?v=20260829-40" defer></script>
+    <script src="js/core/utils.js?v=20260829-40" defer></script>
+    <script src="js/app.js?v=20260829-40" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -68,7 +68,7 @@
         <aside class="sidebar" id="sidebar" aria-label="侧边栏" data-i18n-aria-label="sidebarLabel">
             <button class="brand" id="brand-button" type="button">
                 <span class="brand-mark"><svg><use href="#icon-bookmark"></use></svg></span>
-                <span class="brand-copy"><strong data-i18n="brandName">书签库</strong><small data-i18n="brandSubtitle">本地书签</small></span>
+                <span class="brand-copy"><strong data-i18n="brandName">HJ Bookmarks</strong><small data-i18n="brandSubtitle">HTML + JAVASCRIPT</small></span>
             </button>
 
             <nav class="primary-nav" aria-label="主要视图" data-i18n-aria-label="primaryViewsLabel">
