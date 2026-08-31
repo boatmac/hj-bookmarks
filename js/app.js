@@ -43,7 +43,9 @@ function cacheElements() {
         'join-shared-library-button', 'export-menu',
         'quick-sync-button', 'quick-sync-icon-use', 'quick-sync-label',
         'backup-settings-button', 'backup-menu-status', 'restore-backup-menu-button',
-        'sync-wizard-menu-button', 'sync-settings-button', 'sync-menu-status',
+        'join-shared-library-menu-button', 'join-shared-library-menu-title',
+        'join-shared-library-menu-hint', 'sync-wizard-menu-button',
+        'sync-settings-button', 'sync-menu-status',
         'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
@@ -220,6 +222,7 @@ function bindStaticEvents() {
     ui.quickSyncButton.addEventListener('click', handleQuickSync);
     ui.syncEntryButton.addEventListener('click', openSyncDialog);
     ui.joinSharedLibraryButton.addEventListener('click', openSharedLibraryWizard);
+    ui.joinSharedLibraryMenuButton.addEventListener('click', openSharedLibraryWizard);
     ui.syncWizardMenuButton.addEventListener('click', () => {
         closeExportMenu();
         openSyncWizard();

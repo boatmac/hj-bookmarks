@@ -943,6 +943,13 @@ function renderSyncSettings() {
     ui.syncStatusTitle.textContent = statusContent[0];
     ui.syncStatusDetail.textContent = statusContent[1];
     ui.syncMenuStatus.textContent = statusContent[2];
+    const switchingSharedLibrary = sync.setupComplete && isSyncModeConfigured();
+    ui.joinSharedLibraryMenuTitle.textContent = t(switchingSharedLibrary
+        ? 'switchSharedLibrary'
+        : 'joinSharedLibrary');
+    ui.joinSharedLibraryMenuHint.textContent = t(switchingSharedLibrary
+        ? 'switchSharedLibraryHint'
+        : 'joinSharedLibraryMenuHint');
     ui.lastSyncValue.textContent = formatBackupTime(activeSyncTime()) || t('syncLastNever');
     ui.conflictProtectionValue.textContent = t(
         sync.hasBaseline ? 'conflictBaselineReady' : 'conflictBaselinePending',
