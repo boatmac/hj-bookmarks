@@ -11,28 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-38">
-    <script src="js/core/translations.js?v=20260829-38" defer></script>
-    <script src="js/core/config.js?v=20260829-38" defer></script>
-    <script src="js/core/coordination.js?v=20260829-38" defer></script>
-    <script src="js/core/storage.js?v=20260829-38" defer></script>
-    <script src="js/sync/backup.js?v=20260829-38" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-38" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-38" defer></script>
-    <script src="js/sync/providers.js?v=20260829-38" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-38" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-38" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-38" defer></script>
-    <script src="js/sync/merge.js?v=20260829-38" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-38" defer></script>
-    <script src="js/ui/help.js?v=20260829-38" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-38" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-38" defer></script>
-    <script src="js/ui/render.js?v=20260829-38" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-38" defer></script>
-    <script src="js/data/transfer.js?v=20260829-38" defer></script>
-    <script src="js/core/utils.js?v=20260829-38" defer></script>
-    <script src="js/app.js?v=20260829-38" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-39">
+    <script src="js/core/translations.js?v=20260829-39" defer></script>
+    <script src="js/core/config.js?v=20260829-39" defer></script>
+    <script src="js/core/coordination.js?v=20260829-39" defer></script>
+    <script src="js/core/storage.js?v=20260829-39" defer></script>
+    <script src="js/sync/backup.js?v=20260829-39" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-39" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-39" defer></script>
+    <script src="js/sync/providers.js?v=20260829-39" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-39" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-39" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-39" defer></script>
+    <script src="js/sync/merge.js?v=20260829-39" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-39" defer></script>
+    <script src="js/ui/help.js?v=20260829-39" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-39" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-39" defer></script>
+    <script src="js/ui/render.js?v=20260829-39" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-39" defer></script>
+    <script src="js/data/transfer.js?v=20260829-39" defer></script>
+    <script src="js/core/utils.js?v=20260829-39" defer></script>
+    <script src="js/app.js?v=20260829-39" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -250,7 +250,7 @@
         </main>
     </div>
 
-    <dialog class="item-dialog help-dialog" id="help-dialog">
+    <dialog class="item-dialog help-dialog" id="help-dialog" aria-labelledby="help-dialog-title">
         <div class="dialog-panel">
             <header class="dialog-header">
                 <div><p class="eyebrow" data-i18n="helpEyebrow">使用指南</p><h2 id="help-dialog-title" data-i18n="helpTitle">帮助与使用说明</h2></div>
@@ -307,9 +307,31 @@
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
                             <li data-i18n="helpSync5">顶部快捷按钮可立即同步、重试、解锁或进入冲突中心。</li>
-                            <li data-i18n="helpSync6">远端自动同步解锁后会定期检查共享库更新，切回页面或恢复联网时也会立即检查。</li>
-                            <li data-i18n="helpSync7">为每台设备设置易识别的名称，冲突中心和回收站会显示对应修改来源。</li>
-                            <li data-i18n="helpSync8">组织者先用设置向导创建共享库，其他成员再用“加入共享书签库”连接现有远端。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpSharedLibrary">共享书签库</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpShared1">组织者先用设置向导创建远端库，其他成员再用“加入共享书签库”连接。</li>
+                            <li data-i18n="helpShared2">所有成员都能查看和修改全部书签，访问权限由 WebDAV 凭据和共享加密口令共同控制。</li>
+                            <li data-i18n="helpShared3">自动同步会定期检查远端更新；设备名称用于显示冲突和删除来源。</li>
+                            <li data-i18n="helpShared4">当前一次只能连接一个同步位置；连接后会锁定地址和账号，不提供容易混淆的数据切换。</li>
+                            <li data-i18n="helpShared5">加入前若本机已有书签，必须确认它们是否参与共享库首次合并。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="help-topic">
+                    <summary><span data-i18n="helpDeployment">在线部署与便携使用</span><svg><use href="#icon-chevron-down"></use></svg></summary>
+                    <div>
+                        <ul>
+                            <li data-i18n="helpDeployment1">静态部署只发布应用文件，不会自动公开浏览器中的书签或同步凭据。</li>
+                            <li data-i18n="helpDeployment2">本地文件与线上域名拥有独立数据空间，可通过备份恢复、导入或加密同步迁移。</li>
+                            <li data-i18n="helpDeployment3">GitHub Actions 会在测试通过后生成可直接解压使用的便携 ZIP，并可发布 GitHub Pages 和 Release。</li>
+                            <li data-i18n="helpDeployment4">线上版无法连接 WebDAV 时，需要同步服务允许该网站域名访问。</li>
                         </ul>
                     </div>
                 </details>
@@ -336,6 +358,7 @@
 
             <footer class="dialog-footer help-dialog-footer">
                 <a class="button button-secondary" href="README.md" target="_blank" rel="noreferrer" data-i18n="openReadme">查看项目 README</a>
+                <a class="button button-secondary" href="docs/DEPLOYMENT.md" target="_blank" rel="noreferrer" data-i18n="openDeploymentGuide">查看部署指南</a>
                 <a class="button button-secondary" href="tests/index.html" target="_blank" rel="noreferrer" data-i18n="openBrowserTests">运行浏览器测试</a>
                 <span class="dialog-footer-spacer"></span>
                 <button class="button button-primary" id="help-dialog-done-button" type="button" data-i18n="gotIt">知道了</button>
