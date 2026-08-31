@@ -935,18 +935,12 @@ svg {
     background: var(--panel-muted);
 }
 
-.export-popover .shared-library-menu-item,
 .export-popover .wizard-menu-item {
     margin-bottom: 3px;
     background: color-mix(in srgb, var(--accent-soft) 68%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-.export-popover .shared-library-menu-item {
-    background: var(--accent-soft);
-}
-
-.export-popover .shared-library-menu-item strong,
 .export-popover .wizard-menu-item strong {
     color: var(--accent);
 }
@@ -3696,6 +3690,50 @@ svg {
     color: var(--accent-contrast);
     background: var(--accent);
     border-color: var(--accent);
+}
+
+.wizard-shared-entry {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 42px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 13px;
+    padding: 12px 15px;
+    color: var(--text);
+    text-align: left;
+    background: color-mix(in srgb, var(--accent-soft) 58%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+    border-radius: 12px;
+}
+
+.wizard-shared-entry:hover {
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+
+.wizard-shared-entry > span:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wizard-shared-entry strong {
+    color: var(--accent);
+    font-size: 11px;
+}
+
+.wizard-shared-entry small {
+    color: var(--text-soft);
+    font-size: 9px;
+    line-height: 1.45;
+}
+
+.wizard-shared-entry-arrow {
+    width: 16px;
+    height: 16px;
+    color: var(--text-faint);
 }
 
 .wizard-local-folder {

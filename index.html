@@ -11,28 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-35">
-    <script src="js/core/translations.js?v=20260829-35" defer></script>
-    <script src="js/core/config.js?v=20260829-35" defer></script>
-    <script src="js/core/coordination.js?v=20260829-35" defer></script>
-    <script src="js/core/storage.js?v=20260829-35" defer></script>
-    <script src="js/sync/backup.js?v=20260829-35" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-35" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-35" defer></script>
-    <script src="js/sync/providers.js?v=20260829-35" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-35" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-35" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-35" defer></script>
-    <script src="js/sync/merge.js?v=20260829-35" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-35" defer></script>
-    <script src="js/ui/help.js?v=20260829-35" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-35" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-35" defer></script>
-    <script src="js/ui/render.js?v=20260829-35" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-35" defer></script>
-    <script src="js/data/transfer.js?v=20260829-35" defer></script>
-    <script src="js/core/utils.js?v=20260829-35" defer></script>
-    <script src="js/app.js?v=20260829-35" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-36">
+    <script src="js/core/translations.js?v=20260829-36" defer></script>
+    <script src="js/core/config.js?v=20260829-36" defer></script>
+    <script src="js/core/coordination.js?v=20260829-36" defer></script>
+    <script src="js/core/storage.js?v=20260829-36" defer></script>
+    <script src="js/sync/backup.js?v=20260829-36" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-36" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-36" defer></script>
+    <script src="js/sync/providers.js?v=20260829-36" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-36" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-36" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-36" defer></script>
+    <script src="js/sync/merge.js?v=20260829-36" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-36" defer></script>
+    <script src="js/ui/help.js?v=20260829-36" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-36" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-36" defer></script>
+    <script src="js/ui/render.js?v=20260829-36" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-36" defer></script>
+    <script src="js/data/transfer.js?v=20260829-36" defer></script>
+    <script src="js/core/utils.js?v=20260829-36" defer></script>
+    <script src="js/app.js?v=20260829-36" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -154,9 +154,8 @@
                         </summary>
                         <div class="export-popover">
                             <p class="export-section-label" data-i18n="syncSection">同步与冲突</p>
-                            <button class="shared-library-menu-item" id="join-shared-library-menu-button" type="button"><strong data-i18n="joinSharedLibrary">加入共享书签库</strong><small data-i18n="joinSharedLibraryMenuHint">使用共享地址、成员凭据和统一加密口令加入</small></button>
-                            <button class="wizard-menu-item" id="sync-wizard-menu-button" type="button"><strong data-i18n="openSetupWizard">设置向导</strong><small data-i18n="syncWizardMenuHint">分步选择位置、账号、加密和自动同步</small></button>
                             <button class="sync-menu-item" id="sync-settings-button" type="button"><strong data-i18n="encryptedWebDavSync">加密同步</strong><small id="sync-menu-status">尚未设置</small></button>
+                            <button class="wizard-menu-item" id="sync-wizard-menu-button" type="button"><strong data-i18n="openSetupWizard">设置向导</strong><small data-i18n="syncWizardMenuHint">创建同步或在向导中加入现有共享库</small></button>
                             <button class="conflict-menu-item" id="conflict-center-menu-button" type="button"><strong data-i18n="conflictCenter">冲突中心</strong><small id="conflict-menu-status">暂无待处理冲突</small></button>
                             <hr>
                             <p class="export-section-label" data-i18n="backupTransferSection">备份与迁移</p>
@@ -715,6 +714,11 @@
                             <span class="selection-check"><svg><use href="#icon-check"></use></svg></span>
                         </label>
                     </div>
+                    <button class="wizard-shared-entry" id="wizard-join-shared-library-button" type="button">
+                        <span class="sync-location-icon"><svg><use href="#icon-sync"></use></svg></span>
+                        <span><strong data-i18n="alreadyHaveSharedLibrary">已有共享书签库？</strong><small data-i18n="alreadyHaveSharedLibraryHint">使用管理员提供的地址和共享加密口令加入</small></span>
+                        <svg class="wizard-shared-entry-arrow"><use href="#icon-chevron-right"></use></svg>
+                    </button>
                 </section>
 
                 <section class="sync-wizard-step hidden" data-wizard-step="2">

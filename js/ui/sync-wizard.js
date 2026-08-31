@@ -186,6 +186,9 @@ function renderSyncWizard() {
     ui.wizardLocalFolderFields.classList.toggle('hidden', !localMode);
     ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode || sharedIntent);
     ui.wizardSharedLibraryNote.classList.toggle('hidden', !sharedIntent || syncWizardStep !== 2);
+    ui.wizardSharedLibraryNote.textContent = t(
+        state.sync.setupComplete ? 'sharedLibraryReplaceNote' : 'sharedLibraryTrustNote',
+    );
     ui.wizardConnectionHint.textContent = t(sharedIntent
         ? 'sharedLibraryConnectionHint'
         : localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint');

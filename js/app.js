@@ -43,8 +43,7 @@ function cacheElements() {
         'join-shared-library-button', 'export-menu',
         'quick-sync-button', 'quick-sync-icon-use', 'quick-sync-label',
         'backup-settings-button', 'backup-menu-status', 'restore-backup-menu-button',
-        'join-shared-library-menu-button', 'sync-wizard-menu-button',
-        'sync-settings-button', 'sync-menu-status',
+        'sync-wizard-menu-button', 'sync-settings-button', 'sync-menu-status',
         'conflict-center-menu-button', 'conflict-menu-status',
         'import-menu-button', 'export-json-button',
         'export-html-button', 'clear-all-button',
@@ -104,7 +103,7 @@ function cacheElements() {
         'backup-restore-apply-button',
         'sync-wizard-dialog', 'sync-wizard-title', 'sync-wizard-eyebrow',
         'sync-wizard-close-button', 'sync-wizard-progress',
-        'wizard-connection-hint', 'wizard-shared-library-note', 'wizard-remote-fields',
+        'wizard-join-shared-library-button', 'wizard-connection-hint', 'wizard-shared-library-note', 'wizard-remote-fields',
         'wizard-local-folder-fields', 'wizard-local-folder-name',
         'wizard-choose-folder-button', 'wizard-connection-error',
         'wizard-endpoint-input', 'wizard-username-input', 'wizard-password-input',
@@ -221,7 +220,6 @@ function bindStaticEvents() {
     ui.quickSyncButton.addEventListener('click', handleQuickSync);
     ui.syncEntryButton.addEventListener('click', openSyncDialog);
     ui.joinSharedLibraryButton.addEventListener('click', openSharedLibraryWizard);
-    ui.joinSharedLibraryMenuButton.addEventListener('click', openSharedLibraryWizard);
     ui.syncWizardMenuButton.addEventListener('click', () => {
         closeExportMenu();
         openSyncWizard();
@@ -321,6 +319,7 @@ function bindStaticEvents() {
     ui.syncWizardBackButton.addEventListener('click', goToPreviousSyncWizardStep);
     ui.syncWizardNextButton.addEventListener('click', goToNextSyncWizardStep);
     ui.syncWizardFinishButton.addEventListener('click', finishSyncWizard);
+    ui.wizardJoinSharedLibraryButton.addEventListener('click', openSharedLibraryWizard);
     ui.wizardChooseFolderButton.addEventListener('click', chooseSyncWizardLocalFolder);
     ui.wizardShowPasswords.addEventListener('change', toggleSyncWizardPasswordVisibility);
     ui.wizardSharedLocalConfirm.addEventListener('change', () => {
