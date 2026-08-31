@@ -183,8 +183,8 @@ test('同步地址会规范化并识别 Koofr', () => {
         normalizeWebDavEndpoint('https://dav.example.com/bookmarks/'),
         'https://dav.example.com/bookmarks/bookmarks-sync.enc.json',
     );
-    assert(isKoofrSyncEndpoint('https://app.koofr.net/dav/Koofr/Bookmarks/'));
-    assert(!isKoofrSyncEndpoint('https://dav.example.com/Koofr/Bookmarks/'));
+    assert(isKoofrSyncEndpoint('https://app.koofr.net/dav/Koofr/Example-Bookmarks/'));
+    assert(!isKoofrSyncEndpoint('https://dav.example.com/Koofr/Example-Bookmarks/'));
 });
 
 test('远端版本探测会使用条件请求并识别内容变化', async () => {
@@ -476,7 +476,7 @@ test('自动同步超时会隐藏内部路径并安排渐进重试', async () =>
         Object.assign(sync, {
             supported: true,
             mode: 'remote',
-            endpoint: 'https://app.koofr.net/dav/Koofr/Bookmarks/',
+            endpoint: 'https://app.koofr.net/dav/Koofr/Example-Bookmarks/',
             username: '',
             password: '',
             passphrase: 'test passphrase',

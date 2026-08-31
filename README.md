@@ -275,7 +275,7 @@ https://dav.example.com/bookmarks/
 
 ### Koofr
 
-应用会自动识别 `https://app.koofr.net/dav/...` 地址，并透明改用 Koofr 官方 REST API。该 API 明确允许本地 `file://` 页面通过 CORS 访问，因此不需要反向代理，也不会向不支持浏览器跨域的 Koofr WebDAV 端点发送请求。
+应用会自动识别以 `https://app.koofr.net/dav/Koofr` 开头的地址，并透明改用 Koofr 官方 REST API。该 API 明确允许本地 `file://` 页面通过 CORS 访问，因此不需要反向代理，也不会向不支持浏览器跨域的 Koofr WebDAV 端点发送请求。
 
 可直接继续填写 Koofr WebDAV 地址，例如：
 

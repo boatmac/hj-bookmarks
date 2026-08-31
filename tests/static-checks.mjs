@@ -60,13 +60,18 @@ async function checkDocumentationSafety() {
         resolve(repositoryRoot, 'SECURITY.md'),
         ...await collectFiles(resolve(repositoryRoot, 'docs'), new Set(['.md'])),
     ];
+    const genericKoofrRoot = 'https://app.koofr.net/dav/Koofr';
     const unsafeEndpoints = [];
     const credentialHeaders = [];
     for (const path of markdownFiles) {
         const source = await readFile(path, 'utf8');
         const koofrUrls = source.match(/https:\/\/app\.koofr\.net\/dav\/[^\s`<>)]+/gi) || [];
         koofrUrls
-            .filter((url) => !url.includes('...') && !/example/i.test(url))
+            .filter((url) => {
+                const normalized = url.replace(/\/+$/, '');
+                return normalized !== genericKoofrRoot
+                    && !normalized.startsWith(`${genericKoofrRoot}/Example-`);
+            })
             .forEach((url) => unsafeEndpoints.push(`${path}: ${url}`));
         if (/\bAuthorization:\s*(?:Basic|Bearer)\s+[A-Za-z0-9+/._=-]{8,}/i.test(source)) {
             credentialHeaders.push(path);

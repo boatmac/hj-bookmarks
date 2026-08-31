@@ -192,7 +192,7 @@ Access-Control-Allow-Private-Network: true
 
 ## Koofr REST Adapter
 
-`app.koofr.net/dav/...` 地址只用于用户熟悉的路径表达，实际请求自动切换为 Koofr REST API，因为 Koofr WebDAV 的未认证 OPTIONS 返回 401，而 REST API 允许 `Origin: null`。
+以 `https://app.koofr.net/dav/Koofr` 开头的地址只用于用户熟悉的路径表达，实际请求自动切换为 Koofr REST API，因为 Koofr WebDAV 的未认证 OPTIONS 返回 401，而 REST API 允许 `Origin: null`。
 
 主要端点：
 
