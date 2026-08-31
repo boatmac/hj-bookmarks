@@ -134,6 +134,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PACKAGE_NAME: ${{ needs.test.outputs.package-name }}
         run: |
+          RELEASE_FLAGS=()
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            RELEASE_FLAGS+=(--prerelease)
+          fi
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
               "release/${PACKAGE_NAME}.zip" \
@@ -145,5 +149,6 @@ jobs:
               "release/${PACKAGE_NAME}.zip.sha256" \
               --verify-tag \
               --generate-notes \
-              --title "${GITHUB_REF_NAME}"
+              --title "${GITHUB_REF_NAME}" \
+              "${RELEASE_FLAGS[@]}"
           fi

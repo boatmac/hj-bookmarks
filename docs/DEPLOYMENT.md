@@ -2,6 +2,11 @@
 
 本文说明如何在不改变零构建运行方式的前提下发布线上版本，并通过 GitHub Actions 生成可下载的本地便携包。
 
+当前官方地址：
+
+- 源代码：<https://github.com/boatmac/hj-bookmarks>
+- GitHub Pages：<https://boatmac.github.io/hj-bookmarks/>
+
 ## 部署产物
 
 `scripts/prepare-static-package.mjs` 只复制运行和页面帮助需要的文件：

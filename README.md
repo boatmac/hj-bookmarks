@@ -2,6 +2,9 @@
 
 一个零构建、零 Node.js 依赖、本地优先的书签管理器，支持加密备份、多设备同步和可信小组共享。项目只使用浏览器原生 HTML、CSS、JavaScript 和 IndexedDB；名称中的 **HJ** 代表 **HTML + JavaScript**。
 
+- **在线使用**：<https://boatmac.github.io/hj-bookmarks/>
+- **源代码**：<https://github.com/boatmac/hj-bookmarks>
+
 ## 直接运行
 
 双击项目根目录的 `index.html`，使用最新版 Edge、Chrome、Firefox 或 Safari 打开即可。
@@ -460,7 +463,7 @@ node scripts/prepare-static-package.mjs dist/site
 
 ## 项目状态
 
-HJ Bookmarks 正在进行首次公开版本的发布准备。内部数据库名称、Storage Key、备份格式和同步协议继续保留原有兼容标识，品牌更新不会影响已有数据。
+HJ Bookmarks 已通过本地 `file://`、GitHub Actions、便携包、GitHub Pages 和真实 WebDAV 同步验收，当前进入 `v1.0.0-rc.1` 发布候选阶段。内部数据库名称、Storage Key、备份格式和同步协议继续保留原有兼容标识，品牌更新不会影响已有数据。
 
 ## 许可证
 
