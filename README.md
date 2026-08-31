@@ -1,9 +1,13 @@
 # HJ Bookmarks
 
+[![HJ Bookmarks CI and release](https://github.com/boatmac/hj-bookmarks/actions/workflows/browser-tests.yml/badge.svg)](https://github.com/boatmac/hj-bookmarks/actions/workflows/browser-tests.yml)
+
 一个零构建、零 Node.js 依赖、本地优先的书签管理器，支持加密备份、多设备同步和可信小组共享。项目只使用浏览器原生 HTML、CSS、JavaScript 和 IndexedDB；名称中的 **HJ** 代表 **HTML + JavaScript**。
 
 - **在线使用**：<https://boatmac.github.io/hj-bookmarks/>
 - **源代码**：<https://github.com/boatmac/hj-bookmarks>
+
+![HJ Bookmarks 深色界面，展示文件夹、标签和书签卡片](docs/images/hj-bookmarks-overview.png)
 
 ## 直接运行
 
@@ -11,10 +15,14 @@
 
 ```text
 hj-bookmarks/
-├── .github/workflows/
-│   └── browser-tests.yml
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   ├── workflows/browser-tests.yml
+│   └── dependabot.yml
+├── CHANGELOG.md
 ├── index.html
 ├── LICENSE
+├── SECURITY.md
 ├── css/
 │   └── style.css
 ├── js/
@@ -49,6 +57,8 @@ hj-bookmarks/
 
 仓库入口文档就是当前根目录的 [`README.md`](README.md)。其他维护文档：
 
+- [`CHANGELOG.md`](CHANGELOG.md)：各发布版本的重要功能、安全和兼容性变化
+- [`SECURITY.md`](SECURITY.md)：支持范围、私密漏洞报告入口和脱敏要求
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)：模块边界、加载顺序和测试架构
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)：GitHub Pages、便携包、Release 和其他静态平台
 - [`docs/SYNC-DESIGN.md`](docs/SYNC-DESIGN.md)：同步、加密、凭据和冲突协议
@@ -460,6 +470,13 @@ node scripts/prepare-static-package.mjs dist/site
 ```
 
 浏览器测试页本身仍可直接双击运行。首次启用 Pages、创建版本标签、校验下载包以及 Cloudflare、Netlify、Azure 的部署说明详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
+
+## 问题与安全报告
+
+- 普通缺陷和功能建议请使用仓库的结构化 [Issue 模板](https://github.com/boatmac/hj-bookmarks/issues/new/choose)。
+- 尚未修复的安全漏洞请使用 [Private vulnerability reporting](https://github.com/boatmac/hj-bookmarks/security/advisories/new)，不要公开提交密码、令牌、加密口令或私人书签。
+
+完整要求见 [`SECURITY.md`](SECURITY.md)。
 
 ## 项目状态
 

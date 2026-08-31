@@ -1,0 +1,85 @@
+name: Bug report / 问题报告
+description: Report a reproducible HJ Bookmarks problem / 报告可重现的问题
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请使用合成数据重现，并删除密码、Authorization、Cookie、令牌、加密口令和私人书签。
+        Thanks for helping. Reproduce with synthetic data and remove all credentials, passphrases, tokens, and private bookmarks.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting / 提交前
+      options:
+        - label: I searched existing issues and did not find the same problem. / 我已搜索现有 Issue。
+          required: true
+        - label: I removed all secrets and private bookmark data. / 我已删除所有秘密和私人书签数据。
+          required: true
+        - label: This is not an undisclosed security vulnerability. / 这不是尚未披露的安全漏洞。
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit / 版本或提交
+      description: For example, v1.0.0-rc.1 or a commit hash.
+      placeholder: v1.0.0-rc.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: location
+    attributes:
+      label: App location / 使用方式
+      options:
+        - GitHub Pages
+        - Local file (file://)
+        - Portable ZIP
+        - Other static hosting
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and operating system / 浏览器与系统
+      placeholder: Edge 140 on Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem / 问题描述
+      description: What happened, and how did it affect your bookmarks, backup, or sync?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps / 重现步骤
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior / 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics / 脱敏诊断信息
+      description: Optional screenshots or console messages. Never include credentials, passphrases, tokens, or private bookmark data.
+      render: text

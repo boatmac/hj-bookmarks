@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report / 私密安全报告
+    url: https://github.com/boatmac/hj-bookmarks/security/advisories/new
+    about: Do not disclose vulnerabilities, credentials, passphrases, or private bookmarks in a public issue.

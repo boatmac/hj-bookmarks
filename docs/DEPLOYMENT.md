@@ -17,7 +17,9 @@
 ├── css/
 ├── js/
 ├── README.md
+├── CHANGELOG.md
 ├── LICENSE
+├── SECURITY.md
 ├── docs/
 ├── tests/
 │   ├── index.html

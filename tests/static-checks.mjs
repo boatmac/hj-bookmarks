@@ -54,7 +54,19 @@ function duplicateValues(values) {
 }
 
 async function checkDocumentStructure() {
-    const [html, appSource, translations, css, testHtml, loaderSource, readme, license] = await Promise.all([
+    const [
+        html,
+        appSource,
+        translations,
+        css,
+        testHtml,
+        loaderSource,
+        readme,
+        license,
+        changelog,
+        securityPolicy,
+        overviewImage,
+    ] = await Promise.all([
         readFile(resolve(repositoryRoot, 'index.html'), 'utf8'),
         readFile(resolve(repositoryRoot, 'js/app.js'), 'utf8'),
         readFile(resolve(repositoryRoot, 'js/core/translations.js'), 'utf8'),
@@ -63,6 +75,9 @@ async function checkDocumentStructure() {
         readFile(resolve(repositoryRoot, 'js/script.js'), 'utf8'),
         readFile(resolve(repositoryRoot, 'README.md'), 'utf8'),
         readFile(resolve(repositoryRoot, 'LICENSE'), 'utf8'),
+        readFile(resolve(repositoryRoot, 'CHANGELOG.md'), 'utf8'),
+        readFile(resolve(repositoryRoot, 'SECURITY.md'), 'utf8'),
+        stat(resolve(repositoryRoot, 'docs/images/hj-bookmarks-overview.png')),
     ]);
 
     check(
@@ -78,6 +93,19 @@ async function checkDocumentStructure() {
     check(
         license.startsWith('MIT License\n') && license.includes('Copyright (c) 2026 boatmac'),
         'The MIT license or copyright attribution is missing.',
+    );
+    check(
+        changelog.includes('## [1.0.0-rc.1]') && changelog.includes('## [Unreleased]'),
+        'The changelog is missing the current release or Unreleased section.',
+    );
+    check(
+        securityPolicy.includes('/security/advisories/new')
+        && securityPolicy.includes('不要提交秘密'),
+        'The security policy is missing private reporting or secret-handling guidance.',
+    );
+    check(
+        overviewImage.isFile() && overviewImage.size > 10_000,
+        'The README overview image is missing or unexpectedly small.',
     );
 
     const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
