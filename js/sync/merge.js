@@ -17,9 +17,20 @@ async function createLocalSyncDataset() {
         modifiedBy: item.modifiedBy || state.sync.deviceId,
     }));
     const tombstones = (await getAllTombstones()).map(normalizeSyncTombstone).filter(Boolean);
+    const ownDevice = {
+        deviceId: state.sync.deviceId,
+        name: state.sync.deviceName,
+        updatedAt: state.sync.deviceNameUpdatedAt,
+    };
+    const devices = mergeSyncDeviceLists(
+        state.sync.devices.filter((device) => device.deviceId !== state.sync.deviceId),
+        [ownDevice],
+    );
+    state.sync.devices = devices;
     return {
         items: items.sort((left, right) => left.syncId.localeCompare(right.syncId)),
         tombstones: tombstones.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+        devices,
     };
 }
 
@@ -36,7 +47,10 @@ function parseRemoteSyncDataset(input) {
     try {
         const items = input.items.map(normalizeSyncItem);
         const tombstones = input.tombstones.map(normalizeSyncTombstone).filter(Boolean);
-        return { items, tombstones };
+        const devices = Array.isArray(input.devices)
+            ? input.devices.slice(0, 1000).map(normalizeSyncDevice).filter(Boolean)
+            : [];
+        return { items, tombstones, devices };
     } catch (error) {
         if (error?.message === t('syncRemoteInvalid')) throw error;
         throw new Error(t('syncRemoteInvalid'));
@@ -44,7 +58,7 @@ function parseRemoteSyncDataset(input) {
 }
 
 function emptySyncDataset() {
-    return { items: [], tombstones: [] };
+    return { items: [], tombstones: [], devices: [] };
 }
 
 function normalizeStoredSyncDataset(input) {
@@ -53,7 +67,39 @@ function normalizeStoredSyncDataset(input) {
         tombstones: Array.isArray(input?.tombstones)
             ? input.tombstones.map(normalizeSyncTombstone).filter(Boolean)
             : [],
+        devices: Array.isArray(input?.devices)
+            ? input.devices.slice(0, 1000).map(normalizeSyncDevice).filter(Boolean)
+            : [],
     };
+}
+
+function normalizeSyncDevice(input) {
+    if (!input || typeof input.deviceId !== 'string' || !input.deviceId) return null;
+    return {
+        deviceId: input.deviceId,
+        name: typeof input.name === 'string' ? input.name.trim().slice(0, 80) : '',
+        updatedAt: validDate(input.updatedAt) ? input.updatedAt : '1970-01-01T00:00:00.000Z',
+    };
+}
+
+function mergeSyncDeviceLists(...lists) {
+    const devices = new Map();
+    lists.flat().forEach((input) => {
+        const device = normalizeSyncDevice(input);
+        if (!device) return;
+        const current = devices.get(device.deviceId);
+        if (
+            !current
+            || Date.parse(device.updatedAt) > Date.parse(current.updatedAt)
+            || (
+                device.updatedAt === current.updatedAt
+                && device.name.localeCompare(current.name) > 0
+            )
+        ) devices.set(device.deviceId, device);
+    });
+    return [...devices.values()]
+        .sort((left, right) => left.deviceId.localeCompare(right.deviceId))
+        .slice(0, 1000);
 }
 
 function normalizeSyncItem(input) {
@@ -132,6 +178,7 @@ function mergeSyncDatasets(local, remote) {
     return {
         items: liveItems.sort((left, right) => left.syncId.localeCompare(right.syncId)),
         tombstones: liveTombstones.sort((left, right) => left.syncId.localeCompare(right.syncId)),
+        devices: mergeSyncDeviceLists(local.devices || [], remote.devices || []),
     };
 }
 
@@ -214,6 +261,11 @@ function threeWayMergeSyncDatasets(base, local, remote) {
         appendSyncEntity(dataset, localEntity.kind === 'absent' ? remoteEntity : localEntity);
     });
 
+    dataset.devices = mergeSyncDeviceLists(
+        base?.devices || [],
+        local?.devices || [],
+        remote?.devices || [],
+    );
     sanitizeSyncHierarchy(dataset.items);
     dataset.items.sort((left, right) => left.syncId.localeCompare(right.syncId));
     dataset.tombstones.sort((left, right) => left.syncId.localeCompare(right.syncId));
@@ -385,6 +437,15 @@ function sanitizeSyncHierarchy(items) {
 }
 
 function replaceLocalSyncDataset(dataset) {
+    const mergedDevices = mergeSyncDeviceLists(state.sync.devices, dataset.devices || []);
+    state.sync.devices = mergeSyncDeviceLists(
+        mergedDevices.filter((device) => device.deviceId !== state.sync.deviceId),
+        [{
+            deviceId: state.sync.deviceId,
+            name: state.sync.deviceName,
+            updatedAt: state.sync.deviceNameUpdatedAt,
+        }],
+    );
     const existingBySyncId = new Map(state.items.map((item) => [item.syncId, item]));
     const liveSyncIds = new Set(dataset.items.map((item) => item.syncId));
     const numericIds = new Map(

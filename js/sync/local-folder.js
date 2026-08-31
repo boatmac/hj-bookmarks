@@ -24,6 +24,7 @@ async function initializeLocalFolderSync() {
 
 async function chooseLocalSyncDirectory() {
     updateSyncSecretsFromForm();
+    const previousKey = syncEndpointKey();
     const local = state.sync.localFolder;
     if (!local.supported) {
         showToast(t('localFolderUnsupportedDetail'));
@@ -59,6 +60,7 @@ async function chooseLocalSyncDirectory() {
         }
         state.sync.mode = 'local-folder';
         state.sync.provider = 'local-folder';
+        if (previousKey !== syncEndpointKey()) resetKnownSyncDevices();
         state.sync.error = '';
         state.sync.unlocked = false;
 
@@ -252,6 +254,7 @@ async function runLocalFolderSyncUnlocked({ notify = false } = {}) {
         sync.conflictEndpointKey = endpointKey;
         sync.unlocked = true;
         sync.sessionCredentialsRestored = false;
+        sync.deviceNamePendingSync = false;
         localFolder.lastSyncAt = new Date().toISOString();
         if (sync.rememberSession) saveSessionSyncCredentials();
         await saveSyncPreferences();
@@ -352,6 +355,7 @@ function hashSyncDataset(dataset) {
     const content = JSON.stringify({
         items: dataset.items,
         tombstones: dataset.tombstones,
+        devices: dataset.devices || [],
     });
     return `${hashString(content)}-${content.length}`;
 }

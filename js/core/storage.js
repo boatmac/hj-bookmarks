@@ -313,11 +313,34 @@ async function deleteSyncState(endpointKey) {
 }
 
 async function initializeSyncIdentity() {
-    const storedId = await getSetting(DEVICE_ID_KEY);
+    const [storedId, storedName, storedNameUpdatedAt] = await Promise.all([
+        getSetting(DEVICE_ID_KEY),
+        getSetting(DEVICE_NAME_KEY),
+        getSetting(DEVICE_NAME_UPDATED_AT_KEY),
+    ]);
     state.sync.deviceId = typeof storedId === 'string' && storedId
         ? storedId
         : createUuid();
-    if (storedId !== state.sync.deviceId) await saveSetting(DEVICE_ID_KEY, state.sync.deviceId);
+    const defaultName = t('defaultDeviceName', { suffix: state.sync.deviceId.slice(0, 4) });
+    state.sync.deviceName = typeof storedName === 'string' && storedName.trim()
+        ? storedName.trim().slice(0, 80)
+        : defaultName;
+    state.sync.deviceNameUpdatedAt = validDate(storedNameUpdatedAt)
+        ? storedNameUpdatedAt
+        : new Date().toISOString();
+    state.sync.devices = [{
+        deviceId: state.sync.deviceId,
+        name: state.sync.deviceName,
+        updatedAt: state.sync.deviceNameUpdatedAt,
+    }];
+
+    const updates = [];
+    if (storedId !== state.sync.deviceId) updates.push(saveSetting(DEVICE_ID_KEY, state.sync.deviceId));
+    if (storedName !== state.sync.deviceName) updates.push(saveSetting(DEVICE_NAME_KEY, state.sync.deviceName));
+    if (storedNameUpdatedAt !== state.sync.deviceNameUpdatedAt) {
+        updates.push(saveSetting(DEVICE_NAME_UPDATED_AT_KEY, state.sync.deviceNameUpdatedAt));
+    }
+    await Promise.all(updates);
 }
 
 async function ensureSyncMetadata() {

@@ -50,9 +50,14 @@ async function initializeWebDavSync() {
         ui.syncEndpointInput.value = state.sync.endpoint;
         ui.syncUsernameInput.value = state.sync.username;
         restoreSessionSyncCredentials();
-        state.sync.hasBaseline = isSyncModeConfigured()
-            ? Boolean(await getSyncBaseline(syncEndpointKey()))
-            : false;
+        const storedBaseline = isSyncModeConfigured()
+            ? await getSyncBaseline(syncEndpointKey())
+            : null;
+        state.sync.hasBaseline = Boolean(storedBaseline);
+        if (storedBaseline?.devices) {
+            state.sync.devices = mergeSyncDeviceLists(state.sync.devices, storedBaseline.devices);
+            refreshOwnSyncDeviceRecord();
+        }
         await loadSyncConflicts();
     } catch (error) {
         console.error('Unable to restore WebDAV sync settings:', error);
@@ -88,6 +93,77 @@ function syncEndpointKey(endpoint = state.sync.endpoint, username = state.sync.u
         return `local-folder\u0000${state.sync.localFolder.id || 'unconfigured'}`;
     }
     return `${String(username || '').trim().toLocaleLowerCase('en-US')}\u0000${String(endpoint || '').trim()}`;
+}
+
+function syncDeviceDisplayName(deviceId) {
+    const id = String(deviceId || '');
+    if (!id) return t('conflictValueEmpty');
+    if (id === state.sync.deviceId && state.sync.deviceName) return state.sync.deviceName;
+    const device = state.sync.devices.find((entry) => entry.deviceId === id);
+    return device?.name || t('unknownDeviceName', { suffix: id.slice(0, 8) });
+}
+
+function resetKnownSyncDevices() {
+    state.sync.devices = [];
+    refreshOwnSyncDeviceRecord();
+}
+
+function refreshOwnSyncDeviceRecord() {
+    state.sync.devices = mergeSyncDeviceLists(
+        state.sync.devices.filter((device) => device.deviceId !== state.sync.deviceId),
+        [{
+            deviceId: state.sync.deviceId,
+            name: state.sync.deviceName,
+            updatedAt: state.sync.deviceNameUpdatedAt,
+        }],
+    );
+}
+
+function handleSyncDeviceNameCoordinationMessage(message) {
+    if (
+        message.deviceId !== state.sync.deviceId
+        || typeof message.name !== 'string'
+        || !validDate(message.updatedAt)
+        || Date.parse(message.updatedAt) <= Date.parse(state.sync.deviceNameUpdatedAt || 0)
+    ) return;
+    state.sync.deviceName = message.name.trim().slice(0, 80);
+    state.sync.deviceNameUpdatedAt = message.updatedAt;
+    refreshOwnSyncDeviceRecord();
+    if (document.activeElement !== ui.syncDeviceNameInput) {
+        ui.syncDeviceNameInput.value = state.sync.deviceName;
+    }
+    if (ui.conflictDialog?.open) renderConflictCenter();
+    renderSyncSettings();
+}
+
+async function handleSyncDeviceNameChange() {
+    const fallback = t('defaultDeviceName', { suffix: state.sync.deviceId.slice(0, 4) });
+    const name = ui.syncDeviceNameInput.value.trim().slice(0, 80) || fallback;
+    ui.syncDeviceNameInput.value = name;
+    if (name === state.sync.deviceName) return;
+    state.sync.deviceName = name;
+    state.sync.deviceNameUpdatedAt = new Date().toISOString();
+    state.sync.deviceNamePendingSync = true;
+    refreshOwnSyncDeviceRecord();
+    await Promise.all([
+        saveSetting(DEVICE_NAME_KEY, state.sync.deviceName),
+        saveSetting(DEVICE_NAME_UPDATED_AT_KEY, state.sync.deviceNameUpdatedAt),
+    ]);
+    if (state.coordination.initialized) {
+        postCoordinationMessage('device-name-changed', {
+            deviceId: state.sync.deviceId,
+            name: state.sync.deviceName,
+            updatedAt: state.sync.deviceNameUpdatedAt,
+        });
+    }
+    if (ui.conflictDialog?.open) renderConflictCenter();
+    renderSyncSettings();
+    showToast(t('deviceNameSaved', { name }));
+    if (
+        state.sync.unlocked
+        && state.sync.automatic
+        && !ui.syncDialog.open
+    ) scheduleWebDavSync(150);
 }
 
 function restoreSessionSyncCredentials() {
@@ -367,9 +443,9 @@ function formatConflictDevice(entity) {
     if (!entity || entity.kind === 'absent') return '';
     const value = entity.value;
     const time = formatConflictTime(entity.kind === 'deleted' ? value.deletedAt : value.updatedAt);
-    const device = String(value.modifiedBy || '').slice(0, 8);
+    const deviceId = String(value.modifiedBy || '');
     return [
-        device ? t('conflictDeviceId', { device }) : '',
+        deviceId ? t('conflictDeviceName', { name: syncDeviceDisplayName(deviceId) }) : '',
         time ? t('conflictModifiedAt', { time }) : '',
     ].filter(Boolean).join(' · ');
 }
@@ -621,6 +697,7 @@ function openSyncDialog() {
     ui.syncEndpointInput.value = state.sync.endpoint;
     ui.syncUsernameInput.value = state.sync.username;
     ui.syncPasswordInput.value = state.sync.password;
+    ui.syncDeviceNameInput.value = state.sync.deviceName;
     ui.syncPassphraseInput.value = state.sync.passphrase;
     renderSyncSettings();
     ui.syncDialog.showModal();
@@ -634,7 +711,11 @@ function closeSyncDialog() {
     updateSyncSecretsFromForm();
     saveSyncPreferences();
     if (ui.syncDialog.open) ui.syncDialog.close();
-    scheduleRemoteWatchForActivity();
+    if (state.sync.deviceNamePendingSync && state.sync.unlocked && state.sync.automatic) {
+        scheduleWebDavSync(150);
+    } else {
+        scheduleRemoteWatchForActivity();
+    }
 }
 
 function cancelWebDavSync() {
@@ -662,6 +743,7 @@ async function handleSyncModeChange() {
     resetSyncRetryState(true);
     const nextKey = syncEndpointKey();
     if (previousKey !== nextKey) {
+        resetKnownSyncDevices();
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = nextKey;
         state.sync.conflictIndex = 0;
@@ -693,6 +775,7 @@ function updateSyncSecretsFromForm(resetRetry = true) {
         state.sync.koofrMountUser = '';
     }
     if (previousEndpointKey !== nextEndpointKey) {
+        resetKnownSyncDevices();
         state.sync.hasBaseline = false;
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = nextEndpointKey;
@@ -838,7 +921,7 @@ function renderSyncSettings() {
             t('syncReadyTitle'),
             localMode
                 ? t('localFolderReadyDetail', { name: localFolder.name || t('localSyncFolderNotSelected') })
-                : t('syncReadyDetail'),
+                : t('syncReadyDetail', { count: sync.devices.length }),
             t('syncMenuReady', { time: formatBackupTime(activeSyncTime(), true) }),
         ],
     }[status];
@@ -878,6 +961,10 @@ function renderSyncSettings() {
     ui.syncEndpointInput.disabled = sync.running || otherTabSync;
     ui.syncUsernameInput.disabled = sync.running || otherTabSync;
     ui.syncPasswordInput.disabled = sync.running || otherTabSync;
+    if (document.activeElement !== ui.syncDeviceNameInput) {
+        ui.syncDeviceNameInput.value = sync.deviceName;
+    }
+    ui.syncDeviceNameInput.disabled = sync.running || otherTabSync;
     ui.syncPassphraseInput.disabled = sync.running || otherTabSync;
     ui.disconnectSyncButton.classList.toggle(
         'hidden',
@@ -956,6 +1043,7 @@ async function disconnectWebDavSync() {
         state.sync.sessionCredentialsRestored = false;
         state.sync.automatic = false;
         state.sync.setupComplete = false;
+        state.sync.deviceNamePendingSync = false;
         state.sync.localFolder.lastSyncAt = '';
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = '';
@@ -964,6 +1052,7 @@ async function disconnectWebDavSync() {
         ui.syncPasswordInput.value = '';
         ui.syncPassphraseInput.value = '';
         await disconnectLocalSyncDirectory();
+        resetKnownSyncDevices();
         resetRemoteSyncWatcher();
         renderConflictBanner();
         return;
@@ -988,6 +1077,7 @@ async function disconnectWebDavSync() {
         automatic: false,
         setupComplete: false,
         unlocked: false,
+        deviceNamePendingSync: false,
         lastSyncAt: '',
         error: '',
         hasBaseline: false,
@@ -1004,6 +1094,7 @@ async function disconnectWebDavSync() {
         retryAt: 0,
         lastNotifiedError: '',
     });
+    resetKnownSyncDevices();
     resetRemoteSyncWatcher();
     await saveSyncPreferences();
     ui.syncEndpointInput.value = '';
@@ -1298,6 +1389,7 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         sync.sessionCredentialsRestored = false;
         if (sync.rememberSession) saveSessionSyncCredentials();
         sync.lastSyncAt = new Date().toISOString();
+        sync.deviceNamePendingSync = false;
         sync.lastNotifiedError = '';
         resetSyncRetryState();
         if (writtenRemoteVersion) {

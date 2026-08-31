@@ -24,6 +24,7 @@ function openSyncWizard() {
         localFolderName: state.sync.localFolder.name,
         passphrase: state.sync.passphrase,
         passphraseConfirm: state.sync.passphrase,
+        deviceName: state.sync.deviceName,
         automatic: state.sync.automatic,
         rememberSession: state.sync.rememberSession,
         createDirectory: state.sync.createDirectory,
@@ -66,6 +67,7 @@ function populateSyncWizardInputs() {
     ui.wizardPasswordInput.value = syncWizardDraft.password;
     ui.wizardPassphraseInput.value = syncWizardDraft.passphrase;
     ui.wizardPassphraseConfirmInput.value = syncWizardDraft.passphraseConfirm;
+    ui.wizardDeviceNameInput.value = syncWizardDraft.deviceName;
     ui.wizardAutoSync.checked = syncWizardDraft.automatic;
     ui.wizardRememberSession.checked = syncWizardDraft.rememberSession;
     ui.wizardCreateDirectory.checked = syncWizardDraft.createDirectory;
@@ -81,6 +83,7 @@ function collectSyncWizardInputs() {
     syncWizardDraft.password = ui.wizardPasswordInput.value;
     syncWizardDraft.passphrase = ui.wizardPassphraseInput.value;
     syncWizardDraft.passphraseConfirm = ui.wizardPassphraseConfirmInput.value;
+    syncWizardDraft.deviceName = ui.wizardDeviceNameInput.value.trim().slice(0, 80);
     syncWizardDraft.automatic = ui.wizardAutoSync.checked;
     syncWizardDraft.rememberSession = ui.wizardRememberSession.checked;
     syncWizardDraft.createDirectory = ui.wizardCreateDirectory.checked;
@@ -212,6 +215,7 @@ function renderSyncWizardReview() {
     const rows = [
         [t('reviewMethod'), t(localMode ? 'localFolderMode' : 'remoteServiceMode')],
         [t('reviewLocation'), localMode ? syncWizardDraft.localFolderName : syncWizardDraft.endpoint],
+        [t('reviewDeviceName'), syncWizardDraft.deviceName || state.sync.deviceName],
         [t('reviewAutoSync'), t(syncWizardDraft.automatic ? 'enabledLabel' : 'disabledLabel')],
         [t('reviewCredentialPolicy'), t(syncWizardDraft.rememberSession ? 'enabledLabel' : 'disabledLabel')],
     ];
@@ -289,6 +293,18 @@ async function finishSyncWizard() {
     state.sync.username = syncWizardDraft.username;
     state.sync.password = syncWizardDraft.mode === 'remote' ? syncWizardDraft.password : '';
     state.sync.passphrase = syncWizardDraft.passphrase;
+    const nextDeviceName = syncWizardDraft.deviceName
+        || t('defaultDeviceName', { suffix: state.sync.deviceId.slice(0, 4) });
+    if (nextDeviceName !== state.sync.deviceName) {
+        state.sync.deviceName = nextDeviceName;
+        state.sync.deviceNameUpdatedAt = new Date().toISOString();
+        state.sync.deviceNamePendingSync = true;
+        refreshOwnSyncDeviceRecord();
+        await Promise.all([
+            saveSetting(DEVICE_NAME_KEY, state.sync.deviceName),
+            saveSetting(DEVICE_NAME_UPDATED_AT_KEY, state.sync.deviceNameUpdatedAt),
+        ]);
+    }
     state.sync.createDirectory = syncWizardDraft.createDirectory;
     state.sync.automatic = syncWizardDraft.automatic;
     state.sync.setupComplete = false;
@@ -314,6 +330,7 @@ async function finishSyncWizard() {
 
     const nextKey = syncEndpointKey();
     if (previousKey !== nextKey) {
+        resetKnownSyncDevices();
         state.sync.conflicts = [];
         state.sync.conflictEndpointKey = nextKey;
         state.sync.conflictIndex = 0;
@@ -331,6 +348,13 @@ async function finishSyncWizard() {
     syncWizardTesting = false;
     if (result) {
         state.sync.setupComplete = true;
+        if (state.coordination.initialized) {
+            postCoordinationMessage('device-name-changed', {
+                deviceId: state.sync.deviceId,
+                name: state.sync.deviceName,
+                updatedAt: state.sync.deviceNameUpdatedAt,
+            });
+        }
         if (state.sync.rememberSession) saveSessionSyncCredentials();
         await saveSyncPreferences();
         renderSyncSettings();
@@ -357,6 +381,10 @@ function snapshotSyncWizardConfiguration() {
         username: sync.username,
         password: sync.password,
         passphrase: sync.passphrase,
+        deviceName: sync.deviceName,
+        deviceNameUpdatedAt: sync.deviceNameUpdatedAt,
+        deviceNamePendingSync: sync.deviceNamePendingSync,
+        devices: sync.devices.map((device) => ({ ...device })),
         rememberSession: sync.rememberSession,
         sessionCredentialsRestored: sync.sessionCredentialsRestored,
         createDirectory: sync.createDirectory,
@@ -394,6 +422,10 @@ async function restoreSyncWizardConfiguration(previous) {
         username: previous.username,
         password: previous.password,
         passphrase: previous.passphrase,
+        deviceName: previous.deviceName,
+        deviceNameUpdatedAt: previous.deviceNameUpdatedAt,
+        deviceNamePendingSync: previous.deviceNamePendingSync,
+        devices: previous.devices,
         rememberSession: previous.rememberSession,
         sessionCredentialsRestored: previous.sessionCredentialsRestored,
         createDirectory: previous.createDirectory,
@@ -410,6 +442,10 @@ async function restoreSyncWizardConfiguration(previous) {
     });
     Object.assign(localFolder, previous.localFolder);
     try {
+        await Promise.all([
+            saveSetting(DEVICE_NAME_KEY, state.sync.deviceName),
+            saveSetting(DEVICE_NAME_UPDATED_AT_KEY, state.sync.deviceNameUpdatedAt),
+        ]);
         if (localFolder.handle) await saveSetting(LOCAL_SYNC_HANDLE_KEY, localFolder.handle);
         else await deleteSetting(LOCAL_SYNC_HANDLE_KEY);
     } catch (error) {
@@ -429,6 +465,7 @@ function syncCurrentSettingsInputs() {
     ui.syncEndpointInput.value = state.sync.endpoint;
     ui.syncUsernameInput.value = state.sync.username;
     ui.syncPasswordInput.value = state.sync.password;
+    ui.syncDeviceNameInput.value = state.sync.deviceName;
     ui.syncPassphraseInput.value = state.sync.passphrase;
     ui.autoCreateDirectoryToggle.checked = state.sync.createDirectory;
     ui.autoSyncToggle.checked = state.sync.automatic;

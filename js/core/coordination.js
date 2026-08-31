@@ -72,6 +72,12 @@ function postCoordinationMessage(type, payload = {}) {
 
 function handleCoordinationMessage(message) {
     if (!message || message.source === state.coordination.tabId) return;
+    if (message.type === 'device-name-changed') {
+        if (typeof handleSyncDeviceNameCoordinationMessage === 'function') {
+            handleSyncDeviceNameCoordinationMessage(message);
+        }
+        return;
+    }
     if (message.type === 'remote-watch') {
         if (typeof handleRemoteWatchCoordinationMessage === 'function') {
             handleRemoteWatchCoordinationMessage(message);

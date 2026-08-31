@@ -12,6 +12,7 @@ async function encryptSyncData(dataset, passphrase) {
         updatedAt: new Date().toISOString(),
         items: dataset.items,
         tombstones: dataset.tombstones,
+        devices: dataset.devices || [],
     }));
     const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
     return `${JSON.stringify({

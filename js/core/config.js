@@ -17,6 +17,8 @@ const SYNC_PREFERENCES_KEY = 'webdav-sync-preferences';
 const LOCAL_SYNC_HANDLE_KEY = 'local-sync-directory-handle';
 const SYNC_SESSION_CREDENTIALS_KEY = 'bookmark-manager.sync-session-credentials';
 const DEVICE_ID_KEY = 'sync-device-id';
+const DEVICE_NAME_KEY = 'sync-device-name';
+const DEVICE_NAME_UPDATED_AT_KEY = 'sync-device-name-updated-at';
 const SYNC_FILE_NAME = 'bookmarks-sync.enc.json';
 const PBKDF2_ITERATIONS = 250000;
 const BACKUP_HEALTH_RECHECK_MS = 24 * 60 * 60 * 1000;
@@ -61,6 +63,10 @@ const state = {
         supported: typeof fetch === 'function' && Boolean(globalThis.crypto?.subtle),
         initialized: false,
         deviceId: '',
+        deviceName: '',
+        deviceNameUpdatedAt: '',
+        deviceNamePendingSync: false,
+        devices: [],
         mode: 'remote',
         endpoint: '',
         provider: '',

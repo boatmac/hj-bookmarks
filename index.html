@@ -11,28 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-33">
-    <script src="js/core/translations.js?v=20260829-33" defer></script>
-    <script src="js/core/config.js?v=20260829-33" defer></script>
-    <script src="js/core/coordination.js?v=20260829-33" defer></script>
-    <script src="js/core/storage.js?v=20260829-33" defer></script>
-    <script src="js/sync/backup.js?v=20260829-33" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-33" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-33" defer></script>
-    <script src="js/sync/providers.js?v=20260829-33" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-33" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-33" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-33" defer></script>
-    <script src="js/sync/merge.js?v=20260829-33" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-33" defer></script>
-    <script src="js/ui/help.js?v=20260829-33" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-33" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-33" defer></script>
-    <script src="js/ui/render.js?v=20260829-33" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-33" defer></script>
-    <script src="js/data/transfer.js?v=20260829-33" defer></script>
-    <script src="js/core/utils.js?v=20260829-33" defer></script>
-    <script src="js/app.js?v=20260829-33" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-34">
+    <script src="js/core/translations.js?v=20260829-34" defer></script>
+    <script src="js/core/config.js?v=20260829-34" defer></script>
+    <script src="js/core/coordination.js?v=20260829-34" defer></script>
+    <script src="js/core/storage.js?v=20260829-34" defer></script>
+    <script src="js/sync/backup.js?v=20260829-34" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-34" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-34" defer></script>
+    <script src="js/sync/providers.js?v=20260829-34" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-34" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-34" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-34" defer></script>
+    <script src="js/sync/merge.js?v=20260829-34" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-34" defer></script>
+    <script src="js/ui/help.js?v=20260829-34" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-34" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-34" defer></script>
+    <script src="js/ui/render.js?v=20260829-34" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-34" defer></script>
+    <script src="js/data/transfer.js?v=20260829-34" defer></script>
+    <script src="js/core/utils.js?v=20260829-34" defer></script>
+    <script src="js/app.js?v=20260829-34" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -304,6 +304,7 @@
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
                             <li data-i18n="helpSync5">顶部快捷按钮可立即同步、重试、解锁或进入冲突中心。</li>
                             <li data-i18n="helpSync6">远端自动同步解锁后会定期检查共享库更新，切回页面或恢复联网时也会立即检查。</li>
+                            <li data-i18n="helpSync7">为每台设备设置易识别的名称，冲突中心和回收站会显示对应修改来源。</li>
                         </ul>
                     </div>
                 </details>
@@ -754,6 +755,10 @@
 
                 <section class="sync-wizard-step hidden" data-wizard-step="4">
                     <div class="wizard-step-heading"><h3 data-i18n="chooseSyncPreferences">选择同步偏好</h3><p data-i18n="chooseSyncPreferencesHint">这些设置之后可以随时修改。</p></div>
+                    <label class="settings-field wizard-device-name-field">
+                        <span><strong data-i18n="deviceName">设备名称</strong><small data-i18n="deviceNameHint">用于在共享库冲突和修改来源中识别这台设备</small></span>
+                        <input id="wizard-device-name-input" type="text" maxlength="80" autocomplete="off" placeholder="例如：设计组笔记本" data-i18n-placeholder="deviceNamePlaceholder">
+                    </label>
                     <div class="settings-list wizard-preferences-list">
                         <label class="setting-row settings-switch-row">
                             <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁后自动上传本机变化，并定期检查共享库更新</small></span>
@@ -835,6 +840,10 @@
                 </div>
 
                 <div class="sync-fields common-sync-fields">
+                    <label class="settings-field">
+                        <span><strong data-i18n="deviceName">设备名称</strong><small data-i18n="deviceNameHint">用于在共享库冲突和修改来源中识别这台设备</small></span>
+                        <input id="sync-device-name-input" type="text" maxlength="80" autocomplete="off" placeholder="例如：设计组笔记本" data-i18n-placeholder="deviceNamePlaceholder">
+                    </label>
                     <label class="settings-field">
                         <span><strong data-i18n="encryptionPassphrase">加密口令</strong><small data-i18n="encryptionPassphraseHint">至少 8 个字符；其他设备必须使用相同口令</small></span>
                         <input id="sync-passphrase-input" type="password" minlength="8" autocomplete="off">

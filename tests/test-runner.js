@@ -41,8 +41,8 @@ function makeSyncItem(overrides = {}) {
     };
 }
 
-function makeDataset(item, tombstones = []) {
-    return { items: item ? [item] : [], tombstones };
+function makeDataset(item, tombstones = [], devices = []) {
+    return { items: item ? [item] : [], tombstones, devices };
 }
 
 function createMemoryDirectory(name = 'memory') {
@@ -100,9 +100,28 @@ function createMemoryDirectory(name = 'memory') {
 function deleteTestDatabase() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.deleteDatabase(DB_NAME);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => reject(new Error('Test database deletion was blocked'));
+        let blockedTimer = null;
+        request.onsuccess = () => {
+            window.clearTimeout(blockedTimer);
+            resolve();
+        };
+        request.onerror = () => {
+            window.clearTimeout(blockedTimer);
+            reject(request.error);
+        };
+        request.onblocked = () => {
+            try {
+                state.db?.close();
+                state.db = null;
+            } catch {
+                // Wait for any test transaction that is already closing.
+            }
+            window.clearTimeout(blockedTimer);
+            blockedTimer = window.setTimeout(
+                () => reject(new Error('Test database deletion remained blocked')),
+                2000,
+            );
+        };
     });
 }
 
@@ -538,6 +557,49 @@ test('顶部同步快捷按钮会随状态切换操作', () => {
         Object.assign(sync, previousSync);
         Object.assign(ui, previousUi);
     }
+});
+
+test('设备名称元数据会按更新时间合并并兼容旧同步文件', () => {
+    const older = {
+        deviceId: 'shared-device',
+        name: 'Old laptop name',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const newer = {
+        ...older,
+        name: 'Design team laptop',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+    };
+    const merged = mergeSyncDatasets(
+        { items: [], tombstones: [], devices: [older] },
+        { items: [], tombstones: [], devices: [newer] },
+    );
+    assertEqual(merged.devices.length, 1);
+    assertEqual(merged.devices[0].name, 'Design team laptop');
+
+    const threeWay = threeWayMergeSyncDatasets(
+        { items: [], tombstones: [], devices: [older] },
+        { items: [], tombstones: [], devices: [] },
+        { items: [], tombstones: [], devices: [newer] },
+    );
+    assertEqual(threeWay.dataset.devices[0].name, 'Design team laptop');
+
+    const legacy = parseRemoteSyncDataset({
+        format: 'bookmark-manager-sync',
+        version: 1,
+        items: [],
+        tombstones: [],
+    });
+    assertDeepEqual(legacy.devices, []);
+    const current = parseRemoteSyncDataset({
+        format: 'bookmark-manager-sync',
+        version: 2,
+        items: [],
+        tombstones: [],
+        devices: [newer, { deviceId: '', name: 'Invalid' }],
+    });
+    assertEqual(current.devices.length, 1);
+    assertEqual(current.devices[0].name, 'Design team laptop');
 });
 
 test('JSON 导入保留父子层级与同步标识', () => {
@@ -1113,15 +1175,21 @@ test('同步数据和回收站快照加密后不包含书签明文', async () =>
         updatedAt: deletedAt,
         modifiedBy: 'device-base',
         item: makeSyncItem({ syncId: 'deleted-item', title: 'Deleted secret' }),
+    }], [{
+        deviceId: 'named-device',
+        name: 'Private device name',
+        updatedAt: deletedAt,
     }]);
     const encrypted = await encryptSyncData(dataset, 'browser test passphrase');
     assert(!encrypted.includes('Secret bookmark'), 'Encrypted payload leaked plaintext');
     assert(!encrypted.includes('Deleted secret'), 'Encrypted recycle payload leaked plaintext');
+    assert(!encrypted.includes('Private device name'), 'Encrypted payload leaked a device name');
     const decrypted = await decryptSyncData(encrypted, 'browser test passphrase');
     assertEqual(decrypted.version, 2);
     const normalized = parseRemoteSyncDataset(decrypted);
     assertEqual(normalized.items[0].title, 'Secret bookmark');
     assertEqual(normalized.tombstones[0].item.title, 'Deleted secret');
+    assertEqual(normalized.devices[0].name, 'Private device name');
 });
 
 test('本地同步目录按设备写入独立加密文件', async () => {
@@ -1129,13 +1197,21 @@ test('本地同步目录按设备写入独立加密文件', async () => {
     state.sync.deviceId = 'device-a';
     await writeLocalSyncDeviceFile(
         root,
-        makeDataset(makeSyncItem({ syncId: 'item-a', title: 'From A' })),
+        makeDataset(makeSyncItem({ syncId: 'item-a', title: 'From A' }), [], [{
+            deviceId: 'device-a',
+            name: 'Laptop A',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+        }]),
         'local folder passphrase',
     );
     state.sync.deviceId = 'device-b';
     await writeLocalSyncDeviceFile(
         root,
-        makeDataset(makeSyncItem({ syncId: 'item-b', title: 'From B' })),
+        makeDataset(makeSyncItem({ syncId: 'item-b', title: 'From B' }), [], [{
+            deviceId: 'device-b',
+            name: 'Laptop B',
+            updatedAt: '2026-01-02T00:00:00.000Z',
+        }]),
         'local folder passphrase',
     );
     const fileSet = await listLocalSyncDeviceFiles(root);
@@ -1144,6 +1220,7 @@ test('本地同步目录按设备写入独立加密文件', async () => {
     assert(fileSet.files.some((entry) => entry.name === 'device-b.enc.json'));
     const aggregate = await readLocalSyncDeviceFiles(fileSet.files, 'local folder passphrase');
     assertDeepEqual(aggregate.items.map((item) => item.title).sort(), ['From A', 'From B']);
+    assertDeepEqual(aggregate.devices.map((device) => device.name).sort(), ['Laptop A', 'Laptop B']);
 });
 
 test('旧版同步 payload v1 会安全升级墓碑字段', () => {
@@ -1284,6 +1361,9 @@ test('IndexedDB、回收站恢复、基线和冲突记录可用', async () => {
     assert(state.db.objectStoreNames.contains(SYNC_CONFLICT_STORE_NAME));
 
     await initializeSyncIdentity();
+    assert(state.sync.deviceName.includes(state.sync.deviceId.slice(0, 4)));
+    assertEqual(await getSetting(DEVICE_NAME_KEY), state.sync.deviceName);
+    assert(validDate(await getSetting(DEVICE_NAME_UPDATED_AT_KEY)));
     const previousBackupState = {
         enabled: state.backup.enabled,
         retention: state.backup.retention,

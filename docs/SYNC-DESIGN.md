@@ -79,9 +79,18 @@ UI
   "version": 2,
   "updatedAt": "ISO-8601",
   "items": [],
-  "tombstones": []
+  "tombstones": [],
+  "devices": [
+    {
+      "deviceId": "uuid",
+      "name": "Design team laptop",
+      "updatedAt": "ISO-8601"
+    }
+  ]
 }
 ```
+
+`devices` 是 payload v2 的可选兼容字段。设备名称按 `deviceId` 合并，并以名称的 `updatedAt` 选择较新版本；旧客户端忽略或移除它时，新客户端会从同步基线和本机身份重新补回。它只是加密后的友好显示元数据，不是成员身份、权限或认证凭据。
 
 加密口令使用 NFKC 规范化后进入 PBKDF2。每次上传生成新的随机 salt 和 96-bit GCM IV。
 

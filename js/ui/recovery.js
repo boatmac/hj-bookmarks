@@ -124,7 +124,7 @@ function createRecoveryCard(tombstone) {
     const meta = createElement('div', 'recovery-card-meta');
     meta.append(
         createRecoveryMeta(t('deletedAtLabel'), formatRecoveryDate(tombstone.deletedAt)),
-        createRecoveryMeta(t('deletedByLabel'), String(tombstone.modifiedBy || '').slice(0, 8) || t('conflictValueEmpty')),
+        createRecoveryMeta(t('deletedByLabel'), syncDeviceDisplayName(tombstone.modifiedBy)),
         createElement('span', 'recovery-expiry', t('expiresInDays', { count: recoveryDaysRemaining(tombstone) })),
     );
 

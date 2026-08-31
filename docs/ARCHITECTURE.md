@@ -65,11 +65,11 @@ js/
 - `state.items`：当前书签快照；
 - `state.view`：当前筛选和目录；
 - `state.backup`：本地备份状态；
-- `state.sync`：远端同步、凭据、基线和冲突状态；
+- `state.sync`：远端同步、凭据、设备名称注册表、基线和冲突状态；
 - `state.persistence`：浏览器持久存储状态；
 - `state.coordination`：当前标签页 ID、跨标签页消息、写锁和同步心跳。
 
-长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。
+长期数据必须通过 `storage.js` 写入 IndexedDB。密码和加密口令不得进入长期设置。设备 ID 与本机自定义名称分别持久化，名称注册表作为同步 payload v2 的可选加密元数据参与合并；它不得被当作账号或权限身份。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。
 
 ## 备份加密边界
 

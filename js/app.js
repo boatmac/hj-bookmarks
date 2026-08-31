@@ -107,7 +107,8 @@ function cacheElements() {
         'wizard-choose-folder-button', 'wizard-connection-error',
         'wizard-endpoint-input', 'wizard-username-input', 'wizard-password-input',
         'wizard-passphrase-input', 'wizard-passphrase-confirm-input',
-        'wizard-show-passwords', 'wizard-passphrase-error', 'wizard-auto-sync',
+        'wizard-show-passwords', 'wizard-passphrase-error', 'wizard-device-name-input',
+        'wizard-auto-sync',
         'wizard-remember-session', 'wizard-create-directory-row',
         'wizard-create-directory', 'wizard-review', 'wizard-test-status',
         'wizard-test-title', 'wizard-test-detail', 'sync-wizard-cancel-button',
@@ -119,7 +120,7 @@ function cacheElements() {
         'local-sync-folder-name', 'choose-local-sync-folder-button',
         'auto-create-directory-row', 'sync-compatibility-note',
         'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
-        'sync-passphrase-input', 'auto-create-directory-toggle',
+        'sync-device-name-input', 'sync-passphrase-input', 'auto-create-directory-toggle',
         'auto-sync-toggle', 'remember-session-credentials-toggle',
         'last-sync-value', 'remote-watch-status-row', 'remote-watch-status-value',
         'conflict-protection-value',
@@ -346,6 +347,7 @@ function bindStaticEvents() {
     ui.syncEndpointInput.addEventListener('change', saveSyncPreferences);
     ui.syncUsernameInput.addEventListener('change', saveSyncPreferences);
     ui.syncPasswordInput.addEventListener('input', updateSyncSecretsFromForm);
+    ui.syncDeviceNameInput.addEventListener('change', handleSyncDeviceNameChange);
     ui.syncPassphraseInput.addEventListener('input', updateSyncSecretsFromForm);
     ui.autoCreateDirectoryToggle.addEventListener('change', handleAutoCreateDirectoryToggle);
     ui.autoSyncToggle.addEventListener('change', handleAutoSyncToggle);

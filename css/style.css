@@ -3701,6 +3701,10 @@ svg {
     flex: 1;
 }
 
+.wizard-device-name-field {
+    margin-bottom: 16px;
+}
+
 .wizard-passphrase-fields {
     display: grid;
     grid-template-columns: 1fr 1fr;
