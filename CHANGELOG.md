@@ -4,6 +4,12 @@ HJ Bookmarks 的重要变更记录在此文件中。版本号遵循 [Semantic Ve
 
 ## [Unreleased]
 
+- 暂无。
+
+## [1.0.0-rc.2] - 2026-08-31
+
+隐私防泄漏与发布保护候选版本。
+
 ### Added
 
 - 新增零依赖公开内容审计，覆盖当前文件、可达 Git 历史、Pages 和便携包。
@@ -54,5 +60,6 @@ HJ Bookmarks 的重要变更记录在此文件中。版本号遵循 [Semantic Ve
 - 继续保留 `BookmarkDB_v3`、`bookmark-manager.*`、备份格式和同步协议标识，避免品牌更新破坏已有数据。
 - 生产脚本继续使用有序的经典 `<script defer>`，支持直接通过 `file://` 打开。
 
-[Unreleased]: https://github.com/boatmac/hj-bookmarks/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/boatmac/hj-bookmarks/compare/v1.0.0-rc.2...HEAD
+[1.0.0-rc.2]: https://github.com/boatmac/hj-bookmarks/releases/tag/v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/boatmac/hj-bookmarks/releases/tag/v1.0.0-rc.1

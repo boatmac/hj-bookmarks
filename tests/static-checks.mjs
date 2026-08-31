@@ -130,7 +130,9 @@ async function checkDocumentStructure() {
         'The MIT license or copyright attribution is missing.',
     );
     check(
-        changelog.includes('## [1.0.0-rc.1]') && changelog.includes('## [Unreleased]'),
+        changelog.includes('## [1.0.0-rc.2]')
+        && changelog.includes('## [1.0.0-rc.1]')
+        && changelog.includes('## [Unreleased]'),
         'The changelog is missing the current release or Unreleased section.',
     );
     check(

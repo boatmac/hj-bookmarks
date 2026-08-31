@@ -496,7 +496,7 @@ git config core.hooksPath .githooks
 
 ## 项目状态
 
-HJ Bookmarks 已通过本地 `file://`、GitHub Actions、便携包、GitHub Pages 和真实 WebDAV 同步验收，当前进入 `v1.0.0-rc.1` 发布候选阶段。内部数据库名称、Storage Key、备份格式和同步协议继续保留原有兼容标识，品牌更新不会影响已有数据。
+HJ Bookmarks 已通过本地 `file://`、GitHub Actions、便携包、GitHub Pages 和真实 WebDAV 同步验收，当前进入 `v1.0.0-rc.2` 发布候选阶段。内部数据库名称、Storage Key、备份格式和同步协议继续保留原有兼容标识，品牌更新不会影响已有数据。
 
 ## 许可证
 
