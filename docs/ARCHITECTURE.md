@@ -32,7 +32,7 @@ js/
 │   ├── backup-passphrase.js 备份口令更换与历史快照安全重加密
 │   ├── local-folder.js  桌面云盘本地目录双向同步
 │   ├── coordinator.js   同步生命周期、凭据和冲突中心
-│   ├── providers.js     标准 WebDAV 与 Koofr Adapter
+│   ├── providers.js     标准 WebDAV、Koofr 与 Azure Blob Adapter
 │   ├── remote-watch.js  共享库远端版本检查、前台触发和多标签页节流
 │   ├── crypto.js        同步与备份的 PBKDF2 + AES-GCM 信封
 │   └── merge.js         数据集规范化、三方合并与本地应用
@@ -69,7 +69,7 @@ js/
 - `state.persistence`：浏览器持久存储状态；
 - `state.coordination`：当前标签页 ID、跨标签页消息、写锁和同步心跳。
 
-长期数据必须通过 `storage.js` 写入 IndexedDB。同步地址和用户名是本机重连所需设置；密码和加密口令不得进入长期设置。设备 ID 与本机自定义名称分别持久化，名称注册表作为同步 payload v2 的可选加密元数据参与合并；它不得被当作账号或权限身份。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。完整数据流见 [`PRIVACY.md`](PRIVACY.md)。
+长期数据必须通过 `storage.js` 写入 IndexedDB。不含秘密查询参数的同步地址和必要用户名是本机重连所需设置；密码、Azure SAS Token 和加密口令不得进入长期设置。设备 ID 与本机自定义名称分别持久化，名称注册表作为同步 payload v2 的可选加密元数据参与合并；它不得被当作账号或权限身份。`state.backup.passphrase` 与 `state.sync.passphrase` 是相互独立的内存凭据；长期备份设置只保存是否启用加密及随机配置 ID。完整数据流见 [`PRIVACY.md`](PRIVACY.md)。
 
 ## 诊断信息边界
 
@@ -105,7 +105,7 @@ js/
 
 ## 共享书签库加入边界
 
-`sync-wizard.js` 通过 `intent: shared` 复用现有五步向导，但跳过同步位置选择并固定为远端 WebDAV。共享入口不会复用现有地址、密码或加密口令，自动同步默认开启；远端文件不存在时拒绝加入，创建第一份共享库仍使用普通设置向导。
+`sync-wizard.js` 通过 `intent: shared` 复用现有五步向导，但跳过同步位置选择并固定为远端模式，可自动识别 WebDAV、Koofr 或 Azure Blob。共享入口不会复用现有地址、访问凭据或加密口令，自动同步默认开启；远端文件不存在时拒绝加入，创建第一份共享库仍使用普通设置向导。Azure Blob 的 SAS 查询参数会在进入长期设置前与基础 URL 分离。
 
 共享加入前若 `state.items` 非空，验证页必须显示本机项目数量并取得显式确认。完成时仍调用唯一的 `runWebDavSync`，因此真实读取、解密、三方合并、条件写入和失败回滚与普通设置一致。向导只增加意图和安全提示，不建立账号、邀请令牌或后端成员系统。
 

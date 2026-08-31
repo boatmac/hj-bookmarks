@@ -4,7 +4,20 @@ HJ Bookmarks 的重要变更记录在此文件中。版本号遵循 [Semantic Ve
 
 ## [Unreleased]
 
-- 暂无。
+### Added
+
+- 新增 Azure Blob Block Blob 远端同步，支持全球 Azure 与世纪互联运营的 Azure 中国区域名。
+- 支持容器/Blob URL、SAS 本机拆分、HEAD/ETag 远端探测和条件 `PUT Blob`。
+- 新增 Azure Blob 设置向导文案、共享库加入、CORS/权限错误和专项配置文档。
+
+### Fixed
+
+- 共享库加入成功后继续使用同步前的本机项目数，不再把刚下载的远端项目误显示为待确认的本机书签。
+
+### Security
+
+- SAS Token 默认仅保存在内存，完整 SAS URL 会在持久化前移除查询参数；请求禁止跨域重定向。
+- Azure Blob 缺少可见 ETag 时停止同步，避免降级为无条件覆盖。
 
 ## [1.0.0-rc.2] - 2026-08-31
 

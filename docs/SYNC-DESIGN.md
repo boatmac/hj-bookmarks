@@ -24,7 +24,8 @@ UI
 │   ├── Remote Version Watcher
 │   └── Remote Adapter Resolver
 │       ├── 标准 WebDAV Adapter
-│       └── Koofr REST Compatibility Adapter
+│       ├── Koofr REST Compatibility Adapter
+│       └── Azure Blob SAS Adapter（全球 Azure / Azure 中国区）
 ├── PBKDF2 + AES-GCM 加密层
 └── 三方合并与冲突中心
 ```
@@ -41,7 +42,7 @@ UI
 | `syncBaselines` | 每个同步端点的最近成功基线及待确认远端状态 |
 | `syncConflicts` | 持久化的冲突记录 |
 
-向导不把 Koofr、Nextcloud 或 NAS 暴露为并列的用户同步类型。用户只选择远端同步或本地目录；远端 Resolver 根据用户填写的地址和服务能力选择兼容 Adapter。服务名称、CORS、Mount ID、REST 路径和条件写入令牌均属于适配层实现细节，仅在维护文档或高级错误诊断中出现。
+向导不把 Koofr、Azure Blob、Nextcloud 或 NAS 暴露为并列的顶层同步类型。用户只选择远端同步或本地目录；远端 Resolver 根据用户填写的地址和服务能力选择兼容 Adapter。服务名称、CORS、Mount ID、REST 路径和条件写入令牌均属于适配层实现细节，仅在维护文档或高级错误诊断中出现。
 
 书签使用本地数字 ID 作为 IndexedDB 主键，同时使用稳定 `syncId` UUID 进行跨设备识别。
 
@@ -125,10 +126,12 @@ UI
 - 自动同步设置
 - 最近同步时间
 - Koofr Mount ID、名称及所属用户名（非敏感缓存）
+- 不含查询参数的 Azure Blob URL（Azure Blob 不保存用户名）
 
 默认只保存在 JavaScript 内存：
 
 - WebDAV/Koofr 密码或应用密码
+- Azure Blob SAS Token
 - 同步加密口令
 - 可选的本地备份加密口令
 - 恢复加密快照时临时输入的口令
@@ -210,11 +213,29 @@ POST /content/api/v2/mounts/{mountId}/files/put
 
 Koofr 上传使用 multipart/form-data，并在覆盖时传递 `overwriteIfHash` 和 `overwriteIfModified`。HTTP 409 视为并发冲突并重新读取。
 
+## Azure Blob SAS Adapter
+
+适配器识别全球 Azure 的 `*.blob.core.windows.net` 和世纪互联运营的 Azure 中国区 `*.blob.core.chinacloudapi.cn`，仅接受 HTTPS。容器 URL 或虚拟目录 URL 会追加固定文件名；容器本身必须预先存在。当前不支持自定义域名、Azurite、Azure Government 或 Data Lake `dfs` 端点。
+
+Blob URL 和 SAS Token 在输入阶段立即分离。长期设置只保存不含查询参数的 URL，SAS 复用密码的内存与刷新会话生命周期。用户名对 Azure Blob 隐藏并清空。每个请求在内存中临时组合 SAS URI，使用 `credentials: omit`，不使用 Storage Account Key、Cookie 或 Authorization 请求头。
+
+请求流程：
+
+1. `HEAD` + ETag 检查远端版本；
+2. `GET` 下载加密 Block Blob；
+3. 首次 `PUT Blob` 使用 `If-None-Match: *`；
+4. 后续 `PUT Blob` 使用读取到的 `If-Match`；
+5. 写入携带 `x-ms-blob-type: BlockBlob`、`x-ms-version` 和 `x-ms-date`；
+6. `412` 进入既有重新读取和三方合并重试；
+7. `401/403` 映射为 SAS 权限错误，写入时的 `404` 映射为容器不存在。
+
+浏览器必须能读取 ETag；缺失时停止同步，避免降级为无条件覆盖。CORS、SAS 权限、全球与中国区域名的完整说明见 [`AZURE-BLOB.md`](AZURE-BLOB.md)。
+
 ## 加入共享书签库
 
-普通设置向导既可创建新的远端同步文件，也可连接已有位置；专用“加入共享书签库”意图只接受远端 WebDAV，并要求目标同步文件已经存在，避免地址填错后静默创建一个孤立的新库。它不预填当前远端地址或任何秘密，自动同步默认开启，成员需要填写自己的 WebDAV 凭据、共享加密口令和本机设备名称。
+普通设置向导既可创建新的远端同步文件，也可连接已有位置；专用“加入共享书签库”意图只接受远端模式，可自动选择 WebDAV、Koofr 或 Azure Blob Adapter，并要求目标同步文件已经存在，避免地址填错后静默创建一个孤立的新库。它不预填当前远端地址或任何秘密，自动同步默认开启，成员需要填写自己的远端凭据、共享加密口令和本机设备名称。
 
-首次加入与普通同步使用同一个数据写锁和 `runWebDavSync`。本机已有项目时，验证步骤必须显式确认这些项目会参与首次合并；远端读取、AES-GCM 解密、基线建立、三方合并和条件 PUT 全部成功后才保存新配置。失败时恢复进入向导前的端点、设备注册表、凭据偏好和本地目录状态。该流程没有邀请账号或服务端成员表，访问控制仍由 WebDAV 目录权限与共享加密口令共同承担。
+首次加入与普通同步使用同一个数据写锁和 `runWebDavSync`。本机已有项目时，验证步骤必须显式确认这些项目会参与首次合并；远端读取、AES-GCM 解密、基线建立、三方合并和条件 PUT 全部成功后才保存新配置。失败时恢复进入向导前的端点、设备注册表、凭据偏好和本地目录状态。该流程没有邀请账号或服务端成员表，访问控制仍由远端服务权限与共享加密口令共同承担。
 
 单工作区版本不提供“切换共享库”。连接成功后，UI 隐藏加入/设置向导入口，并锁定同步方式、远端 URL 与用户名；密码、加密口令、自动同步和设备名称仍可维护。移除同步配置不会删除本机项目，后续加入其他库时依然执行本机数据确认。真正无交叉合并的切换需要未来按工作区隔离 IndexedDB、基线、冲突和设备注册表。
 
@@ -222,9 +243,9 @@ Koofr 上传使用 multipart/form-data，并在覆盖时传递 `overwriteIfHash`
 
 远端模式在自动同步已开启、凭据已解锁、页面可见且无冲突时，每 60 秒执行一次只读版本检查。窗口重新获得焦点、页面从后台恢复或浏览器重新联网时会提前检查；页面隐藏、离线、凭据锁定或存在冲突时不轮询。
 
-标准 WebDAV 使用带 `If-None-Match` 的条件 GET：服务返回 `304` 时不读取响应体；没有可用 ETag 或服务忽略条件请求时，只计算加密信封文本 hash，不执行 PBKDF2 解密。Koofr 只调用 `files/info` 获取远端 hash、修改时间和大小。版本相同不会进入数据写锁，也不会上传新密文；只有版本变化才调用既有 `runWebDavSync`，继续使用三方合并、墓碑、冲突中心和条件写入。
+标准 WebDAV 使用带 `If-None-Match` 的条件 GET：服务返回 `304` 时不读取响应体；没有可用 ETag 或服务忽略条件请求时，只计算加密信封文本 hash，不执行 PBKDF2 解密。Koofr 只调用 `files/info` 获取远端 hash、修改时间和大小。Azure Blob 使用带 `If-None-Match` 的 HEAD，只读取 ETag、修改时间和大小。版本相同不会进入数据写锁，也不会上传新密文；只有版本变化才调用既有 `runWebDavSync`，继续使用三方合并、墓碑、冲突中心和条件写入。
 
-成功写入后，标准 WebDAV 从 PUT 响应记录 ETag 和本次密文 hash；Koofr 再读取一次轻量文件信息。非敏感版本摘要和最近检查时间保存在同步偏好中。多个同源标签页使用短时 Web Lock、BroadcastChannel 及 localStorage 检查时间共享结果，避免同时高频访问同一个远端。
+成功写入后，标准 WebDAV 和 Azure Blob 从 PUT 响应记录 ETag；Koofr 再读取一次轻量文件信息。非敏感版本摘要和最近检查时间保存在同步偏好中。多个同源标签页使用短时 Web Lock、BroadcastChannel 及 localStorage 检查时间共享结果，避免同时高频访问同一个远端。
 
 探测遇到临时网络错误时使用 5 秒至 5 分钟的渐进重试，不弹出重复错误；认证或其他永久错误会停止轮询并要求用户重新处理。探测本身不会解密远端内容，因此损坏或错误口令仍在真正同步阶段由 AES-GCM 和 payload 校验拒绝。
 
@@ -310,7 +331,7 @@ backup-directory/
 - 不使用用户数据构造 `innerHTML`。
 - 拒绝 `javascript:`、`data:` 等链接协议。
 - 远端及加密备份的明文只存在于当前页面内存。
-- Client Secret、永久云 Access Key 不得加入前端。
+- Client Secret、Storage Account Key、永久云 Access Key 不得加入前端；SAS 只能进入内存或用户明确允许的刷新会话。
 - HTTP Basic 只建议配合 HTTPS。
 - 日志和错误信息不得输出 Authorization、密码、加密口令、完整令牌、同步 URL、本机用户目录、堆栈或底层 `cause`。
 - 生产模块通过 `logErrorSafely()` 输出错误摘要，不得直接记录原始 `Error` 对象。

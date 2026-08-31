@@ -107,7 +107,9 @@ function cacheElements() {
         'wizard-join-shared-library-button', 'wizard-connection-hint', 'wizard-shared-library-note', 'wizard-remote-fields',
         'wizard-local-folder-fields', 'wizard-local-folder-name',
         'wizard-choose-folder-button', 'wizard-connection-error',
-        'wizard-endpoint-input', 'wizard-username-input', 'wizard-password-input',
+        'wizard-endpoint-label', 'wizard-endpoint-hint', 'wizard-endpoint-input',
+        'wizard-username-field', 'wizard-username-label', 'wizard-username-input',
+        'wizard-password-label', 'wizard-password-hint', 'wizard-password-input',
         'wizard-passphrase-input', 'wizard-passphrase-confirm-input',
         'wizard-show-passwords', 'wizard-passphrase-error', 'wizard-device-name-input',
         'wizard-auto-sync',
@@ -123,7 +125,9 @@ function cacheElements() {
         'sync-mode-select', 'sync-connection-lock-note', 'remote-sync-fields', 'local-folder-sync-fields',
         'local-sync-folder-name', 'choose-local-sync-folder-button',
         'auto-create-directory-row', 'sync-compatibility-note',
-        'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
+        'sync-endpoint-label', 'sync-endpoint-hint', 'sync-endpoint-input',
+        'sync-username-field', 'sync-username-label', 'sync-username-hint', 'sync-username-input',
+        'sync-password-label', 'sync-password-hint', 'sync-password-input',
         'sync-device-name-input', 'sync-passphrase-input', 'auto-create-directory-toggle',
         'auto-sync-toggle', 'remember-session-credentials-toggle',
         'last-sync-value', 'remote-watch-status-row', 'remote-watch-status-value',
@@ -323,6 +327,7 @@ function bindStaticEvents() {
     ui.syncWizardFinishButton.addEventListener('click', finishSyncWizard);
     ui.wizardJoinSharedLibraryButton.addEventListener('click', openSharedLibraryWizard);
     ui.wizardChooseFolderButton.addEventListener('click', chooseSyncWizardLocalFolder);
+    ui.wizardEndpointInput.addEventListener('input', handleSyncWizardConnectionInput);
     ui.wizardShowPasswords.addEventListener('change', toggleSyncWizardPasswordVisibility);
     ui.wizardSharedLocalConfirm.addEventListener('change', () => {
         if (ui.wizardSharedLocalConfirm.checked) {

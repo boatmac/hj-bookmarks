@@ -7,7 +7,9 @@ const REMOTE_WATCH_SHARED_FRESHNESS_RATIO = 0.75;
 
 function normalizeRemoteSyncVersion(input) {
     if (!input || typeof input !== 'object') return null;
-    const provider = input.provider === 'koofr' ? 'koofr' : input.provider === 'webdav' ? 'webdav' : '';
+    const provider = input.provider === 'koofr'
+        ? 'koofr'
+        : ['webdav', 'azure-blob'].includes(input.provider) ? input.provider : '';
     if (!provider || typeof input.exists !== 'boolean') return null;
     if (!input.exists) return { provider, exists: false };
     if (provider === 'koofr') {

@@ -11,28 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>HJ Bookmarks · 本地优先书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-42">
-    <script src="js/core/translations.js?v=20260829-42" defer></script>
-    <script src="js/core/config.js?v=20260829-42" defer></script>
-    <script src="js/core/coordination.js?v=20260829-42" defer></script>
-    <script src="js/core/storage.js?v=20260829-42" defer></script>
-    <script src="js/sync/backup.js?v=20260829-42" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-42" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-42" defer></script>
-    <script src="js/sync/providers.js?v=20260829-42" defer></script>
-    <script src="js/sync/remote-watch.js?v=20260829-42" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-42" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-42" defer></script>
-    <script src="js/sync/merge.js?v=20260829-42" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-42" defer></script>
-    <script src="js/ui/help.js?v=20260829-42" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-42" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-42" defer></script>
-    <script src="js/ui/render.js?v=20260829-42" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-42" defer></script>
-    <script src="js/data/transfer.js?v=20260829-42" defer></script>
-    <script src="js/core/utils.js?v=20260829-42" defer></script>
-    <script src="js/app.js?v=20260829-42" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-43">
+    <script src="js/core/translations.js?v=20260829-43" defer></script>
+    <script src="js/core/config.js?v=20260829-43" defer></script>
+    <script src="js/core/coordination.js?v=20260829-43" defer></script>
+    <script src="js/core/storage.js?v=20260829-43" defer></script>
+    <script src="js/sync/backup.js?v=20260829-43" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-43" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-43" defer></script>
+    <script src="js/sync/providers.js?v=20260829-43" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-43" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-43" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-43" defer></script>
+    <script src="js/sync/merge.js?v=20260829-43" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-43" defer></script>
+    <script src="js/ui/help.js?v=20260829-43" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-43" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-43" defer></script>
+    <script src="js/ui/render.js?v=20260829-43" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-43" defer></script>
+    <script src="js/data/transfer.js?v=20260829-43" defer></script>
+    <script src="js/core/utils.js?v=20260829-43" defer></script>
+    <script src="js/app.js?v=20260829-43" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -302,7 +302,7 @@
                     <summary><span data-i18n="helpSynchronization">多设备同步</span><svg><use href="#icon-chevron-down"></use></svg></summary>
                     <div>
                         <ul>
-                            <li data-i18n="helpSync1">使用远端同步时，应用会自动选择兼容的连接方式。</li>
+                            <li data-i18n="helpSync1">远端同步支持标准 WebDAV、Koofr 和 Azure Blob（全球 Azure 与世纪互联运营的 Azure 中国区）。</li>
                             <li data-i18n="helpSync2">本地同步目录模式适用于 OneDrive、Google Drive、Dropbox 和 Syncthing 桌面客户端。</li>
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
@@ -316,7 +316,7 @@
                     <div>
                         <ul>
                             <li data-i18n="helpShared1">组织者先用设置向导创建远端库，其他成员再用“加入共享书签库”连接。</li>
-                            <li data-i18n="helpShared2">所有成员都能查看和修改全部书签，访问权限由 WebDAV 凭据和共享加密口令共同控制。</li>
+                            <li data-i18n="helpShared2">所有成员都能查看和修改全部书签，访问权限由远端服务凭据和共享加密口令共同控制。</li>
                             <li data-i18n="helpShared3">自动同步会定期检查远端更新；设备名称用于显示冲突和删除来源。</li>
                             <li data-i18n="helpShared4">当前一次只能连接一个同步位置；连接后会锁定地址和账号，不提供容易混淆的数据切换。</li>
                             <li data-i18n="helpShared5">加入前若本机已有书签，必须确认它们是否参与共享库首次合并。</li>
@@ -331,7 +331,7 @@
                             <li data-i18n="helpDeployment1">静态部署只发布应用文件，不会自动公开浏览器中的书签或同步凭据。</li>
                             <li data-i18n="helpDeployment2">本地文件与线上域名拥有独立数据空间，可通过备份恢复、导入或加密同步迁移。</li>
                             <li data-i18n="helpDeployment3">GitHub Actions 会在测试通过后生成可直接解压使用的便携 ZIP，并可发布 GitHub Pages 和 Release。</li>
-                            <li data-i18n="helpDeployment4">线上版无法连接 WebDAV 时，需要同步服务允许该网站域名访问。</li>
+                            <li data-i18n="helpDeployment4">线上版无法连接远端服务时，需要该服务允许网站域名通过 CORS 访问。</li>
                         </ul>
                     </div>
                 </details>
@@ -351,7 +351,7 @@
                             <li data-i18n="helpPrivacy2">远端同步始终加密；本地自动备份可选择加密。</li>
                             <li data-i18n="helpPrivacy3">同步和备份加密口令都无法找回；遗失后无法解密对应文件。</li>
                             <li data-i18n="helpPrivacy4">共享设备上不要开启“刷新时保留凭据”。</li>
-                            <li data-i18n="helpPrivacy5">同步地址和用户名会保存在本机以便重连；密码和加密口令不会写入长期设置。</li>
+                            <li data-i18n="helpPrivacy5">同步地址和必要的用户名会保存在本机以便重连；密码、SAS Token 和加密口令不会写入长期设置。</li>
                         </ul>
                     </div>
                 </details>
@@ -729,7 +729,7 @@
                         <label class="sync-location-card">
                             <input type="radio" name="wizard-sync-mode" value="remote" checked>
                             <span class="sync-location-icon"><svg><use href="#icon-database"></use></svg></span>
-                            <span><strong data-i18n="remoteSyncLocation">远端同步</strong><small data-i18n="remoteSyncLocationHint">适用于 WebDAV、NAS 和支持的网盘地址</small></span>
+                            <span><strong data-i18n="remoteSyncLocation">远端同步</strong><small data-i18n="remoteSyncLocationHint">适用于 WebDAV、Azure Blob、NAS 和支持的网盘地址</small></span>
                             <span class="selection-check"><svg><use href="#icon-check"></use></svg></span>
                         </label>
                         <label class="sync-location-card">
@@ -748,18 +748,18 @@
 
                 <section class="sync-wizard-step hidden" data-wizard-step="2">
                     <div class="wizard-step-heading"><h3 data-i18n="configureConnection">配置连接</h3><p id="wizard-connection-hint"></p></div>
-                    <p class="wizard-shared-library-note hidden" id="wizard-shared-library-note" data-i18n="sharedLibraryTrustNote">共享库中的所有成员都可以查看和修改全部书签；请使用成员自己的 WebDAV 应用密码。</p>
+                    <p class="wizard-shared-library-note hidden" id="wizard-shared-library-note" data-i18n="sharedLibraryTrustNote">共享库中的所有成员都可以查看和修改全部书签；请使用成员自己的远端凭据或 SAS Token。</p>
                     <div class="sync-fields" id="wizard-remote-fields">
                         <label class="settings-field">
-                            <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="wizardAddressHint">填写服务提供的 WebDAV 或同步地址</small></span>
-                            <input id="wizard-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" autocomplete="url">
+                            <span><strong id="wizard-endpoint-label" data-i18n="webDavUrl">同步地址</strong><small id="wizard-endpoint-hint" data-i18n="wizardAddressHint">填写服务提供的 WebDAV、Azure Blob 或同步地址</small></span>
+                            <input id="wizard-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" autocomplete="off">
                         </label>
-                        <label class="settings-field">
-                            <span><strong data-i18n="webDavUsername">用户名</strong></span>
+                        <label class="settings-field" id="wizard-username-field">
+                            <span><strong id="wizard-username-label" data-i18n="webDavUsername">用户名</strong></span>
                             <input id="wizard-username-input" type="text" autocomplete="username">
                         </label>
                         <label class="settings-field">
-                            <span><strong data-i18n="webDavPassword">密码或应用密码</strong></span>
+                            <span><strong id="wizard-password-label" data-i18n="webDavPassword">密码、应用密码或 SAS Token</strong><small id="wizard-password-hint" data-i18n="sessionOnly">默认仅保留在当前页面内存中</small></span>
                             <input id="wizard-password-input" type="password" autocomplete="off">
                         </label>
                     </div>
@@ -783,7 +783,7 @@
                             <input id="wizard-passphrase-confirm-input" type="password" minlength="8" autocomplete="off">
                         </label>
                     </div>
-                    <label class="wizard-show-passwords"><input id="wizard-show-passwords" type="checkbox"><span data-i18n="showSensitiveFields">显示密码和加密口令</span></label>
+                    <label class="wizard-show-passwords"><input id="wizard-show-passwords" type="checkbox"><span data-i18n="showSensitiveFields">显示访问凭据和加密口令</span></label>
                     <p class="wizard-warning" data-i18n="passphraseRecoveryWarning">请将口令保存在可信的密码管理器中；遗失后无法解密已有同步文件。</p>
                     <p class="wizard-error hidden" id="wizard-passphrase-error" role="alert"></p>
                 </section>
@@ -861,15 +861,15 @@
 
                 <div class="sync-fields" id="remote-sync-fields">
                     <label class="settings-field">
-                        <span><strong data-i18n="webDavUrl">同步地址</strong><small data-i18n="webDavUrlHint">填写同步服务提供的远端地址</small></span>
-                        <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="url">
+                        <span><strong id="sync-endpoint-label" data-i18n="webDavUrl">同步地址</strong><small id="sync-endpoint-hint" data-i18n="webDavUrlHint">填写同步服务提供的远端地址</small></span>
+                        <input id="sync-endpoint-input" type="url" inputmode="url" placeholder="https://dav.example.com/bookmarks/" data-i18n-placeholder="webDavUrlPlaceholder" autocomplete="off">
                     </label>
-                    <label class="settings-field">
-                        <span><strong data-i18n="webDavUsername">用户名</strong><small data-i18n="webDavUsernameHint">地址和用户名会保存在本机</small></span>
+                    <label class="settings-field" id="sync-username-field">
+                        <span><strong id="sync-username-label" data-i18n="webDavUsername">用户名</strong><small id="sync-username-hint" data-i18n="webDavUsernameHint">地址和用户名会保存在本机</small></span>
                         <input id="sync-username-input" type="text" autocomplete="username">
                     </label>
                     <label class="settings-field">
-                        <span><strong data-i18n="webDavPassword">密码或应用密码</strong><small data-i18n="sessionOnly">默认仅保留在当前页面内存中</small></span>
+                        <span><strong id="sync-password-label" data-i18n="webDavPassword">密码、应用密码或 SAS Token</strong><small id="sync-password-hint" data-i18n="sessionOnly">默认仅保留在当前页面内存中</small></span>
                         <input id="sync-password-input" type="password" autocomplete="off">
                     </label>
                 </div>
@@ -925,7 +925,7 @@
                     </div>
                 </div>
 
-                <p class="sync-security-note" data-i18n="syncSecurityNote">书签会先在本机加密后再上传；密码和加密口令不会写入远端文件。</p>
+                <p class="sync-security-note" data-i18n="syncSecurityNote">书签会先在本机加密后再上传；密码、SAS Token 和加密口令不会写入远端文件。</p>
                 <p class="sync-compatibility" id="sync-compatibility-note" data-i18n="syncCorsNote">如果无法连接，请检查同步地址和应用密码，或联系同步服务管理员。</p>
             </div>
 

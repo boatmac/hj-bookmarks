@@ -149,11 +149,11 @@ Build output directory: .
 
 - 自动目录备份及本地同步目录仍要求支持 File System Access API 的 Edge 或 Chrome；
 - HTTPS 托管满足安全上下文要求，但不会扩大 Firefox/Safari 的目录 API 能力；
-- 标准 WebDAV 服务必须允许线上站点的 Origin、请求方法和请求头；
-- 从 `file://` 迁移到 HTTPS 后，Origin 从 `null` 变为实际网站地址，应重新验证 WebDAV CORS；
-- 远端更新检查需要允许 `If-None-Match` 请求头并向浏览器暴露 `ETag`；未暴露 ETag 时会退回密文内容 hash 比较；
+- 标准 WebDAV 与 Azure Blob 必须允许线上站点的 Origin、请求方法和请求头；
+- 从 `file://` 迁移到 HTTPS 后，Origin 从 `null` 变为实际网站地址，应重新验证远端 CORS；
+- 标准 WebDAV 未暴露 ETag 时可退回密文 hash；Azure Blob 必须向浏览器公开 ETag，否则应用会停止写入；
 - 静态托管平台只分发应用文件，书签内容不会因为部署而自动上传到托管平台；
-- 备份口令、同步密码和加密口令不得写入工作流、仓库或构建产物。
+- 备份口令、同步密码、Azure SAS Token 和加密口令不得写入工作流、仓库或构建产物。
 
 ## 仓库重命名
 

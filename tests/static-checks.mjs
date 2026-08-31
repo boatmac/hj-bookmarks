@@ -100,6 +100,7 @@ async function checkDocumentStructure() {
         license,
         changelog,
         securityPolicy,
+        azureBlobGuide,
         overviewImage,
     ] = await Promise.all([
         readFile(resolve(repositoryRoot, 'index.html'), 'utf8'),
@@ -112,6 +113,7 @@ async function checkDocumentStructure() {
         readFile(resolve(repositoryRoot, 'LICENSE'), 'utf8'),
         readFile(resolve(repositoryRoot, 'CHANGELOG.md'), 'utf8'),
         readFile(resolve(repositoryRoot, 'SECURITY.md'), 'utf8'),
+        readFile(resolve(repositoryRoot, 'docs/AZURE-BLOB.md'), 'utf8'),
         stat(resolve(repositoryRoot, 'docs/images/hj-bookmarks-overview.png')),
     ]);
 
@@ -139,6 +141,13 @@ async function checkDocumentStructure() {
         securityPolicy.includes('/security/advisories/new')
         && securityPolicy.includes('不要提交秘密'),
         'The security policy is missing private reporting or secret-handling guidance.',
+    );
+    check(
+        azureBlobGuide.includes('blob.core.windows.net')
+        && azureBlobGuide.includes('blob.core.chinacloudapi.cn')
+        && azureBlobGuide.includes('exampleaccount')
+        && !azureBlobGuide.includes('?sv='),
+        'The Azure Blob guide is missing safe cloud examples or contains a SAS query.',
     );
     check(
         overviewImage.isFile() && overviewImage.size > 10_000,

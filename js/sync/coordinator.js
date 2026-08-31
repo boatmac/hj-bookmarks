@@ -10,6 +10,8 @@ async function initializeWebDavSync() {
         return;
     }
     let storedSetupComplete = null;
+    let sanitizedStoredEndpoint = false;
+    let sensitiveStoredEndpointKey = '';
     try {
         const preferences = await getSetting(SYNC_PREFERENCES_KEY);
         if (preferences && typeof preferences === 'object') {
@@ -43,6 +45,22 @@ async function initializeWebDavSync() {
                     ? preferences.remoteWatchLastChangeAt
                     : '';
             }
+            const previousStoredEndpointKey = syncEndpointKey();
+            const separated = separateAzureBlobCredential(state.sync.endpoint, state.sync.password);
+            if (separated.isAzureBlob) {
+                sanitizedStoredEndpoint = separated.endpoint !== state.sync.endpoint
+                    || Boolean(state.sync.username);
+                if (separated.inlineCredential) sensitiveStoredEndpointKey = previousStoredEndpointKey;
+                state.sync.endpoint = separated.endpoint;
+                state.sync.username = '';
+                if (separated.inlineCredential) state.sync.password = separated.credential;
+                if (state.sync.remoteWatch.endpointKey !== syncEndpointKey()) {
+                    state.sync.remoteWatch.endpointKey = '';
+                    state.sync.remoteWatch.version = null;
+                    state.sync.remoteWatch.lastCheckedAt = '';
+                    state.sync.remoteWatch.lastChangeAt = '';
+                }
+            }
         }
         await initializeLocalFolderSync();
         state.sync.setupComplete = storedSetupComplete ?? isSyncModeConfigured();
@@ -59,6 +77,8 @@ async function initializeWebDavSync() {
             refreshOwnSyncDeviceRecord();
         }
         await loadSyncConflicts();
+        if (sensitiveStoredEndpointKey) await deleteSyncState(sensitiveStoredEndpointKey);
+        if (sanitizedStoredEndpoint) await saveSyncPreferences();
     } catch (error) {
         logErrorSafely('error', 'Unable to restore remote sync settings.', error);
         state.sync.error = error?.message || String(error);
@@ -73,7 +93,10 @@ async function initializeWebDavSync() {
         && !state.sync.conflicts.length
         && state.sync.passphrase.length >= 8
         && (state.sync.mode !== 'local-folder' || state.sync.localFolder.permission === 'granted')
-        && (state.sync.mode === 'local-folder' || !state.sync.username || state.sync.password)
+        && (
+            state.sync.mode === 'local-folder'
+            || hasRemoteAccessCredential(state.sync.endpoint, state.sync.username, state.sync.password)
+        )
     ) {
         state.sync.timer = window.setTimeout(
             () => runWebDavSync({ notify: false, automatic: true }),
@@ -534,7 +557,10 @@ async function resolveCurrentConflictUnlocked(strategy) {
     showToast(t('allConflictsResolved'));
     if (
         state.sync.passphrase
-        && (state.sync.mode === 'local-folder' || !state.sync.username || state.sync.password)
+        && (
+            state.sync.mode === 'local-folder'
+            || hasRemoteAccessCredential(state.sync.endpoint, state.sync.username, state.sync.password)
+        )
     ) {
         window.setTimeout(() => runWebDavSync({ notify: true }), 120);
     }
@@ -658,7 +684,24 @@ function restoreResolvedSyncItems(items) {
     });
 }
 
+function separateRemoteCredentialState() {
+    const separated = separateAzureBlobCredential(state.sync.endpoint, state.sync.password);
+    if (!separated.isAzureBlob) return false;
+    const changed = separated.endpoint !== state.sync.endpoint || Boolean(state.sync.username);
+    state.sync.endpoint = separated.endpoint;
+    state.sync.username = '';
+    state.sync.password = separated.credential;
+    if (state.sync.remoteWatch.endpointKey !== syncEndpointKey()) {
+        state.sync.remoteWatch.endpointKey = '';
+        state.sync.remoteWatch.version = null;
+        state.sync.remoteWatch.lastCheckedAt = '';
+        state.sync.remoteWatch.lastChangeAt = '';
+    }
+    return changed;
+}
+
 async function saveSyncPreferences() {
+    separateRemoteCredentialState();
     try {
         await saveSetting(SYNC_PREFERENCES_KEY, {
             mode: state.sync.mode,
@@ -763,11 +806,29 @@ async function handleSyncModeChange() {
 function updateSyncSecretsFromForm(resetRetry = true) {
     const previousFingerprint = syncSessionFingerprint();
     const previousEndpoint = state.sync.endpoint;
+    const previousAzureBlob = isAzureBlobSyncEndpoint(previousEndpoint);
     const previousEndpointKey = syncEndpointKey();
-    state.sync.endpoint = ui.syncEndpointInput.value.trim();
-    state.sync.username = ui.syncUsernameInput.value.trim();
-    state.sync.password = ui.syncPasswordInput.value;
+    const separated = separateAzureBlobCredential(
+        ui.syncEndpointInput.value.trim(),
+        ui.syncPasswordInput.value,
+    );
+    const providerChanged = previousAzureBlob !== separated.isAzureBlob && Boolean(previousEndpoint);
+    const azureBlobEndpointChanged = previousAzureBlob
+        && separated.isAzureBlob
+        && previousEndpoint !== separated.endpoint;
+    const clearAccessCredential = !separated.inlineCredential
+        && (providerChanged || azureBlobEndpointChanged);
+    state.sync.endpoint = separated.endpoint;
+    state.sync.username = separated.isAzureBlob ? '' : ui.syncUsernameInput.value.trim();
+    state.sync.password = clearAccessCredential ? '' : separated.credential;
     state.sync.passphrase = ui.syncPassphraseInput.value;
+    if (separated.isAzureBlob) {
+        ui.syncEndpointInput.value = state.sync.endpoint;
+        ui.syncUsernameInput.value = '';
+        ui.syncPasswordInput.value = state.sync.password;
+    } else if (clearAccessCredential) {
+        ui.syncPasswordInput.value = '';
+    }
     const nextEndpointKey = syncEndpointKey();
     if (previousEndpoint !== state.sync.endpoint) {
         state.sync.koofrMountId = '';
@@ -876,6 +937,7 @@ function renderSyncSettings() {
     if (!ui.syncMenuStatus) return;
     const sync = state.sync;
     const localMode = sync.mode === 'local-folder';
+    const azureBlob = !localMode && isAzureBlobSyncEndpoint(sync.endpoint);
     const localFolder = sync.localFolder;
     const otherTabSync = hasOtherTabSyncing();
     let status = 'ready';
@@ -889,7 +951,11 @@ function renderSyncSettings() {
     else if (localMode && !localFolder.handle) status = 'local-not-configured';
     else if (localMode && localFolder.permission !== 'granted') status = 'local-permission';
     else if (!localMode && !sync.endpoint) status = 'not-configured';
-    else if (!sync.unlocked && sync.passphrase.length >= 8 && (localMode || !sync.username || sync.password)) status = 'credentials-ready';
+    else if (
+        !sync.unlocked
+        && sync.passphrase.length >= 8
+        && (localMode || hasRemoteAccessCredential(sync.endpoint, sync.username, sync.password))
+    ) status = 'credentials-ready';
     else if (!sync.unlocked) status = 'locked';
 
     const statusContent = {
@@ -935,7 +1001,15 @@ function renderSyncSettings() {
     ui.syncWizardButton.classList.toggle('hidden', connectionConfigured);
     ui.remoteSyncFields.classList.toggle('hidden', localMode);
     ui.localFolderSyncFields.classList.toggle('hidden', !localMode);
-    ui.autoCreateDirectoryRow.classList.toggle('hidden', localMode);
+    ui.syncUsernameField.classList.toggle('hidden', azureBlob);
+    ui.syncEndpointLabel.textContent = t(azureBlob ? 'azureBlobUrl' : 'webDavUrl');
+    ui.syncEndpointHint.textContent = t(azureBlob ? 'azureBlobUrlHint' : 'webDavUrlHint');
+    ui.syncEndpointInput.placeholder = t(azureBlob ? 'azureBlobUrlPlaceholder' : 'webDavUrlPlaceholder');
+    ui.syncUsernameLabel.textContent = t('webDavUsername');
+    ui.syncUsernameHint.textContent = t('webDavUsernameHint');
+    ui.syncPasswordLabel.textContent = t(azureBlob ? 'azureBlobSasToken' : 'webDavPassword');
+    ui.syncPasswordHint.textContent = t(azureBlob ? 'azureBlobSasHint' : 'sessionOnly');
+    ui.autoCreateDirectoryRow.classList.toggle('hidden', localMode || azureBlob);
     ui.localSyncFolderName.textContent = localFolder.handle
         ? t('localSyncFolderSelected', { name: localFolder.name })
         : t('localSyncFolderNotSelected');
@@ -943,7 +1017,9 @@ function renderSyncSettings() {
         || !localFolder.supported
         || sync.running
         || otherTabSync;
-    ui.syncCompatibilityNote.textContent = t(localMode ? 'localFolderCompatibility' : 'syncCorsNote');
+    ui.syncCompatibilityNote.textContent = t(localMode
+        ? 'localFolderCompatibility'
+        : azureBlob ? 'azureBlobCompatibility' : 'syncCorsNote');
 
     ui.syncStatusCard.dataset.state = status;
     ui.syncSettingsButton.dataset.state = status;
@@ -1127,7 +1203,10 @@ function resetSyncRetryState(clearTimer = false) {
 function hasUsableCurrentSyncCredentials() {
     const sync = state.sync;
     return sync.passphrase.length >= 8
-        && (sync.mode === 'local-folder' || !sync.username || Boolean(sync.password));
+        && (
+            sync.mode === 'local-folder'
+            || hasRemoteAccessCredential(sync.endpoint, sync.username, sync.password)
+        );
 }
 
 function canRetryAutomaticRemoteSync() {
@@ -1219,8 +1298,9 @@ async function handleQuickSync() {
     if (!hasUsableCurrentSyncCredentials()) {
         openSyncDialog();
         window.requestAnimationFrame(() => {
-            const missingPassword = sync.mode === 'remote' && sync.username && !sync.password;
-            (missingPassword ? ui.syncPasswordInput : ui.syncPassphraseInput).focus();
+            const missingAccessCredential = sync.mode === 'remote'
+                && !hasRemoteAccessCredential(sync.endpoint, sync.username, sync.password);
+            (missingAccessCredential ? ui.syncPasswordInput : ui.syncPassphraseInput).focus();
         });
         return;
     }
@@ -1304,8 +1384,16 @@ async function runWebDavSyncUnlocked({
 
     let endpoint;
     try {
+        const separated = separateAzureBlobCredential(sync.endpoint, sync.password);
+        sync.endpoint = separated.endpoint;
+        if (separated.isAzureBlob) {
+            sync.username = '';
+            sync.password = validateAzureBlobSasToken(separated.credential);
+        }
         endpoint = normalizeWebDavEndpoint(sync.endpoint);
-        if (sync.username && !sync.password) throw new Error(t('syncPasswordRequired'));
+        if (!hasRemoteAccessCredential(endpoint, sync.username, sync.password)) {
+            throw new Error(t(separated.isAzureBlob ? 'azureBlobSasRequired' : 'syncPasswordRequired'));
+        }
         if (sync.passphrase.length < 8) throw new Error(t('syncPassphraseRequired'));
     } catch (error) {
         sync.error = error.message;
@@ -1316,6 +1404,8 @@ async function runWebDavSyncUnlocked({
 
     sync.endpoint = endpoint;
     ui.syncEndpointInput.value = endpoint;
+    ui.syncUsernameInput.value = sync.username;
+    ui.syncPasswordInput.value = sync.password;
     const endpointKey = syncEndpointKey(endpoint, sync.username);
     if (sync.conflictEndpointKey !== endpointKey) await loadSyncConflicts();
     if (sync.conflicts.length) {

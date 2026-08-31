@@ -34,6 +34,8 @@ const approvedPublicHosts = new Set([
     'developers.cloudflare.com',
     'docs.github.com',
     'docs.netlify.com',
+    'exampleaccount.blob.core.chinacloudapi.cn',
+    'exampleaccount.blob.core.windows.net',
     'fonts.googleapis.com',
     'fonts.gstatic.com',
     'github.com',
@@ -144,6 +146,10 @@ function inspectRemoteUrls(source, location, { allowLegacyExamples = false } = {
             addFinding('credential-in-url', location, source, match.index);
             continue;
         }
+        const sasSignature = url.searchParams.get('sig');
+        if (sasSignature && !/^example(?:-|$)/i.test(sasSignature)) {
+            addFinding('azure-sas-signature', location, source, match.index);
+        }
         const hostname = url.hostname.toLocaleLowerCase('en-US');
         const exampleHost = hostname === 'example.com'
             || hostname.endsWith('.example.com')
@@ -151,6 +157,12 @@ function inspectRemoteUrls(source, location, { allowLegacyExamples = false } = {
         const placeholderHost = raw.includes('$') || !/^[\x20-\x7e]+$/.test(raw);
         if (!placeholderHost && !exampleHost && !approvedPublicHosts.has(hostname)) {
             addFinding('unapproved-public-url-host', location, source, match.index);
+        }
+        if (
+            /\.blob\.core\.(?:windows\.net|chinacloudapi\.cn)$/i.test(hostname)
+            && !approvedPublicHosts.has(hostname)
+        ) {
+            addFinding('non-example-azure-blob-endpoint', location, source, match.index);
         }
         if (/^(?:10|127)\./.test(url.hostname)
             || /^192\.168\./.test(url.hostname)
@@ -315,9 +327,11 @@ function runRuleSelfTest() {
         ['-----BEGIN ', 'PRIVATE KEY-----'].join(''),
         `${'https'}://${'example-user'}:${'example-password'}@dav.example.com/Example-Bookmarks/`,
         `https://dav.example.com/Example-Bookmarks/?${['access_', 'token'].join('')}=${['example', 'value1234'].join('')}`,
+        `${root}/Example-Bookmarks/?${['s', 'ig'].join('')}=${['sensitive', 'signature1234'].join('-')}`,
         ['C:', 'Users', 'Private Person', 'Bookmarks'].join('\\'),
         `${'https'}://${['192', '168', '1', '10'].join('.')}/${['d', 'av'].join('')}/Example-Bookmarks/`,
         `${root}/${['Private', 'Folder'].join('-')}/`,
+        `${'https'}://${['private', 'account'].join('')}.${['blob', 'core', 'windows', 'net'].join('.')}/example-container/`,
     ].join('\n');
     inspectContent(Buffer.from(samples), 'audit-rule-self-test.txt', 'audit-rule-self-test.txt');
     const detected = new Set(findings.slice(initialLength).map((finding) => finding.rule));
@@ -330,10 +344,12 @@ function runRuleSelfTest() {
         'private-key-material',
         'credential-in-url',
         'secret-in-query-string',
+        'azure-sas-signature',
         'personal-local-path',
         'private-network-url',
         'unapproved-public-url-host',
         'non-example-koofr-endpoint',
+        'non-example-azure-blob-endpoint',
     ];
     const missing = expected.filter((rule) => !detected.has(rule));
     findings.splice(initialLength);

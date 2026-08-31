@@ -1,6 +1,10 @@
-/* Standard WebDAV and Koofr provider adapters. */
+/* Standard WebDAV, Koofr, and Azure Blob provider adapters. */
 /* eslint-disable no-unused-vars -- Shared by ordered classic scripts. */
 'use strict';
+
+// A conservative data-plane version shared by global Azure and Azure China.
+const AZURE_BLOB_API_VERSION = '2020-10-02';
+const AZURE_BLOB_HOST_PATTERN = /^[a-z0-9]{3,24}\.blob\.core\.(?:windows\.net|chinacloudapi\.cn)$/i;
 
 function isKoofrSyncEndpoint(value) {
     try {
@@ -9,6 +13,57 @@ function isKoofrSyncEndpoint(value) {
     } catch {
         return false;
     }
+}
+
+function isAzureBlobHostname(hostname) {
+    return AZURE_BLOB_HOST_PATTERN.test(String(hostname || '').toLocaleLowerCase('en-US'));
+}
+
+function isAzureBlobSyncEndpoint(value) {
+    try {
+        return isAzureBlobHostname(new URL(value).hostname);
+    } catch {
+        return false;
+    }
+}
+
+function azureBlobSasTokenFromInput(value) {
+    const input = String(value || '').trim();
+    if (!input) return '';
+    try {
+        const url = new URL(input);
+        if (!isAzureBlobHostname(url.hostname)) return '';
+        return url.search.replace(/^\?/, '');
+    } catch {
+        return input.replace(/^\?/, '');
+    }
+}
+
+function separateAzureBlobCredential(endpoint, credential = '') {
+    const input = String(endpoint || '').trim();
+    if (!isAzureBlobSyncEndpoint(input)) {
+        return { isAzureBlob: false, endpoint: input, credential: String(credential || '') };
+    }
+    const url = new URL(input);
+    const inlineCredential = url.search.replace(/^\?/, '');
+    url.search = '';
+    url.hash = '';
+    return {
+        isAzureBlob: true,
+        endpoint: url.toString(),
+        credential: inlineCredential || azureBlobSasTokenFromInput(credential),
+        inlineCredential: Boolean(inlineCredential),
+    };
+}
+
+function validateAzureBlobSasToken(value) {
+    const token = azureBlobSasTokenFromInput(value);
+    const parameters = new URLSearchParams(token);
+    if (!token || !parameters.get('sig')) throw new Error(t('azureBlobSasRequired'));
+    const expiry = parameters.get('se');
+    if (expiry && !validDate(expiry)) throw new Error(t('azureBlobSasInvalid'));
+    if (expiry && Date.parse(expiry) <= Date.now()) throw new Error(t('azureBlobSasExpired'));
+    return token;
 }
 
 function normalizeWebDavEndpoint(value) {
@@ -20,15 +75,54 @@ function normalizeWebDavEndpoint(value) {
     } catch {
         throw new Error(t('syncUrlInvalid'));
     }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
-        throw new Error(t('syncUrlInvalid'));
+    const azureBlob = isAzureBlobHostname(url.hostname);
+    if (
+        !['http:', 'https:'].includes(url.protocol)
+        || (azureBlob && url.protocol !== 'https:')
+        || url.username
+        || url.password
+    ) {
+        throw new Error(t(azureBlob ? 'azureBlobUrlInvalid' : 'syncUrlInvalid'));
+    }
+    if (azureBlob) {
+        const segments = url.pathname.split('/').filter(Boolean);
+        if (!segments.length) throw new Error(t('azureBlobUrlInvalid'));
+        url.search = '';
     }
     if (!url.pathname.toLowerCase().endsWith('.json')) {
         if (!url.pathname.endsWith('/')) url.pathname += '/';
         url.pathname += SYNC_FILE_NAME;
     }
+    if (azureBlob && url.pathname.split('/').filter(Boolean).length < 2) {
+        throw new Error(t('azureBlobUrlInvalid'));
+    }
     url.hash = '';
     return url.toString();
+}
+
+function hasRemoteAccessCredential(endpoint, username, password) {
+    return isAzureBlobSyncEndpoint(endpoint)
+        ? Boolean(String(password || '').trim())
+        : !String(username || '').trim() || Boolean(password);
+}
+
+function createAzureBlobRequestUrl(endpoint) {
+    const url = new URL(endpoint);
+    url.search = validateAzureBlobSasToken(state.sync.password);
+    return url.toString();
+}
+
+function createAzureBlobHeaders(includeContentType = false) {
+    const headers = new Headers({
+        Accept: 'application/json',
+        'x-ms-version': AZURE_BLOB_API_VERSION,
+        'x-ms-date': new Date().toUTCString(),
+    });
+    if (includeContentType) {
+        headers.set('Content-Type', 'application/json; charset=utf-8');
+        headers.set('x-ms-blob-type', 'BlockBlob');
+    }
+    return headers;
 }
 
 function createWebDavHeaders(includeContentType = false) {
@@ -86,6 +180,10 @@ async function fetchWebDav(url, options) {
 
 async function createSyncRemoteContext(endpoint, { silent = false } = {}) {
     const url = new URL(endpoint);
+    if (isAzureBlobHostname(url.hostname)) {
+        validateAzureBlobSasToken(state.sync.password);
+        return { provider: 'azure-blob', endpoint: url.toString() };
+    }
     if (!isKoofrSyncEndpoint(endpoint)) return { provider: 'webdav' };
 
     const segments = url.pathname.split('/').filter(Boolean).map((segment) => {
@@ -191,6 +289,27 @@ function createWebDavRemoteVersion(response, content = '') {
     };
 }
 
+function createAzureBlobRemoteVersion(response, content = '') {
+    const etag = response.headers.get('ETag') || '';
+    if (!etag) throw new Error(t('azureBlobEtagUnavailable'));
+    return {
+        provider: 'azure-blob',
+        exists: true,
+        etag,
+        lastModified: response.headers.get('Last-Modified') || '',
+        size: Number(response.headers.get('Content-Length')) || String(content).length,
+        contentHash: content ? hashRemoteCiphertext(content) : '',
+    };
+}
+
+function throwAzureBlobResponseError(response, operationKey) {
+    if (response.status === 401 || response.status === 403) throw new Error(t('azureBlobAccessDenied'));
+    if (response.status === 404 && operationKey === 'syncWriteFailed') {
+        throw new Error(t('azureBlobContainerMissing'));
+    }
+    throw createSyncResponseError(operationKey, response.status);
+}
+
 function createKoofrRemoteVersion(info) {
     return {
         provider: 'koofr',
@@ -213,6 +332,7 @@ async function parseKoofrFileInfo(response) {
 }
 
 async function probeRemoteSyncVersion(endpoint, context, previousVersion = null) {
+    if (context.provider === 'azure-blob') return probeAzureBlobSyncVersion(context, previousVersion);
     if (context.provider === 'koofr') return probeKoofrSyncVersion(context);
     const headers = createWebDavHeaders();
     if (previousVersion?.provider === 'webdav' && previousVersion.etag) {
@@ -240,6 +360,31 @@ async function probeRemoteSyncVersion(endpoint, context, previousVersion = null)
     return { version: createWebDavRemoteVersion(response, content), unchanged: false };
 }
 
+async function probeAzureBlobSyncVersion(context, previousVersion = null) {
+    const headers = createAzureBlobHeaders();
+    if (previousVersion?.provider === 'azure-blob' && previousVersion.etag) {
+        headers.set('If-None-Match', previousVersion.etag);
+    }
+    const response = await fetchWebDav(createAzureBlobRequestUrl(context.endpoint), {
+        method: 'HEAD',
+        headers,
+        cache: 'no-store',
+        credentials: 'omit',
+        redirect: 'error',
+    });
+    if (response.status === 304 && previousVersion) {
+        return { version: previousVersion, unchanged: true };
+    }
+    if (response.status === 404) {
+        return {
+            version: { provider: 'azure-blob', exists: false },
+            unchanged: previousVersion?.provider === 'azure-blob' && previousVersion.exists === false,
+        };
+    }
+    if (!response.ok) throwAzureBlobResponseError(response, 'syncReadFailed');
+    return { version: createAzureBlobRemoteVersion(response), unchanged: false };
+}
+
 async function probeKoofrSyncVersion(context) {
     const response = await fetchWebDav(createKoofrApiUrl(context, 'info', { path: context.filePath }), {
         method: 'GET',
@@ -258,6 +403,7 @@ async function probeKoofrSyncVersion(context) {
 }
 
 async function readRemoteSyncFile(endpoint, context) {
+    if (context.provider === 'azure-blob') return readAzureBlobSyncFile(context);
     if (context.provider === 'koofr') return readKoofrSyncFile(context);
     const response = await fetchWebDav(endpoint, {
         method: 'GET',
@@ -283,6 +429,34 @@ async function readRemoteSyncFile(endpoint, context) {
         exists: true,
         etag: response.headers.get('ETag') || '',
         version: createWebDavRemoteVersion(response, text),
+        data,
+    };
+}
+
+async function readAzureBlobSyncFile(context) {
+    const response = await fetchWebDav(createAzureBlobRequestUrl(context.endpoint), {
+        method: 'GET',
+        headers: createAzureBlobHeaders(),
+        cache: 'no-store',
+        credentials: 'omit',
+        redirect: 'error',
+    });
+    if (response.status === 404) return {
+        exists: false,
+        etag: '',
+        version: { provider: 'azure-blob', exists: false },
+        data: emptySyncDataset(),
+    };
+    if (!response.ok) throwAzureBlobResponseError(response, 'syncReadFailed');
+    const text = await response.text();
+    const version = createAzureBlobRemoteVersion(response, text);
+    const data = text.trim()
+        ? parseRemoteSyncDataset(await decryptSyncData(text, state.sync.passphrase))
+        : emptySyncDataset();
+    return {
+        exists: true,
+        etag: version.etag,
+        version,
         data,
     };
 }
@@ -340,6 +514,7 @@ async function readKoofrSyncFile(context) {
 }
 
 async function ensureRemoteParentDirectory(endpoint, context) {
+    if (context.provider === 'azure-blob') return false;
     if (context.provider === 'koofr') return ensureKoofrParentDirectory(context);
     const directory = new URL(endpoint);
     directory.pathname = directory.pathname.slice(0, directory.pathname.lastIndexOf('/') + 1);
@@ -411,6 +586,7 @@ async function ensureKoofrParentDirectory(context) {
 }
 
 async function writeRemoteSyncFile(endpoint, content, remote, context) {
+    if (context.provider === 'azure-blob') return writeAzureBlobSyncFile(content, remote, context);
     if (context.provider === 'koofr') return writeKoofrSyncFile(content, remote, context);
     const headers = createWebDavHeaders(true);
     if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
@@ -431,6 +607,26 @@ async function writeRemoteSyncFile(endpoint, content, remote, context) {
     return {
         status: 'written',
         version: createWebDavRemoteVersion(response, content),
+    };
+}
+
+async function writeAzureBlobSyncFile(content, remote, context) {
+    const headers = createAzureBlobHeaders(true);
+    if (remote.exists && remote.etag) headers.set('If-Match', remote.etag);
+    else if (!remote.exists) headers.set('If-None-Match', '*');
+    const response = await fetchWebDav(createAzureBlobRequestUrl(context.endpoint), {
+        method: 'PUT',
+        headers,
+        body: content,
+        cache: 'no-store',
+        credentials: 'omit',
+        redirect: 'error',
+    });
+    if (response.status === 412) return { status: 'conflict', version: null };
+    if (!response.ok) throwAzureBlobResponseError(response, 'syncWriteFailed');
+    return {
+        status: 'written',
+        version: createAzureBlobRemoteVersion(response, content),
     };
 }
 

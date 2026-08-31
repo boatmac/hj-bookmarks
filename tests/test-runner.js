@@ -187,6 +187,48 @@ test('同步地址会规范化并识别 Koofr', () => {
     assert(!isKoofrSyncEndpoint('https://dav.example.com/Koofr/Example-Bookmarks/'));
 });
 
+test('Azure Blob 地址支持全球 Azure、中国区和 SAS 本机拆分', () => {
+    const globalContainer = 'https://exampleaccount.blob.core.windows.net/example-container/';
+    const chinaContainer = 'https://exampleaccount.blob.core.chinacloudapi.cn/example-container/';
+    const sas = 'sv=2023-11-03&sr=c&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=example-signature';
+    assert(isAzureBlobSyncEndpoint(globalContainer));
+    assert(isAzureBlobSyncEndpoint(chinaContainer));
+    assert(!isAzureBlobSyncEndpoint('https://blob.example.com/example-container/'));
+    assertEqual(
+        normalizeWebDavEndpoint(globalContainer),
+        `${globalContainer}bookmarks-sync.enc.json`,
+    );
+    assertEqual(
+        normalizeWebDavEndpoint(chinaContainer),
+        `${chinaContainer}bookmarks-sync.enc.json`,
+    );
+
+    const separated = separateAzureBlobCredential(`${globalContainer}?${sas}`, '');
+    assert(separated.isAzureBlob);
+    assertEqual(separated.endpoint, globalContainer);
+    assertEqual(separated.credential, sas);
+    assert(!separated.endpoint.includes('sig='));
+    assertEqual(validateAzureBlobSasToken(separated.credential), sas);
+    assert(hasRemoteAccessCredential(separated.endpoint, '', separated.credential));
+    assert(!hasRemoteAccessCredential(separated.endpoint, '', ''));
+
+    let rejectedExpiredSas = false;
+    try {
+        validateAzureBlobSasToken('sv=2023-11-03&se=2020-01-01T00%3A00%3A00Z&sig=example-expired');
+    } catch (error) {
+        rejectedExpiredSas = error.message === t('azureBlobSasExpired');
+    }
+    assert(rejectedExpiredSas, 'Expired Azure SAS must be rejected');
+
+    let rejectedInsecureUrl = false;
+    try {
+        normalizeWebDavEndpoint(globalContainer.replace('https:', 'http:'));
+    } catch {
+        rejectedInsecureUrl = true;
+    }
+    assert(rejectedInsecureUrl, 'Azure Blob must require HTTPS');
+});
+
 test('远端版本探测会使用条件请求并识别内容变化', async () => {
     const originalFetch = window.fetch;
     const previousUsername = state.sync.username;
@@ -279,6 +321,136 @@ test('远端版本探测会使用条件请求并识别内容变化', async () =>
         window.fetch = originalFetch;
         state.sync.username = previousUsername;
         state.sync.password = previousPassword;
+    }
+});
+
+test('Azure Blob 适配器使用 SAS、ETag 和 BlockBlob 条件写入', async () => {
+    const originalFetch = window.fetch;
+    const previousPassword = state.sync.password;
+    const previousPassphrase = state.sync.passphrase;
+    const endpoint = 'https://exampleaccount.blob.core.windows.net/example-container/bookmarks-sync.enc.json';
+    const sas = 'sv=2023-11-03&sr=b&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=example-signature';
+    const passphrase = 'azure adapter test passphrase';
+    const requests = [];
+    try {
+        state.sync.password = sas;
+        state.sync.passphrase = passphrase;
+        const context = await createSyncRemoteContext(endpoint, { silent: true });
+        assertEqual(context.provider, 'azure-blob');
+        assert(!JSON.stringify(context).includes('example-signature'));
+
+        window.fetch = async (url, options) => {
+            requests.push({ url, options });
+            return new Response(null, {
+                status: 200,
+                headers: {
+                    ETag: '"azure-version-1"',
+                    'Last-Modified': 'Wed, 07 Jan 2026 00:00:00 GMT',
+                    'Content-Length': '120',
+                },
+            });
+        };
+        const observed = await probeRemoteSyncVersion(endpoint, context);
+        assertEqual(observed.version.provider, 'azure-blob');
+        assertEqual(observed.version.etag, '"azure-version-1"');
+        assert(remoteSyncVersionsEquivalent(observed.version, { ...observed.version }));
+        assert(!remoteSyncVersionsEquivalent(observed.version, {
+            ...observed.version,
+            etag: '"azure-version-other"',
+        }));
+        assertEqual(requests[0].options.method, 'HEAD');
+        assertEqual(new URL(requests[0].url).searchParams.get('sig'), 'example-signature');
+        assertEqual(requests[0].options.headers.get('x-ms-version'), AZURE_BLOB_API_VERSION);
+
+        window.fetch = async (url, options) => {
+            requests.push({ url, options });
+            return new Response(null, { status: 304 });
+        };
+        const unchanged = await probeRemoteSyncVersion(endpoint, context, observed.version);
+        assert(unchanged.unchanged);
+        assertEqual(requests.at(-1).options.headers.get('If-None-Match'), '"azure-version-1"');
+
+        const encrypted = await encryptSyncData(makeDataset(makeSyncItem({ title: 'Azure item' })), passphrase);
+        window.fetch = async (url, options) => {
+            requests.push({ url, options });
+            return new Response(encrypted, {
+                status: 200,
+                headers: {
+                    ETag: '"azure-version-2"',
+                    'Last-Modified': 'Wed, 07 Jan 2026 00:01:00 GMT',
+                    'Content-Length': String(encrypted.length),
+                },
+            });
+        };
+        const remote = await readRemoteSyncFile(endpoint, context);
+        assert(remote.exists);
+        assertEqual(remote.etag, '"azure-version-2"');
+        assertEqual(remote.data.items[0].title, 'Azure item');
+
+        window.fetch = async (url, options) => {
+            requests.push({ url, options });
+            return new Response(null, {
+                status: 201,
+                headers: {
+                    ETag: '"azure-version-3"',
+                    'Last-Modified': 'Wed, 07 Jan 2026 00:02:00 GMT',
+                },
+            });
+        };
+        const written = await writeRemoteSyncFile(endpoint, encrypted, remote, context);
+        const writeRequest = requests.at(-1);
+        assertEqual(written.status, 'written');
+        assertEqual(written.version.etag, '"azure-version-3"');
+        assertEqual(writeRequest.options.method, 'PUT');
+        assertEqual(writeRequest.options.headers.get('If-Match'), '"azure-version-2"');
+        assertEqual(writeRequest.options.headers.get('x-ms-blob-type'), 'BlockBlob');
+        assertEqual(writeRequest.options.credentials, 'omit');
+
+        window.fetch = async (url, options) => {
+            requests.push({ url, options });
+            return new Response(null, {
+                status: 201,
+                headers: { ETag: '"azure-version-created"' },
+            });
+        };
+        const created = await writeRemoteSyncFile(endpoint, encrypted, { exists: false }, context);
+        assertEqual(created.status, 'written');
+        assertEqual(requests.at(-1).options.headers.get('If-None-Match'), '*');
+
+        window.fetch = async () => new Response(null, { status: 412 });
+        const conflict = await writeRemoteSyncFile(endpoint, encrypted, remote, context);
+        assertEqual(conflict.status, 'conflict');
+
+        window.fetch = async () => new Response(null, { status: 200 });
+        let missingEtag = false;
+        try {
+            await probeRemoteSyncVersion(endpoint, context);
+        } catch (error) {
+            missingEtag = error.message === t('azureBlobEtagUnavailable');
+        }
+        assert(missingEtag, 'Azure Blob must expose ETag through CORS');
+
+        window.fetch = async () => new Response(null, { status: 403 });
+        let accessDenied = false;
+        try {
+            await readRemoteSyncFile(endpoint, context);
+        } catch (error) {
+            accessDenied = error.message === t('azureBlobAccessDenied');
+        }
+        assert(accessDenied, 'Azure Blob access failures must use the SAS-specific message');
+
+        window.fetch = async () => new Response(null, { status: 404 });
+        let missingContainer = false;
+        try {
+            await writeRemoteSyncFile(endpoint, encrypted, { exists: false }, context);
+        } catch (error) {
+            missingContainer = error.message === t('azureBlobContainerMissing');
+        }
+        assert(missingContainer, 'Azure Blob cannot create a missing container');
+    } finally {
+        window.fetch = originalFetch;
+        state.sync.password = previousPassword;
+        state.sync.passphrase = previousPassphrase;
     }
 });
 
@@ -1561,6 +1733,22 @@ test('长期设置只保存必要连接信息而不保存密码或加密口令',
         assert(!serialized.includes(password));
         assert(!serialized.includes(syncPassphrase));
         assert(!serialized.includes(backupPassphrase));
+
+        const azureBase = 'https://exampleaccount.blob.core.chinacloudapi.cn/example-container/';
+        const azureSas = 'sv=2023-11-03&sr=c&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=example-signature';
+        sync.endpoint = `${azureBase}?${azureSas}`;
+        sync.username = 'must-be-cleared@example.com';
+        sync.password = '';
+        sync.remoteWatch.endpointKey = syncEndpointKey();
+        assert(await saveSyncPreferences());
+        const storedAzure = await getSetting(SYNC_PREFERENCES_KEY);
+        const serializedAzure = JSON.stringify(storedAzure);
+        assertEqual(storedAzure.endpoint, azureBase);
+        assertEqual(storedAzure.username, '');
+        assertEqual(sync.password, azureSas);
+        assert(!serializedAzure.includes('sig='));
+        assert(!serializedAzure.includes('example-signature'));
+        assert(!serializedAzure.includes('must-be-cleared'));
     } finally {
         if (previousSyncPreferences === null) await deleteSetting(SYNC_PREFERENCES_KEY);
         else await saveSetting(SYNC_PREFERENCES_KEY, previousSyncPreferences);

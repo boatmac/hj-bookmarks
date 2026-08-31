@@ -40,6 +40,7 @@ function openSyncWizard(options = {}) {
         automatic: sharedIntent ? true : state.sync.automatic,
         rememberSession: sharedIntent ? false : state.sync.rememberSession,
         createDirectory: sharedIntent ? false : state.sync.createDirectory,
+        localItemCount: state.items.length,
     };
     syncWizardStep = sharedIntent ? 2 : 1;
     syncWizardFinished = false;
@@ -93,15 +94,40 @@ function collectSyncWizardInputs() {
     syncWizardDraft.mode = syncWizardDraft.intent === 'shared'
         ? 'remote'
         : selectedMode?.value === 'local-folder' ? 'local-folder' : 'remote';
-    syncWizardDraft.endpoint = ui.wizardEndpointInput.value.trim();
-    syncWizardDraft.username = ui.wizardUsernameInput.value.trim();
-    syncWizardDraft.password = ui.wizardPasswordInput.value;
+    const previousEndpoint = syncWizardDraft.endpoint;
+    const previousAzureBlob = isAzureBlobSyncEndpoint(previousEndpoint);
+    const separated = separateAzureBlobCredential(
+        ui.wizardEndpointInput.value.trim(),
+        ui.wizardPasswordInput.value,
+    );
+    const providerChanged = previousAzureBlob !== separated.isAzureBlob && Boolean(previousEndpoint);
+    const azureBlobEndpointChanged = previousAzureBlob
+        && separated.isAzureBlob
+        && previousEndpoint !== separated.endpoint;
+    const clearAccessCredential = !separated.inlineCredential
+        && (providerChanged || azureBlobEndpointChanged);
+    syncWizardDraft.endpoint = separated.endpoint;
+    syncWizardDraft.username = separated.isAzureBlob ? '' : ui.wizardUsernameInput.value.trim();
+    syncWizardDraft.password = clearAccessCredential ? '' : separated.credential;
+    if (separated.isAzureBlob) {
+        ui.wizardEndpointInput.value = syncWizardDraft.endpoint;
+        ui.wizardUsernameInput.value = '';
+        ui.wizardPasswordInput.value = syncWizardDraft.password;
+    } else if (clearAccessCredential) {
+        ui.wizardPasswordInput.value = '';
+    }
     syncWizardDraft.passphrase = ui.wizardPassphraseInput.value;
     syncWizardDraft.passphraseConfirm = ui.wizardPassphraseConfirmInput.value;
     syncWizardDraft.deviceName = ui.wizardDeviceNameInput.value.trim().slice(0, 80);
     syncWizardDraft.automatic = ui.wizardAutoSync.checked;
     syncWizardDraft.rememberSession = ui.wizardRememberSession.checked;
     syncWizardDraft.createDirectory = ui.wizardCreateDirectory.checked;
+}
+
+function handleSyncWizardConnectionInput() {
+    if (!syncWizardDraft) return;
+    collectSyncWizardInputs();
+    renderSyncWizard();
 }
 
 function clearSyncWizardErrors() {
@@ -126,14 +152,23 @@ function validateSyncWizardStep(step) {
                 return false;
             }
         } else {
+            const azureBlob = isAzureBlobSyncEndpoint(syncWizardDraft.endpoint);
             try {
                 normalizeWebDavEndpoint(syncWizardDraft.endpoint);
+                if (azureBlob) syncWizardDraft.password = validateAzureBlobSasToken(syncWizardDraft.password);
             } catch (error) {
                 showSyncWizardError(ui.wizardConnectionError, error.message);
                 return false;
             }
-            if (syncWizardDraft.username && !syncWizardDraft.password) {
-                showSyncWizardError(ui.wizardConnectionError, t('syncPasswordRequired'));
+            if (!hasRemoteAccessCredential(
+                syncWizardDraft.endpoint,
+                syncWizardDraft.username,
+                syncWizardDraft.password,
+            )) {
+                showSyncWizardError(
+                    ui.wizardConnectionError,
+                    t(azureBlob ? 'azureBlobSasRequired' : 'syncPasswordRequired'),
+                );
                 return false;
             }
         }
@@ -187,18 +222,28 @@ function renderSyncWizard() {
     });
 
     const localMode = syncWizardDraft.mode === 'local-folder';
+    const azureBlob = !localMode && isAzureBlobSyncEndpoint(syncWizardDraft.endpoint);
     ui.wizardRemoteFields.classList.toggle('hidden', localMode);
     ui.wizardLocalFolderFields.classList.toggle('hidden', !localMode);
-    ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode || sharedIntent);
+    ui.wizardUsernameField.classList.toggle('hidden', azureBlob);
+    ui.wizardEndpointLabel.textContent = t(azureBlob ? 'azureBlobUrl' : 'webDavUrl');
+    ui.wizardEndpointHint.textContent = t(azureBlob ? 'azureBlobUrlHint' : 'wizardAddressHint');
+    ui.wizardEndpointInput.placeholder = t(azureBlob ? 'azureBlobUrlPlaceholder' : 'webDavUrlPlaceholder');
+    ui.wizardUsernameLabel.textContent = t('webDavUsername');
+    ui.wizardPasswordLabel.textContent = t(azureBlob ? 'azureBlobSasToken' : 'webDavPassword');
+    ui.wizardPasswordHint.textContent = t(azureBlob ? 'azureBlobSasHint' : 'sessionOnly');
+    ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode || azureBlob || sharedIntent);
     ui.wizardJoinSharedLibraryButton.classList.toggle(
         'hidden',
         state.sync.setupComplete && isSyncModeConfigured(),
     );
     ui.wizardSharedLibraryNote.classList.toggle('hidden', !sharedIntent || syncWizardStep !== 2);
     ui.wizardSharedLibraryNote.textContent = t('sharedLibraryTrustNote');
-    ui.wizardConnectionHint.textContent = t(sharedIntent
-        ? 'sharedLibraryConnectionHint'
-        : localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint');
+    ui.wizardConnectionHint.textContent = t(azureBlob
+        ? (sharedIntent ? 'azureBlobSharedConnectionHint' : 'azureBlobConnectionHint')
+        : sharedIntent
+            ? 'sharedLibraryConnectionHint'
+            : localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint');
     ui.wizardLocalFolderName.textContent = syncWizardDraft.localHandle
         ? t('localSyncFolderSelected', { name: syncWizardDraft.localFolderName })
         : t('localSyncFolderNotSelected');
@@ -216,11 +261,13 @@ function renderSyncWizard() {
     ui.syncWizardFinishButton.disabled = syncWizardTesting;
     ui.syncWizardFinishButton.textContent = t(sharedIntent ? 'joinSharedLibraryAction' : 'testAndFinish');
 
-    const needsLocalConfirmation = sharedIntent && syncWizardStep === 5 && state.items.length > 0;
+    const needsLocalConfirmation = sharedIntent
+        && syncWizardStep === 5
+        && syncWizardDraft.localItemCount > 0;
     ui.wizardSharedLocalConfirmRow.classList.toggle('hidden', !needsLocalConfirmation);
     ui.wizardSharedLocalConfirmTitle.textContent = t('confirmSharingLocalBookmarks');
     ui.wizardSharedLocalConfirmDetail.textContent = t('confirmSharingLocalBookmarksDetail', {
-        count: state.items.length,
+        count: syncWizardDraft.localItemCount,
     });
 
     if (syncWizardStep === 5) {
@@ -261,17 +308,22 @@ function renderSyncWizardReview() {
     ui.wizardReview.replaceChildren();
     const localMode = syncWizardDraft.mode === 'local-folder';
     const sharedIntent = syncWizardDraft.intent === 'shared';
+    const azureBlob = !localMode && isAzureBlobSyncEndpoint(syncWizardDraft.endpoint);
     const rows = [
-        [t('reviewMethod'), t(sharedIntent
-            ? 'sharedLibraryMethod'
-            : localMode ? 'localFolderMode' : 'remoteServiceMode')],
+        [t('reviewMethod'), t(azureBlob
+            ? (sharedIntent ? 'azureBlobSharedLibraryMethod' : 'azureBlobMethod')
+            : sharedIntent
+                ? 'sharedLibraryMethod'
+                : localMode ? 'localFolderMode' : 'remoteServiceMode')],
         [t('reviewLocation'), localMode ? syncWizardDraft.localFolderName : syncWizardDraft.endpoint],
         [t('reviewDeviceName'), syncWizardDraft.deviceName || state.sync.deviceName],
         [t('reviewAutoSync'), t(syncWizardDraft.automatic ? 'enabledLabel' : 'disabledLabel')],
         [t('reviewCredentialPolicy'), t(syncWizardDraft.rememberSession ? 'enabledLabel' : 'disabledLabel')],
     ];
     if (sharedIntent) {
-        rows.push([t('reviewLocalBookmarks'), t('reviewLocalBookmarksCount', { count: state.items.length })]);
+        rows.push([t('reviewLocalBookmarks'), t('reviewLocalBookmarksCount', {
+            count: syncWizardDraft.localItemCount,
+        })]);
     }
     rows.forEach(([label, value]) => {
         const row = createElement('div', 'wizard-review-row');
@@ -337,7 +389,14 @@ async function finishSyncWizard() {
     collectSyncWizardInputs();
     if (
         syncWizardDraft.intent === 'shared'
-        && state.items.length > 0
+        && syncWizardDraft.localItemCount !== state.items.length
+    ) {
+        syncWizardDraft.localItemCount = state.items.length;
+        ui.wizardSharedLocalConfirm.checked = false;
+    }
+    if (
+        syncWizardDraft.intent === 'shared'
+        && syncWizardDraft.localItemCount > 0
         && !ui.wizardSharedLocalConfirm.checked
     ) {
         syncWizardStep = 5;
