@@ -12,6 +12,7 @@ let syncWizardErrorMessage = '';
 function openSyncWizard() {
     if (state.sync.running) return;
     resetSyncRetryState(true);
+    stopRemoteSyncWatcher();
     if (ui.syncDialog.open) ui.syncDialog.close();
     syncWizardDraft = {
         mode: state.sync.mode,
@@ -53,6 +54,7 @@ function closeSyncWizard() {
     ui.wizardPassphraseInput.value = '';
     ui.wizardPassphraseConfirmInput.value = '';
     syncWizardDraft = null;
+    scheduleRemoteWatchForActivity();
 }
 
 function populateSyncWizardInputs() {

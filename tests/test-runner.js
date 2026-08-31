@@ -168,6 +168,257 @@ test('同步地址会规范化并识别 Koofr', () => {
     assert(!isKoofrSyncEndpoint('https://dav.example.com/Koofr/Bookmarks/'));
 });
 
+test('远端版本探测会使用条件请求并识别内容变化', async () => {
+    const originalFetch = window.fetch;
+    const previousUsername = state.sync.username;
+    const previousPassword = state.sync.password;
+    const requests = [];
+    state.sync.username = 'shared-user';
+    state.sync.password = 'shared-password';
+    try {
+        window.fetch = async (_url, options) => {
+            requests.push(options);
+            return new Response(null, { status: 304 });
+        };
+        const previousVersion = {
+            provider: 'webdav',
+            exists: true,
+            etag: '"version-1"',
+            lastModified: '',
+            size: 20,
+            contentHash: 'old-content',
+        };
+        const unchanged = await probeRemoteSyncVersion(
+            'https://dav.example.com/bookmarks-sync.enc.json',
+            { provider: 'webdav' },
+            previousVersion,
+        );
+        assert(unchanged.unchanged);
+        assertDeepEqual(unchanged.version, previousVersion);
+        assertEqual(requests[0].headers.get('If-None-Match'), '"version-1"');
+
+        window.fetch = async (_url, options) => {
+            requests.push(options);
+            return new Response('{"cipher":"changed"}', {
+                status: 200,
+                headers: {
+                    ETag: '"version-2"',
+                    'Last-Modified': 'Wed, 07 Jan 2026 00:00:00 GMT',
+                    'Content-Length': '20',
+                },
+            });
+        };
+        const changed = await probeRemoteSyncVersion(
+            'https://dav.example.com/bookmarks-sync.enc.json',
+            { provider: 'webdav' },
+            previousVersion,
+        );
+        assertEqual(changed.version.etag, '"version-2"');
+        assert(!remoteSyncVersionsEquivalent(previousVersion, changed.version));
+        assert(remoteSyncVersionsEquivalent(changed.version, { ...changed.version }));
+
+        window.fetch = async (_url, options) => {
+            requests.push(options);
+            return new Response(null, { status: 204, headers: { ETag: '"version-3"' } });
+        };
+        const writeResult = await writeRemoteSyncFile(
+            'https://dav.example.com/bookmarks-sync.enc.json',
+            '{"encrypted":true}',
+            { exists: true, etag: '"version-2"' },
+            { provider: 'webdav' },
+        );
+        assertEqual(writeResult.status, 'written');
+        assertEqual(writeResult.version.etag, '"version-3"');
+        assertEqual(requests.at(-1).headers.get('If-Match'), '"version-2"');
+        assert(remoteSyncVersionsEquivalent(
+            { provider: 'koofr', exists: true, hash: 'hash-1', modified: 1, size: 10 },
+            { provider: 'koofr', exists: true, hash: 'hash-1', modified: 2, size: 10 },
+        ));
+        assert(!remoteSyncVersionsEquivalent(
+            { provider: 'koofr', exists: true, hash: 'hash-1', modified: 1, size: 10 },
+            { provider: 'koofr', exists: true, hash: 'hash-2', modified: 2, size: 10 },
+        ));
+
+        window.fetch = async (_url, options) => {
+            requests.push(options);
+            return new Response(JSON.stringify({
+                type: 'file',
+                hash: 'koofr-hash',
+                modified: 12345,
+                size: 99,
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        };
+        const koofr = await probeRemoteSyncVersion('', {
+            provider: 'koofr',
+            origin: 'https://app.koofr.net',
+            mountId: 'mount-test',
+            filePath: '/shared/bookmarks-sync.enc.json',
+        });
+        assertEqual(koofr.version.hash, 'koofr-hash');
+        assertEqual(koofr.version.modified, 12345);
+    } finally {
+        window.fetch = originalFetch;
+        state.sync.username = previousUsername;
+        state.sync.password = previousPassword;
+    }
+});
+
+test('远端检查只在版本变化时触发完整同步', async () => {
+    const sync = state.sync;
+    const watch = sync.remoteWatch;
+    const previousSync = {
+        initialized: sync.initialized,
+        mode: sync.mode,
+        supported: sync.supported,
+        setupComplete: sync.setupComplete,
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+        automatic: sync.automatic,
+        unlocked: sync.unlocked,
+        conflicts: sync.conflicts,
+        running: sync.running,
+        retryScheduled: sync.retryScheduled,
+        error: sync.error,
+        lastSyncAt: sync.lastSyncAt,
+    };
+    const previousWatch = { ...watch };
+    const originalCreateContext = createSyncRemoteContext;
+    const originalProbe = probeRemoteSyncVersion;
+    const originalRunSync = runWebDavSync;
+    let observedVersion = {
+        provider: 'webdav',
+        exists: true,
+        etag: '"shared-1"',
+        lastModified: '',
+        size: 10,
+        contentHash: 'content-1',
+    };
+    let fullSyncCount = 0;
+    createSyncRemoteContext = async () => ({ provider: 'webdav' });
+    probeRemoteSyncVersion = async () => ({ version: observedVersion, unchanged: false });
+    runWebDavSync = async () => {
+        fullSyncCount += 1;
+        return true;
+    };
+    try {
+        Object.assign(sync, {
+            initialized: true,
+            mode: 'remote',
+            supported: true,
+            setupComplete: true,
+            endpoint: 'https://dav.example.com/shared/bookmarks-sync.enc.json',
+            username: '',
+            password: '',
+            passphrase: 'shared library passphrase',
+            automatic: true,
+            unlocked: true,
+            conflicts: [],
+            running: false,
+            retryScheduled: false,
+            error: '',
+            lastSyncAt: '2026-01-01T00:00:00.000Z',
+        });
+        Object.assign(watch, {
+            endpointKey: syncEndpointKey(),
+            version: { ...observedVersion },
+            lastCheckedAt: '',
+            lastChangeAt: '',
+            error: '',
+            retryCount: 0,
+        });
+        safeStorageSet(REMOTE_WATCH_STORAGE_KEY, '');
+        const unchanged = await performRemoteSyncVersionCheck();
+        assertEqual(unchanged.changed, false);
+        assertEqual(fullSyncCount, 0);
+
+        safeStorageSet(REMOTE_WATCH_STORAGE_KEY, '');
+        observedVersion = { ...observedVersion, etag: '"shared-2"', contentHash: 'content-2' };
+        const changed = await performRemoteSyncVersionCheck();
+        assertEqual(changed.changed, true);
+        assertEqual(fullSyncCount, 1);
+    } finally {
+        window.clearTimeout(watch.timer);
+        safeStorageSet(REMOTE_WATCH_STORAGE_KEY, '');
+        Object.assign(sync, previousSync);
+        Object.assign(watch, previousWatch);
+        createSyncRemoteContext = originalCreateContext;
+        probeRemoteSyncVersion = originalProbe;
+        runWebDavSync = originalRunSync;
+    }
+});
+
+test('多个标签页的远端检查锁只允许一个探测任务', async () => {
+    if (!navigator.locks?.request) return;
+    let releaseFirst;
+    let markStarted;
+    const started = new Promise((resolve) => { markStarted = resolve; });
+    const hold = new Promise((resolve) => { releaseFirst = resolve; });
+    const first = tryRemoteWatchLock(async () => {
+        markStarted();
+        await hold;
+        return 'first';
+    });
+    await started;
+    const second = await tryRemoteWatchLock(async () => 'second');
+    assertEqual(second.acquired, false);
+    releaseFirst();
+    const firstResult = await first;
+    assertEqual(firstResult.acquired, true);
+    assertEqual(firstResult.value, 'first');
+});
+
+test('远端监视器会在页面可用时按计划执行检查', async () => {
+    const sync = state.sync;
+    const watch = sync.remoteWatch;
+    const previousSync = {
+        initialized: sync.initialized,
+        mode: sync.mode,
+        supported: sync.supported,
+        setupComplete: sync.setupComplete,
+        endpoint: sync.endpoint,
+        username: sync.username,
+        password: sync.password,
+        passphrase: sync.passphrase,
+        automatic: sync.automatic,
+        unlocked: sync.unlocked,
+        conflicts: sync.conflicts,
+        error: sync.error,
+    };
+    const previousWatch = { ...watch };
+    const originalCheck = checkRemoteSyncVersion;
+    let checks = 0;
+    checkRemoteSyncVersion = async () => {
+        checks += 1;
+        return false;
+    };
+    try {
+        Object.assign(sync, {
+            initialized: true,
+            mode: 'remote',
+            supported: true,
+            setupComplete: true,
+            endpoint: 'https://dav.example.com/shared/bookmarks-sync.enc.json',
+            username: '',
+            password: '',
+            passphrase: 'scheduled shared passphrase',
+            automatic: true,
+            unlocked: true,
+            conflicts: [],
+            error: '',
+        });
+        startRemoteSyncWatcher(10);
+        await new Promise((resolve) => setTimeout(resolve, 90));
+        assertEqual(checks, 1);
+    } finally {
+        stopRemoteSyncWatcher();
+        Object.assign(sync, previousSync);
+        Object.assign(watch, previousWatch);
+        checkRemoteSyncVersion = originalCheck;
+    }
+});
+
 test('自动同步超时会隐藏内部路径并安排渐进重试', async () => {
     const originalFetch = window.fetch;
     const sync = state.sync;

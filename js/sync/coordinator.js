@@ -30,6 +30,19 @@ async function initializeWebDavSync() {
                 ? preferences.setupComplete
                 : null;
             state.sync.lastSyncAt = validDate(preferences.lastSyncAt) ? preferences.lastSyncAt : '';
+            const storedWatchKey = typeof preferences.remoteWatchEndpointKey === 'string'
+                ? preferences.remoteWatchEndpointKey
+                : '';
+            if (state.sync.mode === 'remote' && storedWatchKey === syncEndpointKey()) {
+                state.sync.remoteWatch.endpointKey = storedWatchKey;
+                state.sync.remoteWatch.version = normalizeRemoteSyncVersion(preferences.remoteWatchVersion);
+                state.sync.remoteWatch.lastCheckedAt = validDate(preferences.remoteWatchLastCheckedAt)
+                    ? preferences.remoteWatchLastCheckedAt
+                    : '';
+                state.sync.remoteWatch.lastChangeAt = validDate(preferences.remoteWatchLastChangeAt)
+                    ? preferences.remoteWatchLastChangeAt
+                    : '';
+            }
         }
         await initializeLocalFolderSync();
         state.sync.setupComplete = storedSetupComplete ?? isSyncModeConfigured();
@@ -48,6 +61,7 @@ async function initializeWebDavSync() {
     state.sync.initialized = true;
     renderSyncSettings();
     renderConflictBanner();
+    initializeRemoteSyncWatcher();
     if (
         state.sync.sessionCredentialsRestored
         && state.sync.automatic
@@ -124,6 +138,22 @@ function clearSessionSyncCredentials() {
     state.sync.sessionCredentialsRestored = false;
 }
 
+function handleSyncHistoryRestore(event) {
+    if (!event.persisted) return;
+    resetSyncRetryState(true);
+    stopRemoteSyncWatcher();
+    state.sync.password = '';
+    state.sync.passphrase = '';
+    state.sync.rememberSession = false;
+    state.sync.sessionCredentialsRestored = false;
+    state.sync.unlocked = false;
+    clearSessionSyncCredentials();
+    ui.syncPasswordInput.value = '';
+    ui.syncPassphraseInput.value = '';
+    startLocalFolderPolling();
+    renderSyncSettings();
+}
+
 async function loadSyncConflicts() {
     const endpointKey = syncEndpointKey();
     if (!isSyncModeConfigured()) {
@@ -139,6 +169,7 @@ async function loadSyncConflicts() {
         Math.max(0, state.sync.conflicts.length - 1),
     );
     state.sync.conflictSelections = {};
+    if (state.sync.conflicts.length) stopRemoteSyncWatcher();
     renderConflictBanner();
     renderSyncSettings();
 }
@@ -567,6 +598,10 @@ async function saveSyncPreferences() {
             automatic: state.sync.automatic,
             setupComplete: state.sync.setupComplete,
             lastSyncAt: state.sync.lastSyncAt,
+            remoteWatchEndpointKey: state.sync.remoteWatch.endpointKey,
+            remoteWatchVersion: normalizeRemoteSyncVersion(state.sync.remoteWatch.version),
+            remoteWatchLastCheckedAt: state.sync.remoteWatch.lastCheckedAt,
+            remoteWatchLastChangeAt: state.sync.remoteWatch.lastChangeAt,
         });
         return true;
     } catch (error) {
@@ -577,6 +612,7 @@ async function saveSyncPreferences() {
 
 function openSyncDialog() {
     closeExportMenu();
+    stopRemoteSyncWatcher();
     if (!state.sync.setupComplete || !isSyncModeConfigured()) {
         openSyncWizard();
         return;
@@ -598,6 +634,7 @@ function closeSyncDialog() {
     updateSyncSecretsFromForm();
     saveSyncPreferences();
     if (ui.syncDialog.open) ui.syncDialog.close();
+    scheduleRemoteWatchForActivity();
 }
 
 function cancelWebDavSync() {
@@ -617,6 +654,7 @@ async function handleSyncModeChange() {
         return;
     }
     const previousKey = syncEndpointKey();
+    resetRemoteSyncWatcher();
     state.sync.mode = ui.syncModeSelect.value === 'local-folder' ? 'local-folder' : 'remote';
     state.sync.provider = state.sync.mode === 'local-folder' ? 'local-folder' : '';
     state.sync.unlocked = false;
@@ -664,7 +702,10 @@ function updateSyncSecretsFromForm(resetRetry = true) {
     }
     const credentialsChanged = previousFingerprint !== syncSessionFingerprint();
     if (credentialsChanged && resetRetry !== false) resetSyncRetryState(true);
-    if (credentialsChanged) state.sync.sessionCredentialsRestored = false;
+    if (credentialsChanged) {
+        state.sync.sessionCredentialsRestored = false;
+        resetRemoteSyncWatcher({ clearVersion: previousEndpointKey !== nextEndpointKey });
+    }
     if (state.sync.unlocked && credentialsChanged) state.sync.unlocked = false;
     if (state.sync.rememberSession) saveSessionSyncCredentials();
     state.sync.error = '';
@@ -844,6 +885,7 @@ function renderSyncSettings() {
     );
     ui.disconnectSyncButton.disabled = sync.running || otherTabSync;
     renderQuickSyncButton(status, statusContent[1], otherTabSync);
+    renderRemoteWatchStatus();
     if (typeof renderSyncOnboarding === 'function') renderSyncOnboarding();
 }
 
@@ -886,9 +928,11 @@ async function handleAutoSyncToggle() {
         if (state.sync.unlocked) scheduleWebDavSync(150);
     } else {
         window.clearTimeout(state.sync.timer);
+        stopRemoteSyncWatcher();
         showToast(t('syncAutoPaused'));
     }
     startLocalFolderPolling();
+    if (state.sync.mode === 'remote' && state.sync.automatic) startRemoteSyncWatcher();
 }
 
 async function disconnectWebDavSync() {
@@ -896,6 +940,7 @@ async function disconnectWebDavSync() {
         ? 'confirmDisconnectLocalFolder'
         : 'confirmDisconnectSync';
     if (!window.confirm(t(confirmKey))) return;
+    stopRemoteSyncWatcher();
     resetSyncRetryState(true);
     clearSessionSyncCredentials();
     const endpointKey = syncEndpointKey();
@@ -919,6 +964,7 @@ async function disconnectWebDavSync() {
         ui.syncPasswordInput.value = '';
         ui.syncPassphraseInput.value = '';
         await disconnectLocalSyncDirectory();
+        resetRemoteSyncWatcher();
         renderConflictBanner();
         return;
     }
@@ -958,6 +1004,7 @@ async function disconnectWebDavSync() {
         retryAt: 0,
         lastNotifiedError: '',
     });
+    resetRemoteSyncWatcher();
     await saveSyncPreferences();
     ui.syncEndpointInput.value = '';
     ui.syncUsernameInput.value = '';
@@ -1018,6 +1065,8 @@ function retryScheduledSyncWhenOnline() {
     window.clearTimeout(sync.timer);
     sync.retryScheduled = false;
     sync.retryAt = 0;
+    sync.remoteWatch.deferUntil = Date.now() + 2000;
+    stopRemoteSyncWatcher();
     sync.timer = window.setTimeout(
         () => runWebDavSync({ notify: false, automatic: true }),
         250,
@@ -1032,6 +1081,7 @@ function scheduleWebDavSync(delay = 1800) {
         : Boolean(sync.endpoint);
     if (!sync.supported || !sync.automatic || !sync.unlocked || !configured || sync.conflicts.length) return;
     resetSyncRetryState();
+    if (sync.mode === 'remote') stopRemoteSyncWatcher();
     window.clearTimeout(sync.timer);
     sync.timer = window.setTimeout(() => runWebDavSync({ notify: false, automatic: true }), delay);
 }
@@ -1107,6 +1157,7 @@ function setSyncPhase(phase) {
 }
 
 async function runWebDavSync(options = {}) {
+    if (state.sync.mode === 'remote') stopRemoteSyncWatcher();
     if (state.sync.running) {
         state.sync.pending = true;
         return state.sync.currentPromise || false;
@@ -1124,6 +1175,7 @@ async function runWebDavSync(options = {}) {
     if (!locked.acquired) {
         showTabCoordinationMessage(hasOtherTabSyncing() ? 'otherTabSyncing' : 'otherTabWriting');
         if (options.notify) showToast(t('dataBusyOtherTab'));
+        if (state.sync.mode === 'remote') startRemoteSyncWatcher(2000);
         return false;
     }
     return locked.value;
@@ -1180,6 +1232,7 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         const baseline = storedBaseline ? normalizeStoredSyncDataset(storedBaseline) : null;
         sync.hasBaseline = Boolean(baseline);
         let merged = null;
+        let writtenRemoteVersion = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {
             setSyncPhase(attempt ? 'syncPhaseRetrying' : 'syncPhaseReading');
             const remote = await readRemoteSyncFile(endpoint, remoteContext);
@@ -1218,10 +1271,12 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
             const encrypted = await encryptSyncData(merged, sync.passphrase);
             setSyncPhase('syncPhaseWriting');
             const writeResult = await writeRemoteSyncFile(endpoint, encrypted, remote, remoteContext);
-            if (writeResult === 'conflict') {
+            const writeStatus = typeof writeResult === 'string' ? writeResult : writeResult.status;
+            if (writeStatus === 'conflict') {
                 merged = null;
                 continue;
             }
+            writtenRemoteVersion = writeResult?.version || null;
             break;
         }
         if (!merged) throw new Error(t('syncConflictRetryFailed'));
@@ -1245,6 +1300,13 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         sync.lastSyncAt = new Date().toISOString();
         sync.lastNotifiedError = '';
         resetSyncRetryState();
+        if (writtenRemoteVersion) {
+            noteRemoteSyncVersion(endpointKey, writtenRemoteVersion);
+        } else {
+            sync.remoteWatch.endpointKey = '';
+            sync.remoteWatch.version = null;
+            sync.remoteWatch.lastCheckedAt = '';
+        }
         sync.conflicts = [];
         sync.conflictEndpointKey = endpointKey;
         await saveSyncBaseline(endpointKey, merged);
@@ -1253,6 +1315,7 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         await replaceSyncConflicts(endpointKey, []);
         await saveSyncPreferences();
         scheduleAutoBackup();
+        startRemoteSyncWatcher();
         broadcastDataChanged('sync');
         if (notify) showToast(t('syncComplete', {
             items: merged.items.length,
@@ -1291,6 +1354,7 @@ async function runWebDavSyncUnlocked({ notify = false, automatic = false } = {})
         sync.phase = '';
         document.body.classList.remove('syncing');
         renderSyncSettings();
+        if (sync.mode === 'remote' && !sync.pending && !wasCanceled) startRemoteSyncWatcher();
         if (sync.pending && !wasCanceled) {
             sync.pending = false;
             scheduleWebDavSync(200);

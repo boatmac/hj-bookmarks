@@ -3970,6 +3970,16 @@ svg {
     min-height: 61px;
 }
 
+#remote-watch-status-row[data-state="checking"] .setting-copy small,
+#remote-watch-status-row[data-state="ready"] .setting-copy small {
+    color: var(--accent);
+}
+
+#remote-watch-status-row[data-state="retry"] .setting-copy small,
+#remote-watch-status-row[data-state="locked"] .setting-copy small {
+    color: #c3861d;
+}
+
 .sync-security-note,
 .sync-compatibility {
     margin: 0;

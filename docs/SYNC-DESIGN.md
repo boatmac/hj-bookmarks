@@ -21,6 +21,7 @@ UI
 ├── 同步设置向导（只选择远端同步或本地目录）
 ├── 同步协调器
 │   ├── LocalFolder Adapter
+│   ├── Remote Version Watcher
 │   └── Remote Adapter Resolver
 │       ├── 标准 WebDAV Adapter
 │       └── Koofr REST Compatibility Adapter
@@ -199,6 +200,16 @@ POST /content/api/v2/mounts/{mountId}/files/put
 单次请求内部不立即循环重试，避免在持有数据写锁时长时间等待。自动同步遇到超时、网络中断、HTTP 408/425/429 或常见 5xx 时，会先释放写锁，再按 5 秒、15 秒、45 秒、2 分钟和最多 5 分钟的间隔渐进重试；手动同步仍立即返回错误并由用户决定是否重试。
 
 Koofr 上传使用 multipart/form-data，并在覆盖时传递 `overwriteIfHash` 和 `overwriteIfModified`。HTTP 409 视为并发冲突并重新读取。
+
+## 共享库远端版本检查
+
+远端模式在自动同步已开启、凭据已解锁、页面可见且无冲突时，每 60 秒执行一次只读版本检查。窗口重新获得焦点、页面从后台恢复或浏览器重新联网时会提前检查；页面隐藏、离线、凭据锁定或存在冲突时不轮询。
+
+标准 WebDAV 使用带 `If-None-Match` 的条件 GET：服务返回 `304` 时不读取响应体；没有可用 ETag 或服务忽略条件请求时，只计算加密信封文本 hash，不执行 PBKDF2 解密。Koofr 只调用 `files/info` 获取远端 hash、修改时间和大小。版本相同不会进入数据写锁，也不会上传新密文；只有版本变化才调用既有 `runWebDavSync`，继续使用三方合并、墓碑、冲突中心和条件写入。
+
+成功写入后，标准 WebDAV 从 PUT 响应记录 ETag 和本次密文 hash；Koofr 再读取一次轻量文件信息。非敏感版本摘要和最近检查时间保存在同步偏好中。多个同源标签页使用短时 Web Lock、BroadcastChannel 及 localStorage 检查时间共享结果，避免同时高频访问同一个远端。
+
+探测遇到临时网络错误时使用 5 秒至 5 分钟的渐进重试，不弹出重复错误；认证或其他永久错误会停止轮询并要求用户重新处理。探测本身不会解密远端内容，因此损坏或错误口令仍在真正同步阶段由 AES-GCM 和 payload 校验拒绝。
 
 ## 网络生命周期
 

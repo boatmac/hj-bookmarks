@@ -72,11 +72,18 @@ function postCoordinationMessage(type, payload = {}) {
 
 function handleCoordinationMessage(message) {
     if (!message || message.source === state.coordination.tabId) return;
+    if (message.type === 'remote-watch') {
+        if (typeof handleRemoteWatchCoordinationMessage === 'function') {
+            handleRemoteWatchCoordinationMessage(message);
+        }
+        return;
+    }
     if (message.type === 'sync-start' || message.type === 'sync-heartbeat') {
         state.coordination.activeSyncTabs.set(
             message.source,
             Number(message.expiresAt) || Date.now() + 6500,
         );
+        if (typeof stopRemoteSyncWatcher === 'function') stopRemoteSyncWatcher();
         renderTabCoordinationStatus();
         renderSyncSettings();
         return;
@@ -86,6 +93,7 @@ function handleCoordinationMessage(message) {
         renderTabCoordinationStatus();
         renderSyncSettings();
         processPendingExternalRefresh();
+        if (typeof startRemoteSyncWatcher === 'function') startRemoteSyncWatcher(1500);
         return;
     }
     if (message.type === 'data-changed') scheduleExternalDataRefresh();

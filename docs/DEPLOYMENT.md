@@ -140,6 +140,7 @@ Build output directory: .
 - HTTPS 托管满足安全上下文要求，但不会扩大 Firefox/Safari 的目录 API 能力；
 - 标准 WebDAV 服务必须允许线上站点的 Origin、请求方法和请求头；
 - 从 `file://` 迁移到 HTTPS 后，Origin 从 `null` 变为实际网站地址，应重新验证 WebDAV CORS；
+- 远端更新检查需要允许 `If-None-Match` 请求头并向浏览器暴露 `ETag`；未暴露 ETag 时会退回密文内容 hash 比较；
 - 静态托管平台只分发应用文件，书签内容不会因为部署而自动上传到托管平台；
 - 备份口令、同步密码和加密口令不得写入工作流、仓库或构建产物。
 

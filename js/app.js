@@ -121,7 +121,8 @@ function cacheElements() {
         'sync-endpoint-input', 'sync-username-input', 'sync-password-input',
         'sync-passphrase-input', 'auto-create-directory-toggle',
         'auto-sync-toggle', 'remember-session-credentials-toggle',
-        'last-sync-value', 'conflict-protection-value',
+        'last-sync-value', 'remote-watch-status-row', 'remote-watch-status-value',
+        'conflict-protection-value',
         'disconnect-sync-button', 'sync-wizard-button',
         'sync-now-button', 'conflict-dialog', 'conflict-dialog-title',
         'conflict-dialog-close-button', 'conflict-progress-label',
@@ -237,6 +238,7 @@ function bindStaticEvents() {
     });
     ui.themeButton.addEventListener('click', toggleTheme);
     window.addEventListener('online', retryScheduledSyncWhenOnline);
+    window.addEventListener('pageshow', handleSyncHistoryRestore);
     window.addEventListener('pageshow', handleBackupHistoryRestore);
     ui.mobileMenuButton.addEventListener('click', openSidebar);
     ui.sidebarBackdrop.addEventListener('click', closeSidebar);

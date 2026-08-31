@@ -22,10 +22,13 @@ const PBKDF2_ITERATIONS = 250000;
 const BACKUP_HEALTH_RECHECK_MS = 24 * 60 * 60 * 1000;
 const SYNC_REQUEST_TIMEOUT_MS = Number(globalThis.BOOKMARK_TEST_SYNC_TIMEOUT_MS) || 20000;
 const SYNC_INITIAL_AUTO_DELAY_MS = 1800;
+const REMOTE_SYNC_POLL_INTERVAL_MS = Number(globalThis.BOOKMARK_TEST_REMOTE_POLL_INTERVAL_MS) || 60000;
 const SYNC_RETRY_DELAYS_MS = [5000, 15000, 45000, 120000, 300000];
 const RECYCLE_RETENTION_DAYS = 30;
 const DATA_WRITE_LOCK_NAME = 'bookmark-manager-data-write-v1';
 const BACKUP_FILE_LOCK_NAME = 'bookmark-manager-backup-file-write-v1';
+const REMOTE_WATCH_LOCK_NAME = 'bookmark-manager-remote-watch-v1';
+const REMOTE_WATCH_STORAGE_KEY = 'bookmark-manager.remote-watch-state';
 const COORDINATION_CHANNEL_NAME = 'bookmark-manager-coordination-v1';
 const COORDINATION_STORAGE_KEY = 'bookmark-manager.coordination-event';
 const LOCAL_SYNC_POLL_INTERVAL_MS = 15000;
@@ -75,6 +78,19 @@ const state = {
         koofrMountId: '',
         koofrMountName: '',
         koofrMountUser: '',
+        remoteWatch: {
+            initialized: false,
+            listenerBound: false,
+            timer: null,
+            running: false,
+            endpointKey: '',
+            version: null,
+            lastCheckedAt: '',
+            lastChangeAt: '',
+            error: '',
+            retryCount: 0,
+            deferUntil: 0,
+        },
         username: '',
         password: '',
         passphrase: '',

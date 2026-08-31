@@ -11,27 +11,28 @@
     <meta name="theme-color" content="#eef0e9">
     <title>书签库 · 本地书签管理器</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23235f43'/%3E%3Cpath d='M21 15.5A4.5 4.5 0 0 1 25.5 11h13a4.5 4.5 0 0 1 4.5 4.5V51L32 43.5 21 51V15.5Z' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/style.css?v=20260829-32">
-    <script src="js/core/translations.js?v=20260829-32" defer></script>
-    <script src="js/core/config.js?v=20260829-32" defer></script>
-    <script src="js/core/coordination.js?v=20260829-32" defer></script>
-    <script src="js/core/storage.js?v=20260829-32" defer></script>
-    <script src="js/sync/backup.js?v=20260829-32" defer></script>
-    <script src="js/sync/local-folder.js?v=20260829-32" defer></script>
-    <script src="js/sync/coordinator.js?v=20260829-32" defer></script>
-    <script src="js/sync/providers.js?v=20260829-32" defer></script>
-    <script src="js/sync/crypto.js?v=20260829-32" defer></script>
-    <script src="js/sync/backup-passphrase.js?v=20260829-32" defer></script>
-    <script src="js/sync/merge.js?v=20260829-32" defer></script>
-    <script src="js/ui/recovery.js?v=20260829-32" defer></script>
-    <script src="js/ui/help.js?v=20260829-32" defer></script>
-    <script src="js/ui/backup-restore.js?v=20260829-32" defer></script>
-    <script src="js/ui/sync-wizard.js?v=20260829-32" defer></script>
-    <script src="js/ui/render.js?v=20260829-32" defer></script>
-    <script src="js/ui/bookmarks.js?v=20260829-32" defer></script>
-    <script src="js/data/transfer.js?v=20260829-32" defer></script>
-    <script src="js/core/utils.js?v=20260829-32" defer></script>
-    <script src="js/app.js?v=20260829-32" defer></script>
+    <link rel="stylesheet" href="css/style.css?v=20260829-33">
+    <script src="js/core/translations.js?v=20260829-33" defer></script>
+    <script src="js/core/config.js?v=20260829-33" defer></script>
+    <script src="js/core/coordination.js?v=20260829-33" defer></script>
+    <script src="js/core/storage.js?v=20260829-33" defer></script>
+    <script src="js/sync/backup.js?v=20260829-33" defer></script>
+    <script src="js/sync/local-folder.js?v=20260829-33" defer></script>
+    <script src="js/sync/coordinator.js?v=20260829-33" defer></script>
+    <script src="js/sync/providers.js?v=20260829-33" defer></script>
+    <script src="js/sync/remote-watch.js?v=20260829-33" defer></script>
+    <script src="js/sync/crypto.js?v=20260829-33" defer></script>
+    <script src="js/sync/backup-passphrase.js?v=20260829-33" defer></script>
+    <script src="js/sync/merge.js?v=20260829-33" defer></script>
+    <script src="js/ui/recovery.js?v=20260829-33" defer></script>
+    <script src="js/ui/help.js?v=20260829-33" defer></script>
+    <script src="js/ui/backup-restore.js?v=20260829-33" defer></script>
+    <script src="js/ui/sync-wizard.js?v=20260829-33" defer></script>
+    <script src="js/ui/render.js?v=20260829-33" defer></script>
+    <script src="js/ui/bookmarks.js?v=20260829-33" defer></script>
+    <script src="js/data/transfer.js?v=20260829-33" defer></script>
+    <script src="js/core/utils.js?v=20260829-33" defer></script>
+    <script src="js/app.js?v=20260829-33" defer></script>
 </head>
 <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -302,6 +303,7 @@
                             <li data-i18n="helpSync3">所有设备必须使用完全相同的加密口令。</li>
                             <li data-i18n="helpSync4">同步设置和自动备份相互独立，建议同时启用。</li>
                             <li data-i18n="helpSync5">顶部快捷按钮可立即同步、重试、解锁或进入冲突中心。</li>
+                            <li data-i18n="helpSync6">远端自动同步解锁后会定期检查共享库更新，切回页面或恢复联网时也会立即检查。</li>
                         </ul>
                     </div>
                 </details>
@@ -754,7 +756,7 @@
                     <div class="wizard-step-heading"><h3 data-i18n="chooseSyncPreferences">选择同步偏好</h3><p data-i18n="chooseSyncPreferencesHint">这些设置之后可以随时修改。</p></div>
                     <div class="settings-list wizard-preferences-list">
                         <label class="setting-row settings-switch-row">
-                            <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动运行当前同步方式</small></span>
+                            <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁后自动上传本机变化，并定期检查共享库更新</small></span>
                             <span class="switch-control"><input id="wizard-auto-sync" type="checkbox"><span></span></span>
                         </label>
                         <label class="setting-row settings-switch-row">
@@ -856,7 +858,7 @@
                         </span>
                     </label>
                     <label class="setting-row settings-switch-row">
-                        <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁成功后，数据变化会自动同步至 WebDAV</small></span>
+                        <span class="setting-copy"><strong data-i18n="automaticSync">页面打开时自动同步</strong><small data-i18n="automaticSyncHint">解锁后自动上传本机变化，并定期检查共享库更新</small></span>
                         <span class="switch-control">
                             <input id="auto-sync-toggle" type="checkbox">
                             <span></span>
@@ -864,6 +866,9 @@
                     </label>
                     <div class="setting-row information-row">
                         <span class="setting-copy"><strong data-i18n="lastSync">最近同步</strong><small id="last-sync-value">从未同步</small></span>
+                    </div>
+                    <div class="setting-row information-row" id="remote-watch-status-row">
+                        <span class="setting-copy"><strong data-i18n="sharedLibraryUpdates">共享库更新检查</strong><small id="remote-watch-status-value">开启自动同步后定期检查</small></span>
                     </div>
                     <div class="setting-row information-row">
                         <span class="setting-copy"><strong data-i18n="conflictProtection">三方冲突保护</strong><small id="conflict-protection-value">将在下次成功同步后建立基线</small></span>

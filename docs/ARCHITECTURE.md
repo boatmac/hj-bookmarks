@@ -33,6 +33,7 @@ js/
 │   ├── local-folder.js  桌面云盘本地目录双向同步
 │   ├── coordinator.js   同步生命周期、凭据和冲突中心
 │   ├── providers.js     标准 WebDAV 与 Koofr Adapter
+│   ├── remote-watch.js  共享库远端版本检查、前台触发和多标签页节流
 │   ├── crypto.js        同步与备份的 PBKDF2 + AES-GCM 信封
 │   └── merge.js         数据集规范化、三方合并与本地应用
 ├── ui/
@@ -106,6 +107,8 @@ js/
 
 外部变更通知会在 120 ms 内合并刷新；当前标签页正在同步或持有写锁时延后到操作结束。
 
+远端共享库检查使用 `bookmark-manager-remote-watch-v1` 短时 Web Lock，并把最近检查时间和非敏感版本摘要写入 localStorage 协调记录。同一 Origin 的多个标签页会复用 45 秒内的检查结果；发现变化的标签页调用既有完整同步，数据写锁和 `sync-start` 心跳继续负责真正的合并阶段。
+
 备份文件另使用 `bookmark-manager-backup-file-write-v1` Web Lock，串行化多个标签页中的自动备份、健康检查和口令更换。每次取得文件锁后还会重新读取 IndexedDB 中的加密配置 ID；发现另一标签页已经更换口令时立即清空本标签页旧口令并停止，避免旧页面重新覆盖新文件。口令更换还会同时持有数据写锁，避免长时间转换期间其他标签页改变 IndexedDB 快照；内部强制备份通过明确的已持锁参数复用文件锁，不使用容易把独立并发误判为嵌套调用的全局重入捷径。
 
 ## 兼容加载器
@@ -138,6 +141,7 @@ js/
 ## 修改准则
 
 - 新的纯算法优先放在独立模块并增加浏览器测试。
+- 远端定时任务只允许读取轻量版本信息；检测到变化后必须复用现有同步协调器，不得另写一套合并流程。
 - 用户数据只使用 `textContent` 或属性 API 渲染。
 - 新的远端提供商实现放入 `sync/providers.js`，凭据生命周期由 `coordinator.js` 管理。
 - schema 变更必须递增 `DB_VERSION` 并增加迁移测试。
