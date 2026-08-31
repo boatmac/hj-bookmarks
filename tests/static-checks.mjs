@@ -53,6 +53,36 @@ function duplicateValues(values) {
     return [...counts].filter(([, count]) => count > 1).map(([value]) => value);
 }
 
+async function checkDocumentationSafety() {
+    const markdownFiles = [
+        resolve(repositoryRoot, 'README.md'),
+        resolve(repositoryRoot, 'CHANGELOG.md'),
+        resolve(repositoryRoot, 'SECURITY.md'),
+        ...await collectFiles(resolve(repositoryRoot, 'docs'), new Set(['.md'])),
+    ];
+    const unsafeEndpoints = [];
+    const credentialHeaders = [];
+    for (const path of markdownFiles) {
+        const source = await readFile(path, 'utf8');
+        const koofrUrls = source.match(/https:\/\/app\.koofr\.net\/dav\/[^\s`<>)]+/gi) || [];
+        koofrUrls
+            .filter((url) => !url.includes('...') && !/example/i.test(url))
+            .forEach((url) => unsafeEndpoints.push(`${path}: ${url}`));
+        if (/\bAuthorization:\s*(?:Basic|Bearer)\s+[A-Za-z0-9+/._=-]{8,}/i.test(source)) {
+            credentialHeaders.push(path);
+        }
+    }
+    check(
+        !unsafeEndpoints.length,
+        `Documentation contains a non-example Koofr endpoint: ${unsafeEndpoints.join(', ')}`,
+    );
+    check(
+        !credentialHeaders.length,
+        `Documentation contains an authentication header: ${credentialHeaders.join(', ')}`,
+    );
+    console.log(`Checked ${markdownFiles.length} documentation files for private endpoints and credentials.`);
+}
+
 async function checkDocumentStructure() {
     const [
         html,
@@ -176,6 +206,7 @@ async function checkDocumentStructure() {
 }
 
 await checkJavaScriptSyntax();
+await checkDocumentationSafety();
 await checkDocumentStructure();
 
 if (failures.length) {
