@@ -122,6 +122,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out tagged revision
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download tested portable package
         uses: actions/download-artifact@v8
         with:
