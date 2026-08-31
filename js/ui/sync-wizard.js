@@ -11,6 +11,11 @@ let syncWizardErrorMessage = '';
 
 function openSharedLibraryWizard() {
     closeExportMenu();
+    if (state.sync.setupComplete && isSyncModeConfigured()) {
+        showToast(t('sharedLibraryAlreadyConnected'), 'warning');
+        openSyncDialog();
+        return;
+    }
     openSyncWizard({ intent: 'shared' });
 }
 
@@ -185,10 +190,12 @@ function renderSyncWizard() {
     ui.wizardRemoteFields.classList.toggle('hidden', localMode);
     ui.wizardLocalFolderFields.classList.toggle('hidden', !localMode);
     ui.wizardCreateDirectoryRow.classList.toggle('hidden', localMode || sharedIntent);
-    ui.wizardSharedLibraryNote.classList.toggle('hidden', !sharedIntent || syncWizardStep !== 2);
-    ui.wizardSharedLibraryNote.textContent = t(
-        state.sync.setupComplete ? 'sharedLibraryReplaceNote' : 'sharedLibraryTrustNote',
+    ui.wizardJoinSharedLibraryButton.classList.toggle(
+        'hidden',
+        state.sync.setupComplete && isSyncModeConfigured(),
     );
+    ui.wizardSharedLibraryNote.classList.toggle('hidden', !sharedIntent || syncWizardStep !== 2);
+    ui.wizardSharedLibraryNote.textContent = t('sharedLibraryTrustNote');
     ui.wizardConnectionHint.textContent = t(sharedIntent
         ? 'sharedLibraryConnectionHint'
         : localMode ? 'wizardLocalConnectionHint' : 'wizardRemoteConnectionHint');

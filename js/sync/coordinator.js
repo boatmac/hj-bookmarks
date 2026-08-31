@@ -926,15 +926,23 @@ function renderSyncSettings() {
         ],
     }[status];
 
+    const connectionConfigured = sync.setupComplete && isSyncModeConfigured();
     ui.syncModeSelect.value = sync.mode;
-    ui.syncModeSelect.disabled = sync.running || otherTabSync;
+    ui.syncModeSelect.disabled = connectionConfigured || sync.running || otherTabSync;
+    ui.syncConnectionLockNote.classList.toggle('hidden', !connectionConfigured);
+    ui.joinSharedLibraryMenuButton.classList.toggle('hidden', connectionConfigured);
+    ui.syncWizardMenuButton.classList.toggle('hidden', connectionConfigured);
+    ui.syncWizardButton.classList.toggle('hidden', connectionConfigured);
     ui.remoteSyncFields.classList.toggle('hidden', localMode);
     ui.localFolderSyncFields.classList.toggle('hidden', !localMode);
     ui.autoCreateDirectoryRow.classList.toggle('hidden', localMode);
     ui.localSyncFolderName.textContent = localFolder.handle
         ? t('localSyncFolderSelected', { name: localFolder.name })
         : t('localSyncFolderNotSelected');
-    ui.chooseLocalSyncFolderButton.disabled = !localFolder.supported || sync.running || otherTabSync;
+    ui.chooseLocalSyncFolderButton.disabled = connectionConfigured
+        || !localFolder.supported
+        || sync.running
+        || otherTabSync;
     ui.syncCompatibilityNote.textContent = t(localMode ? 'localFolderCompatibility' : 'syncCorsNote');
 
     ui.syncStatusCard.dataset.state = status;
@@ -943,13 +951,6 @@ function renderSyncSettings() {
     ui.syncStatusTitle.textContent = statusContent[0];
     ui.syncStatusDetail.textContent = statusContent[1];
     ui.syncMenuStatus.textContent = statusContent[2];
-    const switchingSharedLibrary = sync.setupComplete && isSyncModeConfigured();
-    ui.joinSharedLibraryMenuTitle.textContent = t(switchingSharedLibrary
-        ? 'switchSharedLibrary'
-        : 'joinSharedLibrary');
-    ui.joinSharedLibraryMenuHint.textContent = t(switchingSharedLibrary
-        ? 'switchSharedLibraryHint'
-        : 'joinSharedLibraryMenuHint');
     ui.lastSyncValue.textContent = formatBackupTime(activeSyncTime()) || t('syncLastNever');
     ui.conflictProtectionValue.textContent = t(
         sync.hasBaseline ? 'conflictBaselineReady' : 'conflictBaselinePending',
@@ -966,7 +967,9 @@ function renderSyncSettings() {
     ui.syncDialogCloseButton.setAttribute('aria-label', t(sync.running ? 'cancelSync' : 'close'));
     ui.syncDialogCloseButton.title = t(sync.running ? 'cancelSync' : 'close');
     ui.syncEndpointInput.disabled = sync.running || otherTabSync;
+    ui.syncEndpointInput.readOnly = connectionConfigured;
     ui.syncUsernameInput.disabled = sync.running || otherTabSync;
+    ui.syncUsernameInput.readOnly = connectionConfigured;
     ui.syncPasswordInput.disabled = sync.running || otherTabSync;
     if (document.activeElement !== ui.syncDeviceNameInput) {
         ui.syncDeviceNameInput.value = sync.deviceName;
